@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Login — The Slime Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Chewy&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    .admin-login-wrapper {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, var(--blush-pop), var(--bright-lavender));
+      padding: 24px;
+    }
+    .admin-login-card {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      padding: 48px 40px;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+    }
+    .admin-login-card h1 {
+      font-size: 1.8rem;
+      margin-bottom: 8px;
+    }
+    .admin-login-card p {
+      color: var(--ink-soft);
+      font-size: 0.9rem;
+      margin-bottom: 32px;
+    }
+    .admin-login-card .form-group {
+      text-align: left;
+      margin-bottom: 20px;
+    }
+    .admin-login-card label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 6px;
+      color: var(--ink);
+    }
+    .admin-login-card input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid rgba(43, 35, 80, 0.15);
+      border-radius: var(--radius-sm);
+      font-family: var(--font-body);
+      font-size: 1rem;
+      transition: border-color var(--transition);
+    }
+    .admin-login-card input:focus {
+      outline: none;
+      border-color: var(--sky-blue-light);
+    }
+    .admin-login-card .btn-login {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: var(--radius-pill);
+      background: var(--sky-blue-light);
+      color: var(--ink);
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: transform var(--transition), box-shadow var(--transition);
+    }
+    .admin-login-card .btn-login:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+    .admin-login-card .btn-login:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .admin-error {
+      background: rgba(255, 100, 100, 0.1);
+      color: #c0392b;
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      margin-bottom: 20px;
+      display: none;
+    }
+    .admin-back {
+      display: inline-block;
+      margin-top: 24px;
+      font-size: 0.85rem;
+      color: var(--ink-soft);
+    }
+    .admin-back:hover {
+      color: var(--ink);
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-login-wrapper">
+    <div class="admin-login-card">
+      <h1>Admin Login</h1>
+      <p>Sign in to manage The Slime Studio</p>
+      <div class="admin-error" id="loginError"></div>
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" placeholder="lorna@theslimestudio.co.uk" required />
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" placeholder="Enter your password" required />
+        </div>
+        <button type="submit" class="btn-login" id="loginBtn">Sign In</button>
+      </form>
+      <a href="index.html" class="admin-back">&larr; Back to website</a>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase.js"></script>
+  <script>
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      const errorEl = document.getElementById("loginError");
+      const btn = document.getElementById("loginBtn");
+
+      btn.disabled = true;
+      btn.textContent = "Signing in...";
+      errorEl.style.display = "none";
+
+      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+
+      if (error) {
+        errorEl.textContent = "Invalid email or password. Please try again.";
+        errorEl.style.display = "block";
+        btn.disabled = false;
+        btn.textContent = "Sign In";
+        return;
+      }
+
+      sessionStorage.setItem("adminSession", JSON.stringify(data));
+      window.location.href = "dashboard.html";
+    });
+
+    (async () => {
+      const { data } = await sb.auth.getSession();
+      if (data.session) {
+        window.location.href = "dashboard.html";
+      }
+    })();
+  </script>
+</body>
+</html>

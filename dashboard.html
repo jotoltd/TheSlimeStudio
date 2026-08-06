@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — The Slime Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Chewy&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    .dashboard-wrapper {
+      min-height: 100vh;
+      background: var(--cream);
+    }
+    .dashboard-header {
+      background: #FAA989;
+      padding: 20px 0;
+      box-shadow: var(--shadow-sm);
+    }
+    .dashboard-header .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .dashboard-header h1 {
+      font-size: 1.4rem;
+      color: var(--ink);
+    }
+    .dashboard-header .admin-user {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .dashboard-header .admin-user span {
+      font-size: 0.9rem;
+      color: var(--ink);
+    }
+    .btn-logout {
+      padding: 8px 20px;
+      border: none;
+      border-radius: var(--radius-pill);
+      background: var(--ink);
+      color: var(--white);
+      font-family: var(--font-body);
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: opacity var(--transition);
+    }
+    .btn-logout:hover {
+      opacity: 0.85;
+    }
+    .dashboard-body {
+      padding: 40px 0;
+    }
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 24px;
+      margin-bottom: 40px;
+    }
+    .stat-card {
+      background: var(--white);
+      border-radius: var(--radius-md);
+      padding: 28px;
+      box-shadow: var(--shadow-sm);
+    }
+    .stat-card .stat-label {
+      font-size: 0.8rem;
+      color: var(--ink-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+    .stat-card .stat-value {
+      font-family: var(--font-display);
+      font-size: 2rem;
+      color: var(--ink);
+    }
+    .dashboard-panel {
+      background: var(--white);
+      border-radius: var(--radius-md);
+      padding: 32px;
+      box-shadow: var(--shadow-sm);
+    }
+    .dashboard-panel h2 {
+      font-size: 1.3rem;
+      margin-bottom: 20px;
+    }
+    .dashboard-panel table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .dashboard-panel th,
+    .dashboard-panel td {
+      text-align: left;
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(43, 35, 80, 0.08);
+      font-size: 0.9rem;
+    }
+    .dashboard-panel th {
+      font-weight: 600;
+      color: var(--ink-soft);
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: var(--ink-soft);
+      font-size: 0.9rem;
+    }
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: var(--ink-soft);
+    }
+    .inv-actions {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .btn-inv {
+      padding: 10px 24px;
+      border: none;
+      border-radius: var(--radius-pill);
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: transform var(--transition), box-shadow var(--transition);
+    }
+    .btn-inv:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-sm);
+    }
+    .btn-add {
+      background: var(--sky-blue-light);
+      color: var(--ink);
+    }
+    .stock-input {
+      width: 70px;
+      padding: 6px 10px;
+      border: 2px solid rgba(43, 35, 80, 0.15);
+      border-radius: 8px;
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      text-align: center;
+    }
+    .stock-input:focus {
+      outline: none;
+      border-color: var(--sky-blue-light);
+    }
+    .btn-save-stock {
+      padding: 6px 14px;
+      border: none;
+      border-radius: var(--radius-pill);
+      background: var(--canary-yellow);
+      color: var(--ink);
+      font-size: 0.8rem;
+      cursor: pointer;
+      margin-right: 6px;
+      transition: opacity var(--transition);
+    }
+    .btn-save-stock:hover {
+      opacity: 0.8;
+    }
+    .btn-delete {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 8px;
+      background: rgba(255, 100, 100, 0.15);
+      color: #c0392b;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: background var(--transition);
+    }
+    .btn-delete:hover {
+      background: rgba(255, 100, 100, 0.3);
+    }
+    .stock-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: var(--radius-pill);
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+    .stock-in {
+      background: rgba(100, 216, 236, 0.2);
+      color: #2b2350;
+    }
+    .stock-low {
+      background: rgba(255, 196, 251, 0.3);
+      color: #2b2350;
+    }
+    .stock-out {
+      background: rgba(255, 100, 100, 0.15);
+      color: #c0392b;
+    }
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(43, 35, 80, 0.4);
+      z-index: 9999;
+      place-items: center;
+    }
+    .modal-overlay.active {
+      display: grid;
+    }
+    .modal {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      padding: 40px;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: var(--shadow-lg);
+    }
+    .modal h3 {
+      font-size: 1.3rem;
+      margin-bottom: 24px;
+    }
+    .modal .form-group {
+      margin-bottom: 16px;
+    }
+    .modal label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+    .modal input, .modal select {
+      width: 100%;
+      padding: 10px 14px;
+      border: 2px solid rgba(43, 35, 80, 0.15);
+      border-radius: var(--radius-sm);
+      font-family: var(--font-body);
+      font-size: 0.95rem;
+    }
+    .modal input:focus, .modal select:focus {
+      outline: none;
+      border-color: var(--sky-blue-light);
+    }
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 24px;
+    }
+    .btn-modal-cancel {
+      padding: 10px 24px;
+      border: 2px solid rgba(43, 35, 80, 0.15);
+      border-radius: var(--radius-pill);
+      background: transparent;
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    .btn-modal-save {
+      padding: 10px 24px;
+      border: none;
+      border-radius: var(--radius-pill);
+      background: var(--sky-blue-light);
+      color: var(--ink);
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard-wrapper">
+    <div class="dashboard-header">
+      <div class="container">
+        <h1>The Slime Studio — Admin</h1>
+        <div class="admin-user">
+          <span id="adminName"></span>
+          <button class="btn-logout" id="logoutBtn">Logout</button>
+        </div>
+      </div>
+    </div>
+    <div class="dashboard-body">
+      <div class="container">
+        <div class="dashboard-grid">
+          <div class="stat-card">
+            <div class="stat-label">Total Products</div>
+            <div class="stat-value" id="statProducts">--</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Contact Enquiries</div>
+            <div class="stat-value" id="statEnquiries">--</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Low Stock Items</div>
+            <div class="stat-value" id="statLowStock">--</div>
+          </div>
+        </div>
+        <div class="dashboard-panel">
+          <h2>Shop Inventory Management</h2>
+          <div class="inv-actions">
+            <button class="btn-inv btn-add" id="addProductBtn">+ Add Product</button>
+          </div>
+          <div id="inventoryTable">
+            <div class="loading">Loading inventory...</div>
+          </div>
+        </div>
+
+        <div class="dashboard-panel">
+          <h2>Recent Contact Enquiries</h2>
+          <div id="enquiriesTable">
+            <div class="loading">Loading...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Product Modal -->
+  <div class="modal-overlay" id="productModal">
+    <div class="modal">
+      <h3>Add Product</h3>
+      <div class="form-group">
+        <label>Product Name</label>
+        <input type="text" id="pName" placeholder="e.g. Bubblegum Cloud Slime" />
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <input type="text" id="pDesc" placeholder="Short description" />
+      </div>
+      <div class="form-group">
+        <label>Price (£)</label>
+        <input type="number" id="pPrice" step="0.50" placeholder="8.50" />
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <select id="pCategory">
+          <option value="handmade">Handmade Slimes</option>
+          <option value="diy">DIY Kits</option>
+          <option value="textures">Slime Textures</option>
+          <option value="accessories">Accessories</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Stock Quantity</label>
+        <input type="number" id="pStock" placeholder="10" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn-modal-cancel" id="modalCancel">Cancel</button>
+        <button class="btn-modal-save" id="modalSave">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase.js"></script>
+  <script>
+    (async () => {
+      const { data, error } = await sb.auth.getSession();
+      if (!data.session) {
+        window.location.href = "admin.html";
+        return;
+      }
+
+      document.getElementById("adminName").textContent = "Lorna";
+
+      document.getElementById("logoutBtn").addEventListener("click", async () => {
+        await sb.auth.signOut();
+        sessionStorage.removeItem("adminSession");
+        window.location.href = "admin.html";
+      });
+
+      await loadInventory();
+      await loadEnquiries();
+    })();
+
+    async function loadInventory() {
+      try {
+        const { data, error } = await sb
+          .from("products")
+          .select("*")
+          .order("category", { ascending: true })
+          .order("name", { ascending: true });
+
+        if (error) throw error;
+
+        const products = data || [];
+        document.getElementById("statProducts").textContent = products.length;
+        const lowStock = products.filter(p => (p.stock || 0) <= 5);
+        document.getElementById("statLowStock").textContent = lowStock.length;
+
+        const el = document.getElementById("inventoryTable");
+        if (products.length === 0) {
+          el.innerHTML = '<div class="empty-state">No products found. Add your first product!</div>';
+          return;
+        }
+
+        let html = '<table><thead><tr><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
+        products.forEach(p => {
+          const stock = p.stock || 0;
+          let badge = '';
+          if (stock === 0) badge = '<span class="stock-badge stock-out">Out of stock</span>';
+          else if (stock <= 5) badge = '<span class="stock-badge stock-low">Low stock</span>';
+          else badge = '<span class="stock-badge stock-in">In stock</span>';
+
+          html += `<tr>
+            <td>${p.name || '--'}</td>
+            <td>${p.category || '--'}</td>
+            <td>&pound;${Number(p.price || 0).toFixed(2)}</td>
+            <td><input type="number" class="stock-input" value="${stock}" data-id="${p.id}" /></td>
+            <td>${badge}</td>
+            <td>
+              <button class="btn-save-stock" onclick="updateStock('${p.id}')">Save</button>
+              <button class="btn-delete" onclick="deleteProduct('${p.id}', '${(p.name || '').replace(/'/g, "\\'")}')">Delete</button>
+            </td>
+          </tr>`;
+        });
+        html += '</tbody></table>';
+        el.innerHTML = html;
+      } catch (e) {
+        document.getElementById("inventoryTable").innerHTML = '<div class="empty-state">No products found. Add your first product!</div>';
+        document.getElementById("statProducts").textContent = "0";
+        document.getElementById("statLowStock").textContent = "0";
+      }
+    }
+
+    async function updateStock(id) {
+      const input = document.querySelector(`.stock-input[data-id="${id}"]`);
+      if (!input) return;
+      const { error } = await sb.from("products").update({ stock: parseInt(input.value) || 0 }).eq("id", id);
+      if (error) { alert("Error: " + error.message); return; }
+      await loadInventory();
+    }
+
+    async function deleteProduct(id, name) {
+      if (!confirm('Delete "' + name + '"? This cannot be undone.')) return;
+      const { error } = await sb.from("products").delete().eq("id", id);
+      if (error) { alert("Error: " + error.message); return; }
+      await loadInventory();
+    }
+
+    const modal = document.getElementById("productModal");
+    document.getElementById("addProductBtn").addEventListener("click", () => {
+      document.getElementById("pName").value = "";
+      document.getElementById("pDesc").value = "";
+      document.getElementById("pPrice").value = "";
+      document.getElementById("pCategory").value = "handmade";
+      document.getElementById("pStock").value = "";
+      modal.classList.add("active");
+    });
+
+    document.getElementById("modalCancel").addEventListener("click", () => modal.classList.remove("active"));
+    modal.addEventListener("click", (e) => { if (e.target === modal) modal.classList.remove("active"); });
+
+    document.getElementById("modalSave").addEventListener("click", async () => {
+      const name = document.getElementById("pName").value.trim();
+      const desc = document.getElementById("pDesc").value.trim();
+      const price = parseFloat(document.getElementById("pPrice").value) || 0;
+      const category = document.getElementById("pCategory").value;
+      const stock = parseInt(document.getElementById("pStock").value) || 0;
+
+      if (!name) { alert("Please enter a product name."); return; }
+
+      const { error } = await sb.from("products").insert({ name, description: desc, price, category, stock });
+      if (error) { alert("Error: " + error.message); return; }
+
+      modal.classList.remove("active");
+      await loadInventory();
+    });
+
+    async function loadEnquiries() {
+      try {
+        const { count } = await sb.from("enquiries").select("*", { count: "exact", head: true });
+        document.getElementById("statEnquiries").textContent = count || 0;
+      } catch {
+        document.getElementById("statEnquiries").textContent = "0";
+      }
+
+      try {
+        const { data: enquiries, error: eqError } = await sb
+          .from("enquiries")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(10);
+
+        const tableEl = document.getElementById("enquiriesTable");
+        if (eqError || !enquiries || enquiries.length === 0) {
+          tableEl.innerHTML = '<div class="empty-state">No enquiries yet.</div>';
+        } else {
+          let html = '<table><thead><tr><th>Name</th><th>Email</th><th>Message</th><th>Date</th></tr></thead><tbody>';
+          enquiries.forEach(e => {
+            const date = e.created_at ? new Date(e.created_at).toLocaleDateString("en-GB") : "--";
+            html += `<tr><td>${e.name || "--"}</td><td>${e.email || "--"}</td><td>${(e.message || "").substring(0, 50)}</td><td>${date}</td></tr>`;
+          });
+          html += "</tbody></table>";
+          tableEl.innerHTML = html;
+        }
+      } catch {
+        document.getElementById("enquiriesTable").innerHTML = '<div class="empty-state">No enquiries yet.</div>';
+      }
+    }
+  </script>
+</body>
+</html>

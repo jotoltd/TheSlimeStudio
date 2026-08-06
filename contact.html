@@ -7,7 +7,7 @@
   <meta name="description" content="Visit The Slime Studio in Holt, Norfolk. Opening hours, location and contact details for bookings and enquiries." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Lacquer&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Chewy&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
@@ -198,6 +198,36 @@
     </div>
   </footer>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase.js"></script>
   <script src="js/main.js"></script>
+  <script>
+    document.getElementById("contact-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const btn = form.querySelector("button[type=submit]");
+      const originalText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = "Sending...";
+
+      const { error } = await sb.from("enquiries").insert({
+        name: form.name.value,
+        email: form.email.value,
+        enquiry_type: form.type.value,
+        preferred_date: form.date.value || null,
+        message: form.message.value
+      });
+
+      if (error) {
+        btn.textContent = "Error — try again";
+        btn.disabled = false;
+        setTimeout(() => { btn.textContent = originalText; }, 2000);
+      } else {
+        form.reset();
+        btn.textContent = "Sent! ✓";
+        setTimeout(() => { btn.textContent = originalText; btn.disabled = false; }, 2500);
+      }
+    });
+  </script>
 </body>
 </html>
