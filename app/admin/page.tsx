@@ -23,7 +23,7 @@ export default function AdminPage() {
     setError("");
 
     const emailMap: Record<string, string> = {
-      lorna: "lorna@theslimestudio.co.uk",
+      lara: "lara@theslimestudio.co.uk",
     };
     const email = emailMap[username.trim().toLowerCase()] || `${username.trim().toLowerCase()}@theslimestudio.co.uk`;
 
@@ -56,7 +56,7 @@ export default function AdminPage() {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Lorna"
+              placeholder="Lara"
               required
               className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
             />

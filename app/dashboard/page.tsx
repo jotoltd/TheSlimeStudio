@@ -53,7 +53,7 @@ export default function DashboardPage() {
       <div className="reveal rounded-[28px] p-8 md:p-10 mb-8 shadow-sm" style={{ background: "linear-gradient(135deg, #2b2350 0%, #4a3f7a 100%)" }}>
         <span className="eyebrow">{greeting}</span>
         <h1 className="font-display text-[1.8rem] md:text-[2.4rem] mt-2 mb-2 text-white">
-          Welcome back, Lorna! ✨
+          Welcome back, Lara! ✨
         </h1>
         <p className="text-white/70 text-[0.95rem] max-w-lg">
           Here&apos;s what&apos;s happening at The Slime Studio today. Bookings,

@@ -95,7 +95,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="flex items-center gap-3 px-4 py-3 mb-2">
             <div className="w-9 h-9 rounded-full bg-white grid place-items-center font-display text-sm text-ink">L</div>
             <div>
-              <div className="text-[0.85rem] font-medium text-white">Lorna</div>
+              <div className="text-[0.85rem] font-medium text-white">Lara</div>
               <div className="text-[0.7rem] text-white/60">Studio Owner</div>
             </div>
           </div>
