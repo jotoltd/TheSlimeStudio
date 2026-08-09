@@ -101,6 +101,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <div className="text-[0.7rem] text-white/60">Studio Owner</div>
             </div>
           </div>
+          <a
+            href="/"
+            className="block w-full px-4 py-2.5 rounded-xl bg-white/15 text-white text-[0.85rem] text-center hover:bg-white/25 transition-colors mb-2"
+          >
+            Preview Website
+          </a>
           <button
             onClick={handleLogout}
             className="w-full px-4 py-2.5 rounded-xl bg-white/15 text-white text-[0.85rem] hover:bg-white/25 transition-colors"
