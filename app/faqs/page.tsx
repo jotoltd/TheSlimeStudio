@@ -3,14 +3,16 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
 const faqs = [
-  { q: "What ages are the slime-making sessions suitable for?", a: "Our sessions are designed for children aged 4 and up. We provide age-appropriate tools and guidance for each group." },
-  { q: "Are the ingredients safe?", a: "Yes! All our slimes are made with non-toxic, skin-safe ingredients. We avoid borax and use gentle activators instead." },
-  { q: "Can I book a birthday party?", a: "Absolutely! We offer dedicated party slots with 1.5 hours of private studio time. Get in touch via our contact page and we'll tailor a package for you." },
-  { q: "Do you sell DIY kits online?", a: "Yes — our DIY kits are available in the shop with everything you need to make slime at home." },
-  { q: "Where are you located?", a: "We're at Unit A, Feathers Yard, Holt, NR25 2BF. Open Mon–Sat 10am–4pm." },
-  { q: "How long do the slimes last?", a: "With proper care (keeping them in sealed containers and using activator spray), slimes can last several months." },
-  { q: "How much does a session cost?", a: "Standard sessions are £15 per person for a 1-hour slot. Party pricing varies by group size — see our Parties & Birthdays page for details." },
-  { q: "Do I need to book in advance?", a: "Yes, we recommend booking ahead to secure your preferred slot. You can book online via our Book Now page." },
+  { q: "How much is The Slime Studio experience?", a: "The experience is £15 per slime maker, including everything you need to create your slime and take it home." },
+  { q: "Do I need to book?", a: "We recommend booking in advance to make sure we have space for you. Walk-ins are welcome where availability allows." },
+  { q: "What ages is The Slime Studio suitable for?", a: "The Slime Studio is for all ages. Whether it's your first time making slime or you're already slime obsessed, everyone can get involved." },
+  { q: "How long does the experience take?", a: "Allow around 45–60 minutes to create and customise your slime." },
+  { q: "What do I get to make?", a: "You'll create your own slime, choosing your colours and extras to make it completely your own. Your finished slime is yours to take home." },
+  { q: "Can adults make slime too?", a: "Absolutely. The experience isn't just for children — adults are very welcome to book as slime makers too." },
+  { q: "Can I bring more than one person?", a: "Yes. When booking, simply select the number of slime makers attending." },
+  { q: "Do you offer birthday parties?", a: "Yes! We offer private Slime Studio parties for up to 15 slime makers, depending on age. Visit our Parties & Birthdays page for full details and prices." },
+  { q: "Where are you?", a: "The Slime Studio, Unit A, Feathers Yard, Holt, NR25 6BF." },
+  { q: "What are your opening hours?", a: "Monday–Saturday: 10am–4pm. Sunday: Closed." },
 ];
 
 export default function FAQsPage() {
@@ -22,7 +24,7 @@ export default function FAQsPage() {
       <section className="pt-16 pb-14 md:pt-20 md:pb-16 text-center" style={{ backgroundColor: "#ffc4fb" }}>
         <div className="container">
           <h1 className="font-display text-[2.2rem] md:text-[3.4rem] text-ink mb-3 uppercase">
-            FAQs
+            Frequently Asked Questions
           </h1>
           <div className="text-2xl mb-4" style={{ color: "#ff2d78" }}>♥</div>
           <p className="text-[1rem] text-ink/75 max-w-[560px] mx-auto leading-relaxed">
