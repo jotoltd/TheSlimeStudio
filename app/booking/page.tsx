@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { supabase, TIME_SLOTS, SLOT_CAPACITY, PRICE_PER_PERSON } from "@/lib/supabase";
+import { supabase, TIME_SLOTS, SLOT_CAPACITY, PRICE_PER_PERSON, MAX_DAILY_BOOKINGS } from "@/lib/supabase";
 import type { BookingSettings } from "@/lib/supabase";
 
 function todayISO() {
@@ -68,14 +68,26 @@ export default function BookingPage() {
       setErrorMsg("Please select a time slot.");
       return;
     }
-    if (people < 1 || people > 10) {
-      setErrorMsg("Group size must be between 1 and 10.");
+    if (people < 1 || people > SLOT_CAPACITY) {
+      setErrorMsg(`Group size must be between 1 and ${SLOT_CAPACITY}.`);
       return;
     }
 
     setStatus("sending");
 
-    // Re-check capacity right before booking to avoid race conditions
+    // Check total bookings for this date (daily cap)
+    const { data: dailyBookings } = await supabase
+      .from("bookings")
+      .select("id")
+      .eq("date", date);
+    if ((dailyBookings || []).length >= MAX_DAILY_BOOKINGS) {
+      setStatus("error");
+      setErrorMsg(`Sorry, this date is fully booked. Please choose another date.`);
+      loadAvailability(date);
+      return;
+    }
+
+    // Re-check slot capacity right before booking to avoid race conditions
     const { data: existing } = await supabase
       .from("bookings")
       .select("people")
@@ -122,7 +134,7 @@ export default function BookingPage() {
         <div className="container">
           <h1 className="font-display text-[2rem] md:text-[3.2rem] mt-3 mb-3 text-ink">Book a Slime-Making Session</h1>
           <p className="text-[1.1rem] text-ink/80 max-w-[560px] mx-auto">
-            One-hour sessions, every hour. Up to 10 slime makers per slot at
+            One-hour sessions, every hour. Up to {SLOT_CAPACITY} slime makers per slot at
             £{pricePerPerson.toFixed(2)} per person.
           </p>
         </div>
@@ -207,7 +219,7 @@ export default function BookingPage() {
                   <span className="font-display text-2xl w-10 text-center">{people}</span>
                   <button
                     type="button"
-                    onClick={() => setPeople((p) => Math.min(10, maxPeopleForSlot, p + 1))}
+                    onClick={() => setPeople((p) => Math.min(SLOT_CAPACITY, maxPeopleForSlot, p + 1))}
                     className="w-10 h-10 rounded-full bg-ink/10 text-ink text-lg hover:bg-ink/15 transition-colors"
                   >
                     +

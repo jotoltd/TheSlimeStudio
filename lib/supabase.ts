@@ -93,5 +93,6 @@ export type SiteSettings = {
 };
 
 export const TIME_SLOTS = ["10:00", "11:00", "12:00", "13:00", "14:00", "15:00"];
-export const SLOT_CAPACITY = 10;
+export const SLOT_CAPACITY = 5;
+export const MAX_DAILY_BOOKINGS = 5;
 export const PRICE_PER_PERSON = 15;
