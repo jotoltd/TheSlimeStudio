@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import MaintenanceGate from "@/components/MaintenanceGate";
 
 export const metadata: Metadata = {
   title: "The Slime Studio — Create, Play & Discover Slime Magic in Norfolk",
@@ -26,7 +27,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body>{children}</body>
+      <body><MaintenanceGate>{children}</MaintenanceGate></body>
     </html>
   );
 }

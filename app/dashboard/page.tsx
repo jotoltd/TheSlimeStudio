@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { supabase, type Product, type Enquiry, type Booking } from "@/lib/supabase";
+import { supabase, type Product, type Enquiry, type Booking, type SiteSettings } from "@/lib/supabase";
 
 export default function DashboardPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -11,6 +11,9 @@ export default function DashboardPage() {
   const [bookingCount, setBookingCount] = useState(0);
   const [latestEnquiry, setLatestEnquiry] = useState<Enquiry | null>(null);
   const [loadingData, setLoadingData] = useState(true);
+  const [siteSettings, setSiteSettings] = useState<SiteSettings | null>(null);
+  const [maintDate, setMaintDate] = useState("");
+  const [savingMaint, setSavingMaint] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -40,7 +43,30 @@ export default function DashboardPage() {
       .limit(5);
     if (bks) setBookings(bks as Booking[]);
 
+    const { data: ss } = await supabase.from("site_settings").select("*").eq("id", 1).single();
+    if (ss) {
+      const s = ss as SiteSettings;
+      setSiteSettings(s);
+      setMaintDate(new Date(s.launch_date).toISOString().slice(0, 16));
+    }
+
     setLoadingData(false);
+  }
+
+  async function toggleMaintenance() {
+    if (!siteSettings) return;
+    const newVal = !siteSettings.maintenance_mode;
+    setSiteSettings({ ...siteSettings, maintenance_mode: newVal });
+    await supabase.from("site_settings").update({ maintenance_mode: newVal }).eq("id", 1);
+  }
+
+  async function saveMaintDate() {
+    if (!maintDate) return;
+    setSavingMaint(true);
+    const isoDate = new Date(maintDate).toISOString();
+    await supabase.from("site_settings").update({ launch_date: isoDate }).eq("id", 1);
+    setSavingMaint(false);
+    loadData();
   }
 
   const lowStock = products.filter((p) => (p.stock || 0) <= 5);
@@ -59,6 +85,51 @@ export default function DashboardPage() {
           Here&apos;s what&apos;s happening at The Slime Studio today. Bookings,
           shop stock and enquiries all in one place.
         </p>
+      </div>
+
+      {/* Maintenance Mode */}
+      <div className="bg-white rounded-[20px] p-7 shadow-sm mb-8">
+        <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
+          <div>
+            <h2 className="font-display text-[1.1rem] mb-1">Site Maintenance Mode</h2>
+            <p className="text-[0.85rem] text-ink-soft">
+              {siteSettings?.maintenance_mode
+                ? "ON — entire website is offline, showing countdown page"
+                : "OFF — website is live and accessible to everyone"}
+            </p>
+          </div>
+          <button
+            onClick={toggleMaintenance}
+            className={`relative w-16 h-9 rounded-full transition-colors ${siteSettings?.maintenance_mode ? "bg-red-400" : "bg-ink/15"}`}
+          >
+            <span
+              className={`absolute top-1 left-1 w-7 h-7 rounded-full bg-white shadow-sm transition-transform ${
+                siteSettings?.maintenance_mode ? "translate-x-7" : ""
+              }`}
+            />
+          </button>
+        </div>
+        <div className="border-t border-ink/[0.08] pt-6">
+          <label className="block text-sm font-medium mb-2">Countdown Launch Date</label>
+          <div className="flex gap-3 flex-wrap items-center">
+            <input
+              type="datetime-local"
+              value={maintDate}
+              onChange={(e) => setMaintDate(e.target.value)}
+              className="px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
+            />
+            <button
+              onClick={saveMaintDate}
+              disabled={savingMaint}
+              className="px-5 py-2.5 rounded-full bg-sky-blue-light text-ink text-[0.9rem] font-medium disabled:opacity-60 hover:-translate-y-0.5 hover:shadow-sm transition-all"
+            >
+              {savingMaint ? "Saving..." : "Update Date"}
+            </button>
+          </div>
+          <p className="text-[0.8rem] text-ink-soft mt-2">
+            This date powers the countdown timer on the maintenance page.
+          </p>
+        </div>
       </div>
 
       {/* Stats */}
