@@ -22,9 +22,9 @@ export default function Navbar() {
       <div className="container flex items-center justify-between py-4 gap-6">
         <Link href="/" className="flex items-center gap-2.5 flex-shrink-0">
           <img
-            src="/images/logo.png"
+            src="/images/header_logo.jpg"
             alt="The Slime Studio"
-            className="w-[120px] h-auto object-contain flex-shrink-0"
+            className="h-[50px] w-auto object-contain flex-shrink-0 rounded-full"
           />
         </Link>
 
