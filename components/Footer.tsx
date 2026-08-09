@@ -6,13 +6,12 @@ export default function Footer() {
       <div className="container">
         <div className="grid md:grid-cols-[2fr_1fr_1fr_1fr] gap-10 pb-12 border-b border-ink/15">
           <div>
-            <div className="flex items-center gap-2.5 font-display text-[1.3rem] text-ink mb-4">
+            <div className="flex items-center gap-2.5 mb-4">
               <img
-                src="/images/logo.png"
+                src="/images/header_logo.jpg"
                 alt="The Slime Studio"
-                className="w-[72px] h-auto object-contain"
+                className="w-[140px] h-auto object-contain"
               />
-              The Slime Studio
             </div>
             <p className="text-[0.9rem] leading-relaxed text-ink-soft">
               Experience the magic of hands-on creativity. We bring kids and

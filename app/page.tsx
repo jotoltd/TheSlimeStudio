@@ -12,9 +12,9 @@ export default function HomePage() {
         <div className="container relative z-[2]">
           <div className="max-w-lg mx-auto">
             <img
-              src="/images/logo.png"
+              src="/images/header_logo.jpg"
               alt="The Slime Studio — Make Your Own Slime"
-              className="w-full max-w-[420px] mx-auto shadow-lg mb-10 rounded-full"
+              className="w-full max-w-[420px] mx-auto mb-10 object-contain"
             />
             <h1 className="font-display text-[1.8rem] md:text-[2.4rem] leading-[1.15] mb-5 text-ink">
               Get Ready To Make Some Slime!

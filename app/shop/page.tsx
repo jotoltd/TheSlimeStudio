@@ -161,7 +161,7 @@ export default function ShopPage() {
                   className="relative w-[150px] h-[95px] rounded-xl shadow-lg overflow-hidden flex flex-col items-center justify-center gap-1"
                   style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}
                 >
-                  <img src="/images/logo.png" alt="The Slime Studio" className="w-[70px] h-auto object-contain" />
+                  <img src="/images/header_logo.jpg" alt="The Slime Studio" className="w-[100px] h-auto object-contain" />
                   <span className="font-display text-[0.55rem] tracking-wide text-ink/70 uppercase">Gift Card</span>
                 </div>
                 {/* Bow */}
