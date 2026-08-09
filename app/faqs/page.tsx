@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { Heart } from "@/components/Heart";
 
 const faqs = [
   { q: "How much is The Slime Studio experience?", a: "The experience is £15 per slime maker, including everything you need to create your slime and take it home." },
@@ -26,7 +27,7 @@ export default function FAQsPage() {
           <h1 className="font-display text-[2.2rem] md:text-[3.4rem] text-ink mb-3 uppercase">
             Frequently Asked Questions
           </h1>
-          <div className="text-2xl mb-4" style={{ color: "#ff2d78" }}>♥</div>
+          <div className="mb-4 flex justify-center"><Heart size={28} /></div>
           <p className="text-[1rem] text-ink/75 max-w-[560px] mx-auto leading-relaxed">
             Everything you need to know about our sessions, products and studio.
           </p>
@@ -68,7 +69,7 @@ export default function FAQsPage() {
             >
               Contact Us
             </Link>
-            <span style={{ color: "#ff2d78" }}>♥</span>
+            <Heart size={20} />
             <Link
               href="/booking"
               className="btn-secondary"

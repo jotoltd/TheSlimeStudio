@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { Heart } from "@/components/Heart";
 import { supabase, TIME_SLOTS, SLOT_CAPACITY, MAX_DAILY_BOOKINGS } from "@/lib/supabase";
 
 function todayISO() {
@@ -188,11 +189,11 @@ export default function PartiesPage() {
           <div className="grid sm:grid-cols-3 gap-5 mb-8">
             {PRICE_TIERS.map((tier) => (
               <div key={tier.label} className="bg-white rounded-2xl p-7 text-center shadow-sm">
-                <div className="text-2xl mb-2" style={{ color: tier.color }}>♥</div>
+                <div className="mb-2 flex justify-center"><Heart size={24} color={tier.color} /></div>
                 <h3 className="font-display text-[1rem] uppercase tracking-wide mb-2" style={{ color: tier.color }}>
                   {tier.label}
                 </h3>
-                <div className="text-ink/20 mb-2">♥</div>
+                <div className="mb-2 flex justify-center"><Heart size={16} color="#ccc" /></div>
                 <div className="font-display text-[1.8rem] text-ink mb-1">£{tier.price.toFixed(2)}</div>
                 <div className="text-[0.75rem] text-ink-soft uppercase tracking-wider">per child</div>
               </div>
@@ -202,7 +203,7 @@ export default function PartiesPage() {
           <div className="grid sm:grid-cols-2 gap-5">
             {AGE_GROUPS.map((g) => (
               <div key={g.title} className="bg-white/70 rounded-2xl p-6 flex items-center gap-4 border border-ink/5">
-                <div className="text-2xl" style={{ color: "#ff2d78" }}>♥</div>
+                <Heart size={24} />
                 <div>
                   <div className="font-display text-[0.95rem] text-[#8b5fbf] uppercase tracking-wide">{g.title}</div>
                   <div className="text-[0.85rem] text-ink-soft">{g.desc}</div>
@@ -258,7 +259,7 @@ export default function PartiesPage() {
             </div>
           ) : dateFull ? (
             <div className="bg-white rounded-3xl p-10 shadow-sm text-center">
-              <div className="text-3xl mb-4" style={{ color: "#ff2d78" }}>♥</div>
+              <div className="mb-4 flex justify-center"><Heart size={32} /></div>
               <h3 className="font-display text-xl mb-3">Date Fully Booked</h3>
               <p className="text-ink-soft mb-6">
                 Sorry, this date is fully booked. Please choose another date.
@@ -407,13 +408,13 @@ export default function PartiesPage() {
             </p>
             <div className="flex flex-col items-center gap-3 mb-8">
               <a href="https://instagram.com/theslimestudioexperience" target="_blank" rel="noopener noreferrer" className="text-[0.95rem] text-ink hover:text-[#ff2d78] transition-colors">
-                <span style={{ color: "#ff2d78" }}>♥</span> Instagram: @theslimestudioexperience
+                <Heart size={14} /> Instagram: @theslimestudioexperience
               </a>
               <a href="mailto:studio@theslimestudio.co.uk" className="text-[0.95rem] text-ink hover:text-[#ff2d78] transition-colors">
-                <span style={{ color: "#ff2d78" }}>♥</span> Email: studio@theslimestudio.co.uk
+                <Heart size={14} /> Email: studio@theslimestudio.co.uk
               </a>
               <a href="https://www.theslimestudio.co.uk" target="_blank" rel="noopener noreferrer" className="text-[0.95rem] text-ink hover:text-[#ff2d78] transition-colors">
-                <span style={{ color: "#ff2d78" }}>♥</span> Website: www.theslimestudio.co.uk
+                <Heart size={14} /> Website: www.theslimestudio.co.uk
               </a>
             </div>
           </div>

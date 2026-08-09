@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { Heart } from "@/components/Heart";
 import { supabase } from "@/lib/supabase";
 
 const INFO_CARDS = [
@@ -63,7 +64,7 @@ export default function ContactPage() {
           <h1 className="font-display text-[2.2rem] md:text-[3.4rem] text-ink mb-3 uppercase">
             Contact Us
           </h1>
-          <div className="text-2xl mb-4" style={{ color: "#ff2d78" }}>♥</div>
+          <div className="mb-4 flex justify-center"><Heart size={28} /></div>
           <p className="text-[1rem] text-ink/75 max-w-[560px] mx-auto leading-relaxed">
             Got a question about visiting The Slime Studio, your booking or
             anything else? Drop us a message and we&apos;ll get back to you soon.
@@ -158,7 +159,7 @@ export default function ContactPage() {
             >
               Book Now
             </Link>
-            <span style={{ color: "#ff2d78" }}>♥</span>
+            <Heart size={20} />
             <Link
               href="/shop"
               className="btn-secondary"
