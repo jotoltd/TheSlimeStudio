@@ -10,6 +10,7 @@ export default function BookingsAdminPage() {
   const [price, setPrice] = useState("");
   const [savingPrice, setSavingPrice] = useState(false);
   const [priceMsg, setPriceMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   useEffect(() => {
     loadBookings();
@@ -52,8 +53,22 @@ export default function BookingsAdminPage() {
   }
 
   async function cancelBooking(id: string, name: string) {
-    if (!confirm(`Cancel the booking for "${name}"? This cannot be undone.`)) return;
-    await supabase.from("bookings").delete().eq("id", id);
+    if (!confirm(`Cancel the booking for "${name}"? This cannot be undone. An email will be sent to the customer.`)) return;
+    setCancellingId(id);
+    try {
+      const res = await fetch("/api/cancel-booking", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId: id }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.error || "Failed to cancel booking");
+      }
+    } catch {
+      alert("Failed to cancel booking");
+    }
+    setCancellingId(null);
     loadBookings();
   }
 
@@ -161,9 +176,10 @@ export default function BookingsAdminPage() {
                     <td className="py-3">
                       <button
                         onClick={() => cancelBooking(b.id, b.name)}
-                        className="px-3 py-1.5 rounded-lg bg-red-100 text-red-700 text-[0.8rem] hover:bg-red-200 transition-colors"
+                        disabled={cancellingId === b.id}
+                        className="px-3 py-1.5 rounded-lg bg-red-100 text-red-700 text-[0.8rem] hover:bg-red-200 transition-colors disabled:opacity-60"
                       >
-                        Cancel
+                        {cancellingId === b.id ? "Cancelling..." : "Cancel"}
                       </button>
                     </td>
                   </tr>
