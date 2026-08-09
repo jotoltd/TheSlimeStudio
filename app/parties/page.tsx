@@ -14,11 +14,11 @@ const AGE_GROUPS = [
 ];
 
 const INCLUDED = [
-  { icon: "⏰", label: "1.5 Hours Private Studio Time" },
-  { icon: "🎨", label: "Choose Your Slime" },
-  { icon: "🖌️", label: "Pick Your Colour & Scent" },
-  { icon: "⭐", label: "Add Charms & Decorations" },
-  { icon: "🛍️", label: "Take Your Slime Home" },
+  { img: "/images/slime_mixing.jpg.jpeg", label: "1.5 Hours Private Studio Time" },
+  { img: "/images/slime_studio_pink_slime_pot.jpg.jpeg", label: "Choose Your Slime" },
+  { img: "/images/slime_studio_slime_toppings.jpg.jpeg", label: "Pick Your Colour & Scent" },
+  { img: "/images/foam_beads.jpg.jpeg", label: "Add Charms & Decorations" },
+  { img: "/images/purple_finished_slime.jpg.jpeg", label: "Take Your Slime Home" },
 ];
 
 export default function PartiesPage() {
@@ -29,7 +29,7 @@ export default function PartiesPage() {
       {/* Hero image */}
       <div className="relative w-full aspect-[16/7] md:aspect-[16/5] overflow-hidden bg-ink">
         <img
-          src="/images/354d8145-92ae-4c3d-bd51-2e6db44e18c8.JPG"
+          src="/images/slime_studio_pink_slime_experience.jpg.jpeg"
           alt="Parties & Birthdays at The Slime Studio"
           className="absolute inset-0 w-full h-full object-cover"
         />
@@ -103,8 +103,8 @@ export default function PartiesPage() {
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-6">
             {INCLUDED.map((item) => (
               <div key={item.label} className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 rounded-full bg-white grid place-items-center text-2xl mb-3 shadow-sm">
-                  {item.icon}
+                <div className="w-16 h-16 rounded-full overflow-hidden bg-white grid place-items-center mb-3 shadow-sm">
+                  <img src={item.img} alt={item.label} className="w-full h-full object-cover" />
                 </div>
                 <p className="text-[0.85rem] text-ink/80 leading-snug">{item.label}</p>
               </div>

@@ -4,23 +4,28 @@ import { useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
-const carouselImages = ["/images/hero.JPG", "/images/354d8145-92ae-4c3d-bd51-2e6db44e18c8.JPG"];
+const carouselImages = [
+  "/images/slime_studio_pink_slime_experience.jpg.jpeg",
+  "/images/pink_slime_stretch.jpg.jpeg",
+  "/images/blue_slime_closeup.jpg.jpeg",
+  "/images/slime_mixing.jpg.jpeg",
+];
 
 const features = [
   {
-    emoji: "🫧",
+    img: "/images/pink_slime_action.jpg.jpeg",
     gradient: "from-[#64d8ec] to-[#abf7dc]",
     title: "Create It Your Way",
     desc: "Pick your colours, mix, stretch and customise with a huge range of fun extras.",
   },
   {
-    emoji: "✨",
+    img: "/images/slime_studio_teal_slime.jpg.jpeg",
     gradient: "from-[#ffc4fb] to-[#E0B0FF]",
     title: "Everyone Welcome",
     desc: "Whether you're obsessed with slime or trying it for the first time, everyone is welcome.",
   },
   {
-    emoji: "🎁",
+    img: "/images/purple_finished_slime.jpg.jpeg",
     gradient: "from-[#CBC3E3] to-[#abf7dc]",
     title: "Take It Home",
     desc: "Your finished slime is yours to take home and enjoy.",
@@ -121,9 +126,9 @@ export default function AboutPage() {
             {features.map((f) => (
               <div key={f.title} className="flex flex-col items-center">
                 <div
-                  className={`w-32 h-32 md:w-36 md:h-36 rounded-full grid place-items-center bg-gradient-to-br ${f.gradient} border-4 border-white shadow-md mb-5`}
+                  className={`w-32 h-32 md:w-36 md:h-36 rounded-full overflow-hidden bg-gradient-to-br ${f.gradient} border-4 border-white shadow-md mb-5`}
                 >
-                  <span className="text-5xl">{f.emoji}</span>
+                  <img src={f.img} alt={f.title} className="w-full h-full object-cover" />
                 </div>
                 <h3 className="font-display text-[1.1rem] text-[#8b5fbf] uppercase tracking-wide mb-2">
                   {f.title}

@@ -136,16 +136,23 @@ export default function HomePage() {
             </p>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            {["🌈", "🫧", "✨", "🎨", "💜", "🍓", "☁️", "🦄", "⭐", "🍭"].map((emoji, i) => (
+            {[
+              "/images/slime_studio_pink_slime_experience.jpg.jpeg",
+              "/images/blue_slime_closeup.jpg.jpeg",
+              "/images/pink_slime_stretch.jpg.jpeg",
+              "/images/slime_studio_teal_slime.jpg.jpeg",
+              "/images/purple_finished_slime.jpg.jpeg",
+              "/images/slime_mixing.jpg.jpeg",
+              "/images/slime_studio_pink_slime_pot.jpg.jpeg",
+              "/images/slime_studio_slime_toppings.jpg.jpeg",
+              "/images/foam_beads.jpg.jpeg",
+              "/images/pink_slime_action.jpg.jpeg",
+            ].map((src, i) => (
               <div
                 key={i}
-                className={`reveal relative aspect-square rounded-[20px] overflow-hidden cursor-pointer transition-transform hover:scale-105 ${
-                  i % 3 === 0 ? "bg-gradient-to-br from-[#abf7dc] to-[#64d8ec]" :
-                  i % 3 === 1 ? "bg-gradient-to-br from-[#ffc4fb] to-[#CBC3E3]" :
-                  "bg-gradient-to-br from-[#E0B0FF] to-[#abf7dc]"
-                }`}
+                className="reveal relative aspect-square rounded-[20px] overflow-hidden cursor-pointer transition-transform hover:scale-105"
               >
-                <div className="absolute inset-0 grid place-items-center text-[2.5rem]">{emoji}</div>
+                <img src={src} alt={`Slime Studio creation ${i + 1}`} className="w-full h-full object-cover" />
               </div>
             ))}
           </div>
