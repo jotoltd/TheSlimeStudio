@@ -11,7 +11,7 @@ export default function HomePage() {
       <header className="relative pt-[60px] pb-[70px] overflow-hidden text-center">
         <div className="absolute inset-0 z-[1]">
           <img
-            src="/images/hero.JPG"
+            src="/images/slime_mixing.jpg.jpeg"
             alt=""
             className="w-full h-full object-cover"
           />
