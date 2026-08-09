@@ -9,6 +9,7 @@ export default function BookingsAdminPage() {
   const [filter, setFilter] = useState<"upcoming" | "past" | "all">("upcoming");
   const [price, setPrice] = useState("");
   const [savingPrice, setSavingPrice] = useState(false);
+  const [priceMsg, setPriceMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
   useEffect(() => {
     loadBookings();
@@ -23,12 +24,18 @@ export default function BookingsAdminPage() {
   async function savePrice() {
     const value = parseFloat(price);
     if (isNaN(value) || value < 0) {
-      alert("Please enter a valid price.");
+      setPriceMsg({ type: "err", text: "Please enter a valid price." });
       return;
     }
     setSavingPrice(true);
-    await supabase.from("booking_settings").update({ price_per_person: value }).eq("id", 1);
+    setPriceMsg(null);
+    const { error } = await supabase.from("booking_settings").update({ price_per_person: value }).eq("id", 1);
     setSavingPrice(false);
+    if (error) {
+      setPriceMsg({ type: "err", text: "Failed to save — you may need to run the database migration. See Supabase SQL editor." });
+    } else {
+      setPriceMsg({ type: "ok", text: "Price updated successfully!" });
+    }
   }
 
   async function loadBookings() {
@@ -98,6 +105,11 @@ export default function BookingsAdminPage() {
             {savingPrice ? "Saving..." : "Save Price"}
           </button>
         </div>
+        {priceMsg && (
+          <p className={`text-[0.85rem] mt-3 ${priceMsg.type === "ok" ? "text-green-600" : "text-red-600"}`}>
+            {priceMsg.text}
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-5 mb-8">
