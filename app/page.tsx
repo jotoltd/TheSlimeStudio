@@ -8,22 +8,37 @@ export default function HomePage() {
       <Navbar />
 
       {/* Hero */}
-      <header className="relative pt-[70px] pb-[70px] overflow-hidden text-center" style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}>
+      <header className="relative pt-[60px] pb-[70px] overflow-hidden text-center" style={{ backgroundColor: "#ffc4fb" }}>
         <div className="container relative z-[2]">
-          <div className="max-w-2xl mx-auto">
-            <h1 className="font-display text-[2.2rem] md:text-[3.4rem] leading-[1.1] mb-5 text-ink" style={{ letterSpacing: "-0.02em" }}>
-              Book Your Slime-Making Adventure Today
+          <div className="max-w-lg mx-auto">
+            <img
+              src="/images/logo.png"
+              alt="The Slime Studio — Make Your Own Slime"
+              className="w-full max-w-[420px] mx-auto shadow-lg mb-10 rounded-full"
+            />
+            <h1 className="font-display text-[1.8rem] md:text-[2.4rem] leading-[1.15] mb-5 text-ink">
+              Get Ready To Make Some Slime!
             </h1>
-            <p className="text-[1.1rem] text-ink/75 mb-8 max-w-[480px] mx-auto">
-              Hands-on, hour-long slime-making experiences for children and
-              families. Choose your slot, bring your crew, and get squishing.
+            <p className="text-[1.05rem] text-ink/75 mb-8 max-w-[480px] mx-auto leading-relaxed">
+              Welcome to The Slime Studio — a colourful, hands-on experience
+              where you can mix, stretch and create your very own slime.
+              Choose your colours, add your favourite extras and make a slime
+              that&apos;s completely yours to take home.
             </p>
             <div className="flex gap-4 flex-wrap justify-center">
-              <Link href="/booking" className="btn-primary">
-                Book Now — £15pp
+              <Link
+                href="/booking"
+                className="px-8 py-3.5 rounded-full font-display text-[1rem] text-white shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all"
+                style={{ backgroundColor: "#64d8ec" }}
+              >
+                Book Now
               </Link>
-              <Link href="/parties" className="btn-secondary">
-                Birthday Parties
+              <Link
+                href="/shop"
+                className="px-8 py-3.5 rounded-full font-display text-[1rem] text-white shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all"
+                style={{ backgroundColor: "#3fc9a0" }}
+              >
+                Shop
               </Link>
             </div>
           </div>
