@@ -106,7 +106,7 @@ export default function ShopPage() {
             <h1 className="font-display text-[2.2rem] md:text-[3.2rem] leading-[1.1] mb-6" style={{ color: "#E91E8C" }}>
               Is Coming...
             </h1>
-            <div className="text-2xl mb-6">💚</div>
+            <div className="text-2xl mb-6">�</div>
             <p className="text-[1.05rem] text-ink/80 mb-2">
               We&apos;re busy getting <span className="font-semibold" style={{ color: "#E91E8C" }}>The Slime Studio Shop</span> ready!
             </p>
