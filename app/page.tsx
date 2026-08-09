@@ -12,7 +12,7 @@ export default function HomePage() {
         <div className="container relative z-[2]">
           <div className="max-w-lg mx-auto">
             <img
-              src="/images/header_logo.jpg"
+              src="/images/header_logo.png"
               alt="The Slime Studio — Make Your Own Slime"
               className="w-full max-w-[420px] mx-auto mb-10 object-contain"
             />

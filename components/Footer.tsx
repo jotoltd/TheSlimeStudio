@@ -8,7 +8,7 @@ export default function Footer() {
           <div>
             <div className="flex items-center gap-2.5 mb-4">
               <img
-                src="/images/header_logo.jpg"
+                src="/images/header_logo.png"
                 alt="The Slime Studio"
                 className="w-[140px] h-auto object-contain"
               />
