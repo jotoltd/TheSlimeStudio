@@ -152,7 +152,7 @@ export default function PartiesPage() {
       {/* Hero image */}
       <div className="relative w-full aspect-[16/7] md:aspect-[16/5] overflow-hidden bg-ink">
         <img
-          src="/images/slime_studio_pink_slime_experience.jpg.jpeg"
+          src="/images/pink_slime_stretch.jpg.jpeg"
           alt="Parties & Birthdays at The Slime Studio"
           className="absolute inset-0 w-full h-full object-cover"
         />
