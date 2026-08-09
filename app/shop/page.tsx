@@ -94,9 +94,6 @@ export default function ShopPage() {
       ) : !shopLive ? (
         <section className="py-[70px] text-center" style={{ backgroundColor: "#ffc4fb" }}>
           <div className="container max-w-2xl">
-            <div className="mb-6">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="#ff2d78" className="mx-auto"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-            </div>
             <div className="flex items-center justify-center gap-3 mb-4">
               <span className="text-[#64d8ec]">↝</span>
               <h2 className="font-display text-[1.3rem] tracking-wide text-[#64d8ec] uppercase">Shop</h2>
@@ -108,7 +105,9 @@ export default function ShopPage() {
             <h1 className="font-display text-[2.2rem] md:text-[3.2rem] leading-[1.1] mb-6" style={{ color: "#E91E8C" }}>
               Is Coming...
             </h1>
-            <div className="text-2xl mb-6">�</div>
+            <div className="mb-6">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="#ff2d78" className="mx-auto"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+            </div>
             <p className="text-[1.05rem] text-ink/80 mb-2">
               We&apos;re busy getting <span className="font-semibold" style={{ color: "#E91E8C" }}>The Slime Studio Shop</span> ready!
             </p>
