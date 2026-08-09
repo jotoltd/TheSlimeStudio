@@ -51,10 +51,13 @@ export default function Footer() {
 
         <div className="flex flex-wrap justify-between items-center pt-6 text-[0.85rem] text-ink-soft">
           <p>© 2026 The Slime Studio. All rights reserved.</p>
-          <div className="flex gap-3">
-            <a href="#" aria-label="Instagram" className="w-[38px] h-[38px] rounded-full bg-ink/8 grid place-items-center text-lg hover:bg-ink/15 transition-colors">📷</a>
-            <a href="#" aria-label="TikTok" className="w-[38px] h-[38px] rounded-full bg-ink/8 grid place-items-center text-lg hover:bg-ink/15 transition-colors">🎵</a>
-            <a href="#" aria-label="Facebook" className="w-[38px] h-[38px] rounded-full bg-ink/8 grid place-items-center text-lg hover:bg-ink/15 transition-colors">👍</a>
+          <div className="flex gap-4 items-center">
+            <Link href="/admin" className="text-[0.8rem] text-ink-soft/60 hover:text-ink transition-colors">Admin</Link>
+            <div className="flex gap-3">
+              <a href="#" aria-label="Instagram" className="w-[38px] h-[38px] rounded-full bg-ink/8 grid place-items-center text-lg hover:bg-ink/15 transition-colors">📷</a>
+              <a href="#" aria-label="TikTok" className="w-[38px] h-[38px] rounded-full bg-ink/8 grid place-items-center text-lg hover:bg-ink/15 transition-colors">🎵</a>
+              <a href="#" aria-label="Facebook" className="w-[38px] h-[38px] rounded-full bg-ink/8 grid place-items-center text-lg hover:bg-ink/15 transition-colors">👍</a>
+            </div>
           </div>
         </div>
       </div>

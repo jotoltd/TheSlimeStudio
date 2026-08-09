@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ProductCard from "@/components/ProductCard";
-import { supabase, type Product } from "@/lib/supabase";
+import { supabase, type Product, type ShopSettings } from "@/lib/supabase";
 
 const filters = [
   { key: "all", label: "All Products" },
@@ -14,11 +14,7 @@ const filters = [
   { key: "accessories", label: "Accessories" },
 ];
 
-// Flip to true once products are ready to launch.
-const SHOP_LIVE = false;
-
-// Set your shop launch date here.
-const LAUNCH_DATE = new Date("2026-09-01T00:00:00");
+const DEFAULT_LAUNCH_DATE = new Date("2026-09-01T00:00:00");
 
 function useCountdown(target: Date) {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
@@ -45,9 +41,29 @@ export default function ShopPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState("all");
-  const countdown = useCountdown(LAUNCH_DATE);
+  const [shopLive, setShopLive] = useState(false);
+  const [launchDate, setLaunchDate] = useState(DEFAULT_LAUNCH_DATE);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const countdown = useCountdown(launchDate);
 
   useEffect(() => {
+    supabase
+      .from("shop_settings")
+      .select("*")
+      .eq("id", 1)
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          const s = data as ShopSettings;
+          setShopLive(s.live);
+          setLaunchDate(new Date(s.launch_date));
+        }
+        setSettingsLoaded(true);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!shopLive) return;
     async function fetchProducts() {
       const { data, error } = await supabase
         .from("products")
@@ -61,7 +77,7 @@ export default function ShopPage() {
       setLoading(false);
     }
     fetchProducts();
-  }, []);
+  }, [shopLive]);
 
   const filtered =
     activeFilter === "all"
@@ -72,8 +88,10 @@ export default function ShopPage() {
     <>
       <Navbar />
 
-      {/* Shop Hero */}
-      {!SHOP_LIVE ? (
+      {/* Loading state */}
+      {!settingsLoaded ? (
+        <div className="min-h-[60vh] grid place-items-center text-ink-soft">Loading...</div>
+      ) : !shopLive ? (
         <section className="py-[70px] text-center" style={{ backgroundColor: "#ffc4fb" }}>
           <div className="container max-w-2xl">
             <div className="text-2xl mb-2">💗</div>
@@ -164,7 +182,7 @@ export default function ShopPage() {
         </section>
       )}
 
-      {SHOP_LIVE && (
+      {shopLive && (
         /* Filters + Products */
         <section className="section">
           <div className="container">

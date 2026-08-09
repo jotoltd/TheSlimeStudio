@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase, type Product } from "@/lib/supabase";
+import { supabase, type Product, type ShopSettings } from "@/lib/supabase";
 
 export default function ShopAdminPage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [shopSettings, setShopSettings] = useState<ShopSettings | null>(null);
+  const [launchDate, setLaunchDate] = useState("");
+  const [savingSettings, setSavingSettings] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -15,14 +18,37 @@ export default function ShopAdminPage() {
   const [categoryFilter, setCategoryFilter] = useState("all");
 
   useEffect(() => {
-    loadProducts();
+    loadData();
   }, []);
 
-  async function loadProducts() {
+  async function loadData() {
     setLoading(true);
-    const { data } = await supabase.from("products").select("*").order("category").order("name");
-    if (data) setProducts(data as Product[]);
+    const { data: productsData } = await supabase.from("products").select("*").order("category").order("name");
+    if (productsData) setProducts(productsData as Product[]);
+    const { data: settingsData } = await supabase.from("shop_settings").select("*").eq("id", 1).single();
+    if (settingsData) {
+      const s = settingsData as ShopSettings;
+      setShopSettings(s);
+      const d = new Date(s.launch_date);
+      setLaunchDate(d.toISOString().slice(0, 16));
+    }
     setLoading(false);
+  }
+
+  async function toggleShopLive() {
+    if (!shopSettings) return;
+    const newVal = !shopSettings.live;
+    setShopSettings({ ...shopSettings, live: newVal });
+    await supabase.from("shop_settings").update({ live: newVal }).eq("id", 1);
+  }
+
+  async function saveLaunchDate() {
+    if (!launchDate) return;
+    setSavingSettings(true);
+    const isoDate = new Date(launchDate).toISOString();
+    await supabase.from("shop_settings").update({ launch_date: isoDate }).eq("id", 1);
+    setSavingSettings(false);
+    loadData();
   }
 
   async function saveStock(id: string) {
@@ -34,7 +60,7 @@ export default function ShopAdminPage() {
       delete next[id];
       return next;
     });
-    loadProducts();
+    loadData();
   }
 
   function onStockChange(id: string, value: number) {
@@ -44,7 +70,7 @@ export default function ShopAdminPage() {
   async function deleteProduct(id: string, name: string) {
     if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
     await supabase.from("products").delete().eq("id", id);
-    loadProducts();
+    loadData();
   }
 
   async function saveProduct() {
@@ -64,7 +90,7 @@ export default function ShopAdminPage() {
       if (error) { alert("Error: " + error.message); return; }
     }
     closeModal();
-    loadProducts();
+    loadData();
   }
 
   function openAddModal() {
@@ -108,6 +134,51 @@ export default function ShopAdminPage() {
         >
           + Add Product
         </button>
+      </div>
+
+      {/* Shop Mode + Launch Date */}
+      <div className="bg-white rounded-[20px] p-7 shadow-sm mb-6">
+        <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
+          <div>
+            <h2 className="font-display text-[1.1rem] mb-1">Shop Mode</h2>
+            <p className="text-[0.85rem] text-ink-soft">
+              {shopSettings?.live
+                ? "Live — customers can browse and buy products at /shop"
+                : "Coming Soon — shop page shows countdown and gift card info"}
+            </p>
+          </div>
+          <button
+            onClick={toggleShopLive}
+            className={`relative w-16 h-9 rounded-full transition-colors ${shopSettings?.live ? "bg-sky-blue-light" : "bg-ink/15"}`}
+          >
+            <span
+              className={`absolute top-1 left-1 w-7 h-7 rounded-full bg-white shadow-sm transition-transform ${
+                shopSettings?.live ? "translate-x-7" : ""
+              }`}
+            />
+          </button>
+        </div>
+        <div className="border-t border-ink/[0.08] pt-6">
+          <label className="block text-sm font-medium mb-2">Countdown Launch Date</label>
+          <div className="flex gap-3 flex-wrap items-center">
+            <input
+              type="datetime-local"
+              value={launchDate}
+              onChange={(e) => setLaunchDate(e.target.value)}
+              className="px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
+            />
+            <button
+              onClick={saveLaunchDate}
+              disabled={savingSettings}
+              className="px-5 py-2.5 rounded-full bg-sky-blue-light text-ink text-[0.9rem] font-medium disabled:opacity-60 hover:-translate-y-0.5 hover:shadow-sm transition-all"
+            >
+              {savingSettings ? "Saving..." : "Update Date"}
+            </button>
+          </div>
+          <p className="text-[0.8rem] text-ink-soft mt-2">
+            This date powers the countdown timer on the /shop coming soon page.
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-5 mb-8">
