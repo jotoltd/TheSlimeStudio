@@ -168,7 +168,7 @@ export default function HomePage() {
 
       {/* Secondary CTA */}
       <section className="container my-20">
-        <div className="reveal rounded-[32px] p-12 md:p-16 text-center shadow-lg" style={{ background: "linear-gradient(135deg, #2b2350 0%, #4a3f7a 100%)" }}>
+        <div className="reveal rounded-[32px] p-12 md:p-16 text-center shadow-lg" style={{ backgroundColor: "#64d8ec" }}>
           <h2 className="font-display text-[1.8rem] md:text-[2.6rem] mb-3.5 text-white">Ready to Get Squishing?</h2>
           <p className="text-[1.1rem] text-white/70 mb-8 max-w-xl mx-auto">
             Spots fill up fast — secure your slime-making slot today. Sessions
