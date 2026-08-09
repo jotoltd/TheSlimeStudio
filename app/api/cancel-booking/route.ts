@@ -1,17 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { verifyToken } from "@/lib/auth";
-import { Resend } from "resend";
+import { getResend, EMAIL_FROM, cancellationHtml } from "@/lib/email";
 
 export const runtime = "nodejs";
-
-let _resend: Resend | null = null;
-function getResend() {
-  if (!_resend && process.env.RESEND_API_KEY) {
-    _resend = new Resend(process.env.RESEND_API_KEY);
-  }
-  return _resend;
-}
 
 export async function POST(req: NextRequest) {
   // Verify admin auth
@@ -81,33 +73,17 @@ export async function POST(req: NextRequest) {
       const r = getResend();
       if (r) {
         await r.emails.send({
-        from: "The Slime Studio <noreply@theslimestudio.co.uk>",
-        to: b.email,
-        subject: "Your Booking Has Been Cancelled",
-        html: `
-          <div style="font-family: 'Poppins', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
-            <h1 style="color: #ff2d78; font-size: 1.5rem; margin-bottom: 16px;">Booking Cancelled</h1>
-            <p style="color: #333; font-size: 1rem; line-height: 1.6;">
-              Hi ${b.name},
-            </p>
-            <p style="color: #333; font-size: 1rem; line-height: 1.6;">
-              We're writing to let you know that your Slime Studio booking has been cancelled.
-            </p>
-            <div style="background: #fdeef7; border-radius: 12px; padding: 16px; margin: 16px 0;">
-              <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Date:</strong> ${b.date ? new Date(b.date).toLocaleDateString("en-GB") : ""}</p>
-              <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Time:</strong> ${b.time_slot || ""}</p>
-              <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>People:</strong> ${b.people || ""}</p>
-              ${b.is_party ? '<p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Type:</strong> Birthday Party</p>' : ''}
-            </div>
-            <p style="color: #333; font-size: 1rem; line-height: 1.6;">
-              If you believe this is an error, please contact us at studio@theslimestudio.co.uk.
-            </p>
-            <p style="color: #ff2d78; font-size: 0.9rem; margin-top: 24px;">
-              ♥ The Slime Studio
-            </p>
-          </div>
-        `,
-      });
+          from: EMAIL_FROM,
+          to: b.email,
+          subject: "Your Booking Has Been Cancelled — The Slime Studio",
+          html: cancellationHtml({
+            name: b.name || "",
+            date: b.date || "",
+            timeSlot: b.time_slot || "",
+            people: b.people || 0,
+            isParty: b.is_party,
+          }),
+        });
       }
     } catch (e) {
       console.error("Failed to send cancellation email:", e);

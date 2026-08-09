@@ -136,6 +136,12 @@ export default function PartiesPage() {
       setStatus("error");
       setErrorMsg("Something went wrong. Please try again.");
     } else {
+      // Send confirmation email (fire-and-forget)
+      fetch("/api/booking-confirmation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, date, timeSlot, people: children, totalPrice, isParty: true }),
+      }).catch(() => {});
       setStatus("sent");
       setName("");
       setEmail("");
