@@ -94,7 +94,7 @@ export default function ShopPage() {
       ) : !shopLive ? (
         <section className="py-[70px] text-center" style={{ backgroundColor: "#ffc4fb" }}>
           <div className="container max-w-2xl">
-            <div className="text-2xl mb-2">💗</div>
+            <div className="text-2xl mb-6" style={{ color: "#ff2d78" }}>♥</div>
             <div className="flex items-center justify-center gap-3 mb-4">
               <span className="text-[#64d8ec]">↝</span>
               <h2 className="font-display text-[1.3rem] tracking-wide text-[#64d8ec] uppercase">Shop</h2>
