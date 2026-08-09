@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: "🏠" },
@@ -17,20 +16,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const pathname = usePathname();
   const [authed, setAuthed] = useState(false);
+  const [adminName, setAdminName] = useState("Admin");
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (!data.session) {
+    fetch("/api/session").then(async (res) => {
+      if (!res.ok) {
         router.push("/admin");
       } else {
+        const data = await res.json();
+        setAdminName(data.name || "Admin");
         setAuthed(true);
       }
     });
   }, [router]);
 
   async function handleLogout() {
-    await supabase.auth.signOut();
+    await fetch("/api/logout", { method: "POST" });
     router.push("/admin");
   }
 
@@ -95,7 +97,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="flex items-center gap-3 px-4 py-3 mb-2">
             <div className="w-9 h-9 rounded-full bg-white grid place-items-center font-display text-sm text-ink">L</div>
             <div>
-              <div className="text-[0.85rem] font-medium text-white">Lara</div>
+              <div className="text-[0.85rem] font-medium text-white">{adminName}</div>
               <div className="text-[0.7rem] text-white/60">Studio Owner</div>
             </div>
           </div>

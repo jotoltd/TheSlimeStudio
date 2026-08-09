@@ -2,8 +2,11 @@ import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+export const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey || supabaseAnonKey);
 
 export type Product = {
   id: string;
@@ -70,6 +73,14 @@ export type Subscriber = {
   address: string | null;
   postcode: string | null;
   status: string;
+  created_at: string;
+};
+
+export type Admin = {
+  id: string;
+  username: string;
+  password_hash: string;
+  display_name: string;
   created_at: string;
 };
 

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -12,8 +11,8 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) router.push("/dashboard");
+    fetch("/api/session").then((res) => {
+      if (res.ok) router.push("/dashboard");
     });
   }, [router]);
 
@@ -22,18 +21,17 @@ export default function AdminPage() {
     setLoading(true);
     setError("");
 
-    const emailMap: Record<string, string> = {
-      lara: "lara@theslimestudio.co.uk",
-    };
-    const email = emailMap[username.trim().toLowerCase()] || `${username.trim().toLowerCase()}@theslimestudio.co.uk`;
+    const res = await fetch("/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: username.trim().toLowerCase(), password }),
+    });
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-
-    if (error) {
+    if (res.ok) {
+      router.push("/dashboard");
+    } else {
       setError("Invalid username or password. Please try again.");
       setLoading(false);
-    } else {
-      router.push("/dashboard");
     }
   }
 
@@ -56,7 +54,7 @@ export default function AdminPage() {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Lara"
+              placeholder="lara"
               required
               className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
             />
