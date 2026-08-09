@@ -35,10 +35,9 @@ export default function ContactPage() {
   return (
     <>
       <Navbar />
-      <section className="bg-gradient-to-br from-blush-pop to-bright-lavender py-[70px] text-center">
+      <section className="py-[70px] text-center" style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}>
         <div className="container">
-          <span className="eyebrow">Get in Touch</span>
-          <h1 className="font-display text-[2rem] md:text-[3.2rem] mt-3 mb-3">Contact Us</h1>
+          <h1 className="font-display text-[2rem] md:text-[3.2rem] mt-3 mb-3 text-ink">Contact Us</h1>
           <p className="text-[1.1rem] text-ink/80 max-w-[560px] mx-auto">
             Visit us in Holt, Norfolk or send us a message — we'd love to hear
             from you.

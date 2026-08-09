@@ -38,7 +38,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen grid place-items-center bg-gradient-to-br from-blush-pop to-bright-lavender p-6">
+    <div className="min-h-screen grid place-items-center p-6" style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}>
       <div className="bg-white rounded-3xl shadow-lg p-12 max-w-md w-full text-center">
         <h1 className="font-display text-3xl mb-2">Admin Login</h1>
         <p className="text-ink-soft text-sm mb-8">Sign in to manage The Slime Studio</p>

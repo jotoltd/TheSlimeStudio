@@ -8,18 +8,22 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Primary — Mint
         aquamarine: "#abf7dc",
-        "blush-pop": "#ffc4fb",
-        "canary-yellow": "#fffd74",
-        "bright-lavender": "#c4aef0",
         "sky-blue-light": "#64d8ec",
-        ink: "#2b2350",
-        "ink-soft": "#5a5278",
-        cream: "#fffaff",
-        peach: "#FAA989",
+        // Secondary — Lavender
+        "bright-lavender": "#CBC3E3",
+        "blush-pop": "#E0B0FF",
+        // Accent — Coral
+        "canary-yellow": "#F2734C",
+        peach: "#F2734C",
+        // Neutrals
+        ink: "#211B3D",
+        "ink-soft": "#5A5278",
+        cream: "#FBF8F5",
       },
       fontFamily: {
-        display: ["Chewy", "Poppins", "system-ui", "sans-serif"],
+        display: ["Avenir", "Avenir Next", "Poppins", "system-ui", "sans-serif"],
         body: ["Poppins", "system-ui", "sans-serif"],
       },
       borderRadius: {

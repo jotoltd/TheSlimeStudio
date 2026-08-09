@@ -8,23 +8,17 @@ export default function HomePage() {
       <Navbar />
 
       {/* Hero */}
-      <header className="relative pt-[60px] pb-[80px] overflow-hidden">
-        <img
-          src="/images/hero.JPG"
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover z-0"
-        />
+      <header className="relative pt-[70px] pb-[70px] overflow-hidden text-center" style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}>
         <div className="container relative z-[2]">
-          <div className="max-w-lg bg-white/40 backdrop-blur-md rounded-[32px] p-8 shadow-md">
-            <span className="eyebrow">Norfolk's Slime-Making Studio</span>
-            <h1 className="font-display text-[2.2rem] md:text-[3.6rem] leading-[1.15] mt-3 mb-5 text-ink">
+          <div className="max-w-2xl mx-auto">
+            <h1 className="font-display text-[2.2rem] md:text-[3.4rem] leading-[1.1] mb-5 text-ink" style={{ letterSpacing: "-0.02em" }}>
               Book Your Slime-Making Adventure Today
             </h1>
-            <p className="text-[1.15rem] text-ink/85 mb-8 max-w-[480px]">
+            <p className="text-[1.1rem] text-ink/75 mb-8 max-w-[480px] mx-auto">
               Hands-on, hour-long slime-making experiences for children and
               families. Choose your slot, bring your crew, and get squishing.
             </p>
-            <div className="flex gap-4 flex-wrap">
+            <div className="flex gap-4 flex-wrap justify-center">
               <Link href="/booking" className="btn-primary">
                 Book Now — £15pp
               </Link>
@@ -34,25 +28,12 @@ export default function HomePage() {
             </div>
           </div>
         </div>
-        {/* Slime drips */}
-        <div className="absolute bottom-[-1px] left-0 w-full h-[60px] pointer-events-none z-[2]">
-          <svg viewBox="0 0 1200 60" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full block">
-            <path className="drip-drop" fill="#fffd74" d="M0,0 L0,30 Q30,50 60,30 Q90,10 120,35 Q150,55 180,30 Q210,5 240,40 Q270,60 300,30 Q330,15 360,38 Q390,52 420,28 Q450,8 480,35 Q510,55 540,30 Q570,12 600,40 Q630,58 660,30 Q690,5 720,36 Q750,54 780,28 Q810,10 840,38 Q870,50 900,30 Q930,12 960,35 Q990,55 1020,30 Q1050,8 1080,38 Q1110,52 1140,28 Q1170,12 1200,35 L1200,0 Z" />
-            <circle className="drip-drop" fill="#fffd74" cx="150" cy="48" r="6" />
-            <circle className="drip-drop" fill="#fffd74" cx="450" cy="46" r="5" />
-            <circle className="drip-drop" fill="#fffd74" cx="750" cy="47" r="7" />
-            <circle className="drip-drop" fill="#fffd74" cx="1050" cy="45" r="5" />
-            <circle className="drip-drop" fill="#fffd74" cx="300" cy="50" r="4" />
-            <circle className="drip-drop" fill="#fffd74" cx="900" cy="48" r="6" />
-          </svg>
-        </div>
       </header>
 
       {/* Brief Intro */}
-      <section className="section bg-sky-blue-light text-center">
+      <section className="section text-center">
         <div className="container max-w-2xl">
-          <span className="eyebrow">Welcome</span>
-          <h2 className="font-display text-[1.8rem] md:text-[2.6rem] mt-4 mb-4">
+          <h2 className="font-display text-[1.8rem] md:text-[2.6rem] mt-4 mb-4 text-ink">
             The Slime Studio
           </h2>
           <p className="text-[1.1rem] text-ink-soft">
@@ -64,11 +45,10 @@ export default function HomePage() {
       </section>
 
       {/* The Experience */}
-      <section className="section bg-gradient-to-b from-sky-blue-light to-[#d4f5ee]">
+      <section className="section">
         <div className="container">
           <div className="text-center mb-12 reveal">
-            <span className="eyebrow">The Experience</span>
-            <h2 className="font-display text-[1.8rem] md:text-[2.8rem] mt-4 mb-3">
+            <h2 className="font-display text-[1.8rem] md:text-[2.8rem] mt-4 mb-3 text-ink">
               How It Works
             </h2>
             <p className="text-[1.05rem] text-ink-soft max-w-[620px] mx-auto">
@@ -81,12 +61,12 @@ export default function HomePage() {
               { icon: "🧪", title: "Mix & Create", desc: "Colours, scents and textures — all included" },
               { icon: "🫧", title: "Squish & Play", desc: "An hour of hands-on sensory fun" },
               { icon: "🎁", title: "Take It Home", desc: "Pack up your creation to keep" },
-            ].map((step) => (
+            ].map((step, i) => (
               <div
                 key={step.title}
                 className="reveal bg-white rounded-[20px] p-9 text-center shadow-sm hover:-translate-y-1.5 hover:shadow-lg transition-all"
               >
-                <div className="w-[72px] h-[72px] rounded-full grid place-items-center text-[2rem] mx-auto mb-4 bg-sky-blue-light">
+                <div className="w-[72px] h-[72px] rounded-full grid place-items-center text-[2rem] mx-auto mb-4" style={{ backgroundColor: i % 2 === 0 ? "#abf7dc" : "#ffc4fb" }}>
                   {step.icon}
                 </div>
                 <h3 className="font-display text-[1.15rem] mb-1.5">{step.title}</h3>
@@ -103,11 +83,10 @@ export default function HomePage() {
       </section>
 
       {/* Why Choose Us */}
-      <section className="section bg-gradient-to-b from-[#d4f5ee] to-sky-blue-light">
+      <section className="section">
         <div className="container">
           <div className="text-center mb-12 reveal">
-            <span className="eyebrow">Why Choose Us</span>
-            <h2 className="font-display text-[1.8rem] md:text-[2.8rem] mt-4 max-w-3xl mx-auto">
+            <h2 className="font-display text-[1.8rem] md:text-[2.8rem] mt-4 max-w-3xl mx-auto text-ink">
               Families love making memories at The Slime Studio
             </h2>
           </div>
@@ -129,11 +108,10 @@ export default function HomePage() {
       </section>
 
       {/* Studio Gallery */}
-      <section className="section bg-sky-blue-light">
+      <section className="section">
         <div className="container">
           <div className="text-center mb-12 reveal">
-            <span className="eyebrow">Our Studio</span>
-            <h2 className="font-display text-[1.8rem] md:text-[2.8rem] mt-4 mb-3">
+            <h2 className="font-display text-[1.8rem] md:text-[2.8rem] mt-4 mb-3 text-ink">
               A Peek Inside The Slime Studio
             </h2>
             <p className="text-[1.05rem] text-ink-soft max-w-[620px] mx-auto">
@@ -146,9 +124,9 @@ export default function HomePage() {
               <div
                 key={i}
                 className={`reveal relative aspect-square rounded-[20px] overflow-hidden cursor-pointer transition-transform hover:scale-105 ${
-                  i % 3 === 0 ? "bg-gradient-to-br from-sky-blue-light to-sky-blue-light" :
-                  i % 3 === 1 ? "bg-gradient-to-br from-blush-pop to-bright-lavender" :
-                  "bg-gradient-to-br from-canary-yellow to-sky-blue-light"
+                  i % 3 === 0 ? "bg-gradient-to-br from-[#abf7dc] to-[#64d8ec]" :
+                  i % 3 === 1 ? "bg-gradient-to-br from-[#ffc4fb] to-[#CBC3E3]" :
+                  "bg-gradient-to-br from-[#E0B0FF] to-[#abf7dc]"
                 }`}
               >
                 <div className="absolute inset-0 grid place-items-center text-[2.5rem]">{emoji}</div>
@@ -160,17 +138,17 @@ export default function HomePage() {
 
       {/* Secondary CTA */}
       <section className="container my-20">
-        <div className="reveal bg-gradient-to-br from-bright-lavender to-blush-pop rounded-[32px] p-12 md:p-16 text-center shadow-lg">
-          <h2 className="font-display text-[1.8rem] md:text-[2.6rem] mb-3.5">Ready to Get Squishing?</h2>
-          <p className="text-[1.1rem] text-ink/90 mb-8 max-w-xl mx-auto">
+        <div className="reveal rounded-[32px] p-12 md:p-16 text-center shadow-lg" style={{ background: "linear-gradient(135deg, #2b2350 0%, #4a3f7a 100%)" }}>
+          <h2 className="font-display text-[1.8rem] md:text-[2.6rem] mb-3.5 text-white">Ready to Get Squishing?</h2>
+          <p className="text-[1.1rem] text-white/70 mb-8 max-w-xl mx-auto">
             Spots fill up fast — secure your slime-making slot today. Sessions
             run hourly, 1–10 people, £15 per person.
           </p>
           <div className="flex gap-4 justify-center flex-wrap">
-            <Link href="/booking" className="btn-secondary">
+            <Link href="/booking" className="btn-primary">
               Book Now
             </Link>
-            <Link href="/parties" className="btn-ghost">
+            <Link href="/parties" className="btn-ghost" style={{ color: "#fff", borderColor: "rgba(255,255,255,0.35)", background: "rgba(255,255,255,0.08)" }}>
               Plan a Birthday Party
             </Link>
           </div>

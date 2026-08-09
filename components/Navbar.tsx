@@ -9,6 +9,7 @@ const navLinks = [
   { href: "/about", label: "About" },
   { href: "/parties", label: "Parties & Birthdays" },
   { href: "/shop", label: "Shop" },
+  { href: "/subscribe", label: "Subscription Box" },
   { href: "/contact", label: "Contact" },
 ];
 
@@ -17,26 +18,25 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
 
   return (
-    <nav className="sticky top-0 z-[1000] bg-[#FFDAB3] backdrop-blur-md overflow-visible">
+    <nav className="sticky top-0 z-[1000] backdrop-blur-md overflow-visible shadow-sm" style={{ backgroundColor: "#abf7dc" }}>
       <div className="container flex items-center justify-between py-4 gap-6">
-        <Link href="/" className="flex items-center gap-2.5 font-display text-[1.3rem] text-ink flex-shrink-0">
+        <Link href="/" className="flex items-center gap-2.5 flex-shrink-0">
           <img
             src="/images/logo.png"
             alt="The Slime Studio"
-            className="w-[72px] h-auto object-contain flex-shrink-0"
+            className="w-[120px] h-auto object-contain flex-shrink-0"
           />
-          The Slime Studio
         </Link>
 
-        <ul className="hidden md:flex items-center gap-1.5">
+        <ul className="hidden md:flex items-center gap-0.5">
           {navLinks.map((link) => (
             <li key={link.href}>
               <Link
                 href={link.href}
-                className={`font-display text-[0.95rem] px-4 py-2 rounded-full transition-all ${
+                className={`font-display text-[1.05rem] px-3 py-2 rounded-full transition-all ${
                   pathname === link.href
-                    ? "bg-bright-lavender/15 text-bright-lavender"
-                    : "text-ink hover:bg-bright-lavender/12 hover:text-bright-lavender"
+                    ? "bg-ink/10 text-ink font-semibold"
+                    : "text-ink/70 hover:bg-ink/8 hover:text-ink"
                 }`}
               >
                 {link.label}
@@ -62,33 +62,17 @@ export default function Navbar() {
         </button>
       </div>
 
-      {/* Navbar drips */}
-      <div className="absolute bottom-[-38px] left-0 w-full h-[40px] pointer-events-none z-[1]">
-        <svg viewBox="0 0 1200 40" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full block">
-          <path className="drip-drop" fill="#64d8ec" d="M0,0 L0,12 Q20,34 40,16 Q60,4 80,24 Q100,38 120,12 Q140,6 160,28 Q180,38 200,10 Q220,4 240,30 Q260,38 280,16 Q300,6 320,24 Q340,34 360,12 Q380,4 400,28 Q420,38 440,16 Q460,6 480,24 Q500,34 520,10 Q540,4 560,30 Q580,38 600,16 Q620,6 640,28 Q660,34 680,12 Q700,4 720,24 Q740,38 760,16 Q780,6 800,28 Q820,34 840,10 Q860,4 880,30 Q900,38 920,16 Q940,6 960,24 Q980,34 1000,12 Q1020,4 1040,28 Q1060,38 1080,16 Q1100,6 1120,24 Q1140,34 1160,12 Q1180,4 1200,24 L1200,0 Z" />
-          <circle className="drip-drop" fill="#64d8ec" cx="80" cy="28" r="5" />
-          <circle className="drip-drop" fill="#64d8ec" cx="240" cy="34" r="6" />
-          <circle className="drip-drop" fill="#64d8ec" cx="400" cy="30" r="5" />
-          <circle className="drip-drop" fill="#64d8ec" cx="560" cy="34" r="7" />
-          <circle className="drip-drop" fill="#64d8ec" cx="720" cy="28" r="5" />
-          <circle className="drip-drop" fill="#64d8ec" cx="880" cy="34" r="6" />
-          <circle className="drip-drop" fill="#64d8ec" cx="1040" cy="30" r="5" />
-          <circle className="drip-drop" fill="#64d8ec" cx="160" cy="30" r="4" />
-          <circle className="drip-drop" fill="#64d8ec" cx="640" cy="30" r="4" />
-        </svg>
-      </div>
-
       {open && (
-        <ul className="md:hidden bg-[#FFDAB3] px-6 pb-4 flex flex-col gap-1">
+        <ul className="md:hidden px-6 pb-4 flex flex-col gap-1" style={{ backgroundColor: "#abf7dc" }}>
           {navLinks.map((link) => (
             <li key={link.href}>
               <Link
                 href={link.href}
                 onClick={() => setOpen(false)}
-                className={`block py-2 font-display text-[0.95rem] px-4 rounded-full transition-all ${
+                className={`block py-2 font-display text-[1.1rem] px-4 rounded-full transition-all ${
                   pathname === link.href
-                    ? "bg-bright-lavender/15 text-bright-lavender"
-                    : "text-ink hover:bg-bright-lavender/12"
+                    ? "bg-ink/10 text-ink font-semibold"
+                    : "text-ink/70 hover:bg-ink/8"
                 }`}
               >
                 {link.label}

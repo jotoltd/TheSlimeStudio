@@ -7,10 +7,9 @@ export default function GalleryPage() {
   return (
     <>
       <Navbar />
-      <section className="bg-gradient-to-br from-blush-pop to-bright-lavender py-[70px] text-center">
+      <section className="py-[70px] text-center" style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}>
         <div className="container">
-          <span className="eyebrow">Creative Feed</span>
-          <h1 className="font-display text-[2rem] md:text-[3.2rem] mt-3 mb-3">Our Gallery</h1>
+          <h1 className="font-display text-[2rem] md:text-[3.2rem] mt-3 mb-3 text-ink">Our Gallery</h1>
           <p className="text-[1.1rem] text-ink/80 max-w-[560px] mx-auto">
             Follow our journey from Holt, Norfolk — slime creations, workshop
             moments and fun from our studio.
@@ -25,9 +24,9 @@ export default function GalleryPage() {
               <div
                 key={i}
                 className={`reveal relative aspect-square rounded-[20px] overflow-hidden cursor-pointer transition-transform hover:scale-105 ${
-                  i % 3 === 0 ? "bg-gradient-to-br from-sky-blue-light to-sky-blue-light" :
-                  i % 3 === 1 ? "bg-gradient-to-br from-blush-pop to-bright-lavender" :
-                  "bg-gradient-to-br from-canary-yellow to-sky-blue-light"
+                  i % 3 === 0 ? "bg-gradient-to-br from-[#abf7dc] to-[#64d8ec]" :
+                  i % 3 === 1 ? "bg-gradient-to-br from-[#ffc4fb] to-[#CBC3E3]" :
+                  "bg-gradient-to-br from-[#E0B0FF] to-[#abf7dc]"
                 }`}
               >
                 <div className="absolute inset-0 grid place-items-center text-[2.5rem]">{emoji}</div>

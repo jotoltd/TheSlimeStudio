@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { supabase, TIME_SLOTS, SLOT_CAPACITY, PRICE_PER_PERSON } from "@/lib/supabase";
+import type { BookingSettings } from "@/lib/supabase";
 
 function todayISO() {
   const d = new Date();
@@ -22,6 +23,13 @@ export default function BookingPage() {
   const [phone, setPhone] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
+  const [pricePerPerson, setPricePerPerson] = useState(PRICE_PER_PERSON);
+
+  useEffect(() => {
+    supabase.from("booking_settings").select("*").eq("id", 1).single().then(({ data }) => {
+      if (data) setPricePerPerson((data as BookingSettings).price_per_person);
+    });
+  }, []);
 
   useEffect(() => {
     loadAvailability(date);
@@ -44,7 +52,7 @@ export default function BookingPage() {
   }
 
   const maxPeopleForSlot = timeSlot ? remaining[timeSlot] ?? SLOT_CAPACITY : SLOT_CAPACITY;
-  const totalPrice = useMemo(() => people * PRICE_PER_PERSON, [people]);
+  const totalPrice = useMemo(() => people * pricePerPerson, [people, pricePerPerson]);
 
   function selectSlot(slot: string) {
     setTimeSlot(slot);
@@ -110,13 +118,12 @@ export default function BookingPage() {
     <>
       <Navbar />
 
-      <section className="bg-gradient-to-br from-blush-pop to-bright-lavender py-[70px] text-center">
+      <section className="py-[70px] text-center" style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}>
         <div className="container">
-          <span className="eyebrow">Book Your Slot</span>
-          <h1 className="font-display text-[2rem] md:text-[3.2rem] mt-3 mb-3">Book a Slime-Making Session</h1>
+          <h1 className="font-display text-[2rem] md:text-[3.2rem] mt-3 mb-3 text-ink">Book a Slime-Making Session</h1>
           <p className="text-[1.1rem] text-ink/80 max-w-[560px] mx-auto">
             One-hour sessions, every hour. Up to 10 slime makers per slot at
-            £15 per person.
+            £{pricePerPerson.toFixed(2)} per person.
           </p>
         </div>
       </section>
@@ -245,7 +252,7 @@ export default function BookingPage() {
               </div>
 
               <div className="flex items-center justify-between bg-sky-blue-light/20 rounded-xl p-5 mb-6">
-                <span className="text-sm text-ink-soft">Total ({people} × £{PRICE_PER_PERSON})</span>
+                <span className="text-sm text-ink-soft">Total ({people} × £{pricePerPerson.toFixed(2)})</span>
                 <span className="font-display text-2xl">£{totalPrice.toFixed(2)}</span>
               </div>
 

@@ -5,10 +5,9 @@ export default function AboutPage() {
   return (
     <>
       <Navbar />
-      <section className="bg-gradient-to-br from-blush-pop to-bright-lavender py-[70px] text-center">
+      <section className="py-[70px] text-center" style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}>
         <div className="container">
-          <span className="eyebrow">Our Story</span>
-          <h1 className="font-display text-[2rem] md:text-[3.2rem] mt-3 mb-3">About The Slime Studio</h1>
+          <h1 className="font-display text-[2rem] md:text-[3.2rem] mt-3 mb-3 text-ink">About The Slime Studio</h1>
           <p className="text-[1.1rem] text-ink/80 max-w-[560px] mx-auto">
             From a kitchen table hobby to a beloved Norfolk studio — discover how
             our slime-making journey began.

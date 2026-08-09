@@ -25,7 +25,7 @@
   body {
     font-family: "Poppins", system-ui, sans-serif;
     color: #2b2350;
-    background: #64d8ec;
+    background: #ffc4fb;
     line-height: 1.65;
     overflow-x: hidden;
   }
@@ -45,7 +45,7 @@
   }
 
   h1, h2, h3, h4 {
-    font-family: "Chewy", "Poppins", system-ui, sans-serif;
+    font-family: "Avenir", "Avenir Next", "Poppins", system-ui, sans-serif;
     font-weight: 400;
     line-height: 1.15;
   }
@@ -65,12 +65,12 @@
 
   .eyebrow {
     display: inline-block;
-    font-family: "Chewy", "Poppins", system-ui, sans-serif;
+    font-family: "Avenir", "Avenir Next", "Poppins", system-ui, sans-serif;
     font-size: 0.8rem;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: #c4aef0;
-    background: rgba(196, 174, 240, 0.12);
+    color: #CBC3E3;
+    background: rgba(203, 195, 227, 0.12);
     padding: 6px 16px;
     border-radius: 999px;
   }
@@ -81,10 +81,11 @@
     gap: 8px;
     padding: 14px 30px;
     border-radius: 999px;
-    background: #64d8ec;
+    background: linear-gradient(135deg, #64d8ec 0%, #abf7dc 100%);
     color: #2b2350;
-    font-family: "Chewy", "Poppins", sans-serif;
+    font-family: "Avenir", "Avenir Next", "Poppins", sans-serif;
     font-size: 1rem;
+    font-weight: 600;
     border: none;
     cursor: pointer;
     box-shadow: 0 8px 24px rgba(100, 216, 236, 0.4);
@@ -92,9 +93,9 @@
   }
 
   .btn-primary:hover {
-    transform: translateY(-2px);
-    background: #4cc5db;
-    box-shadow: 0 12px 32px rgba(100, 216, 236, 0.5);
+    transform: translateY(-3px);
+    background: linear-gradient(135deg, #4cc5db 0%, #8fe9c9 100%);
+    box-shadow: 0 14px 36px rgba(100, 216, 236, 0.55);
   }
 
   .btn-secondary {
@@ -103,19 +104,21 @@
     gap: 8px;
     padding: 14px 30px;
     border-radius: 999px;
-    background: #abf7dc;
+    background: #fff;
     color: #2b2350;
-    font-family: "Chewy", "Poppins", sans-serif;
+    font-family: "Avenir", "Avenir Next", "Poppins", sans-serif;
     font-size: 1rem;
-    border: none;
+    font-weight: 500;
+    border: 2px solid rgba(43, 35, 80, 0.12);
     cursor: pointer;
-    box-shadow: 0 8px 24px rgba(171, 247, 220, 0.5);
+    box-shadow: var(--shadow-sm);
     transition: transform var(--transition), box-shadow var(--transition), background var(--transition);
   }
 
   .btn-secondary:hover {
     transform: translateY(-2px);
-    background: #8cecc9;
+    background: #f9f7ff;
+    box-shadow: var(--shadow-md);
   }
 
   .btn-ghost {
@@ -124,19 +127,20 @@
     gap: 8px;
     padding: 14px 30px;
     border-radius: 999px;
-    background: #fff;
+    background: transparent;
     color: #2b2350;
-    font-family: "Chewy", "Poppins", sans-serif;
+    font-family: "Avenir", "Avenir Next", "Poppins", sans-serif;
     font-size: 1rem;
-    border: none;
+    font-weight: 500;
+    border: 2px solid rgba(43, 35, 80, 0.15);
     cursor: pointer;
-    box-shadow: var(--shadow-sm);
-    transition: transform var(--transition), box-shadow var(--transition);
+    transition: transform var(--transition), background var(--transition), border-color var(--transition);
   }
 
   .btn-ghost:hover {
     transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
+    background: rgba(43, 35, 80, 0.05);
+    border-color: rgba(43, 35, 80, 0.3);
   }
 }
 

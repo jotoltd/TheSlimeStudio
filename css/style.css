@@ -1,9 +1,9 @@
 /* ===== Design Tokens ===== */
 :root {
   --aquamarine: #abf7dcff;
-  --blush-pop: #ffc4fbff;
+  --blush-pop: #E0B0FF;
   --canary-yellow: #fffd74ff;
-  --bright-lavender: #c4aef0ff;
+  --bright-lavender: #CBC3E3;
   --sky-blue-light: #64d8ecff;
 
   --ink: #2b2350;
@@ -11,7 +11,7 @@
   --white: #ffffff;
   --cream: #fffaff;
 
-  --font-display: "Chewy", "Poppins", system-ui, sans-serif;
+  --font-display: "Avenir", "Avenir Next", "Poppins", system-ui, sans-serif;
   --font-body: "Poppins", system-ui, sans-serif;
 
   --radius-sm: 12px;
@@ -45,7 +45,7 @@ html {
 body {
   font-family: var(--font-body);
   color: var(--ink);
-  background: var(--sky-blue-light);
+  background: #ffc4fb;
   line-height: 1.65;
   overflow-x: hidden;
 }
