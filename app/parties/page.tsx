@@ -39,7 +39,7 @@ export default function PartiesPage() {
       <section className="text-center py-14 md:py-16 px-6" style={{ backgroundColor: "#ffc4fb" }}>
         <div className="container max-w-2xl">
           <h1 className="font-display text-[1.8rem] md:text-[2.6rem] leading-[1.2] mb-3 text-ink">
-            Make Their Celebration <span style={{ color: "#ff2d78" }}>Extra Slimy!</span> 💗
+            Make Their Celebration <span style={{ color: "#ff2d78" }}>Extra Slimy!</span> 🥳
           </h1>
           <p className="text-[1rem] text-ink/80 leading-relaxed mb-4">
             Celebrate at The Slime Studio with your own private slime-making
