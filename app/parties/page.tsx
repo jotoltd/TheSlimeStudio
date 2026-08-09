@@ -126,8 +126,7 @@ export default function PartiesPage() {
             </div>
             <Link
               href="/contact"
-              className="px-8 py-3.5 rounded-full font-display text-[1rem] text-white shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all flex-shrink-0"
-              style={{ backgroundColor: "#ff2d78" }}
+              className="btn-primary flex-shrink-0"
             >
               Party Enquiry
             </Link>

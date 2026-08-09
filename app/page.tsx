@@ -28,15 +28,13 @@ export default function HomePage() {
             <div className="flex gap-4 flex-wrap justify-center">
               <Link
                 href="/booking"
-                className="px-8 py-3.5 rounded-full font-display text-[1rem] text-white shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all"
-                style={{ backgroundColor: "#64d8ec" }}
+                className="btn-primary"
               >
                 Book Now
               </Link>
               <Link
                 href="/shop"
-                className="px-8 py-3.5 rounded-full font-display text-[1rem] text-white shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all"
-                style={{ backgroundColor: "#3fc9a0" }}
+                className="btn-secondary"
               >
                 Shop
               </Link>

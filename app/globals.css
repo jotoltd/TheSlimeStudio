@@ -81,21 +81,21 @@
     gap: 8px;
     padding: 14px 30px;
     border-radius: 999px;
-    background: linear-gradient(135deg, #64d8ec 0%, #abf7dc 100%);
-    color: #2b2350;
+    background: #ff2d78;
+    color: #fff;
     font-family: "Avenir", "Avenir Next", "Poppins", sans-serif;
     font-size: 1rem;
     font-weight: 600;
     border: none;
     cursor: pointer;
-    box-shadow: 0 8px 24px rgba(100, 216, 236, 0.4);
+    box-shadow: 0 8px 24px rgba(255, 45, 120, 0.35);
     transition: transform var(--transition), box-shadow var(--transition), background var(--transition);
   }
 
   .btn-primary:hover {
     transform: translateY(-3px);
-    background: linear-gradient(135deg, #4cc5db 0%, #8fe9c9 100%);
-    box-shadow: 0 14px 36px rgba(100, 216, 236, 0.55);
+    background: #e6266b;
+    box-shadow: 0 14px 36px rgba(255, 45, 120, 0.5);
   }
 
   .btn-secondary {
@@ -104,21 +104,21 @@
     gap: 8px;
     padding: 14px 30px;
     border-radius: 999px;
-    background: #fff;
-    color: #2b2350;
+    background: #3fc9a0;
+    color: #fff;
     font-family: "Avenir", "Avenir Next", "Poppins", sans-serif;
     font-size: 1rem;
-    font-weight: 500;
-    border: 2px solid rgba(43, 35, 80, 0.12);
+    font-weight: 600;
+    border: none;
     cursor: pointer;
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 8px 24px rgba(63, 201, 160, 0.35);
     transition: transform var(--transition), box-shadow var(--transition), background var(--transition);
   }
 
   .btn-secondary:hover {
-    transform: translateY(-2px);
-    background: #f9f7ff;
-    box-shadow: var(--shadow-md);
+    transform: translateY(-3px);
+    background: #36b58a;
+    box-shadow: 0 14px 36px rgba(63, 201, 160, 0.5);
   }
 
   .btn-ghost {
@@ -166,6 +166,18 @@
 @keyframes float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-20px); }
+}
+
+/* Focus states for accessibility */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+summary:focus-visible {
+  outline: 3px solid #ff2d78;
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
 /* Reveal animation */

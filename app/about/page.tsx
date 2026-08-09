@@ -144,15 +144,13 @@ export default function AboutPage() {
           <div className="flex gap-4 justify-center flex-wrap">
             <a
               href="/booking"
-              className="px-8 py-3.5 rounded-full font-display text-[1.05rem] text-white shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all"
-              style={{ backgroundColor: "#64d8ec" }}
+              className="btn-primary"
             >
               Book Now
             </a>
             <a
               href="/shop"
-              className="px-8 py-3.5 rounded-full font-display text-[1.05rem] text-white shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all"
-              style={{ backgroundColor: "#3fc9a0" }}
+              className="btn-secondary"
             >
               Shop
             </a>

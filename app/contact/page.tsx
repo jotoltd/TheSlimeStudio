@@ -129,8 +129,7 @@ export default function ContactPage() {
               <button
                 type="submit"
                 disabled={status === "sending"}
-                className="px-10 py-3.5 rounded-full font-display text-[1rem] text-white shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all disabled:opacity-60"
-                style={{ backgroundColor: "#ff2d78" }}
+                className="btn-primary disabled:opacity-60"
               >
                 {status === "sending" ? "Sending..." : status === "sent" ? "Sent! ✓" : status === "error" ? "Error — try again" : "Send Message"}
               </button>
@@ -171,16 +170,14 @@ export default function ContactPage() {
           <div className="flex gap-4 justify-center items-center flex-wrap">
             <Link
               href="/booking"
-              className="px-8 py-3.5 rounded-full font-display text-[1rem] text-white shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all"
-              style={{ backgroundColor: "#ff2d78" }}
+              className="btn-primary"
             >
               Book Now
             </Link>
             <span style={{ color: "#ff2d78" }}>♥</span>
             <Link
               href="/shop"
-              className="px-8 py-3.5 rounded-full font-display text-[1rem] text-white shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all"
-              style={{ backgroundColor: "#3fc9a0" }}
+              className="btn-secondary"
             >
               Shop
             </Link>
