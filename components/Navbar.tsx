@@ -7,9 +7,9 @@ import { useState } from "react";
 const navLinks = [
   { href: "/", label: "Home" },
   { href: "/about", label: "About" },
-  { href: "/parties", label: "Parties & Birthdays" },
+  { href: "/parties", label: "Parties" },
   { href: "/shop", label: "Shop" },
-  { href: "/subscribe", label: "Subscription Box" },
+  { href: "/subscribe", label: "Subscribe" },
   { href: "/faqs", label: "FAQs" },
   { href: "/contact", label: "Contact" },
 ];
@@ -29,12 +29,12 @@ export default function Navbar() {
           />
         </Link>
 
-        <ul className="hidden md:flex items-center gap-0.5">
+        <ul className="hidden md:flex items-center gap-0 whitespace-nowrap">
           {navLinks.map((link) => (
             <li key={link.href}>
               <Link
                 href={link.href}
-                className={`font-display text-[1.05rem] px-3 py-2 rounded-full transition-all ${
+                className={`font-display text-[0.9rem] px-2.5 py-2 rounded-full transition-all whitespace-nowrap ${
                   pathname === link.href
                     ? "bg-ink/10 text-ink font-semibold"
                     : "text-ink/70 hover:bg-ink/8 hover:text-ink"
