@@ -10,6 +10,7 @@ const navLinks = [
   { href: "/parties", label: "Parties & Birthdays" },
   { href: "/shop", label: "Shop" },
   { href: "/subscribe", label: "Subscription Box" },
+  { href: "/faqs", label: "FAQs" },
   { href: "/contact", label: "Contact" },
 ];
 
