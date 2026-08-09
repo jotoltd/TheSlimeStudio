@@ -33,17 +33,39 @@ export default function SubscribePage() {
       return;
     }
     setSubmitting(true);
-    const { error: insertError } = await supabase.from("subscribers").insert({
+    const { data: inserted, error: insertError } = await supabase.from("subscribers").insert({
       name: form.name.trim(),
       email: form.email.trim(),
       phone: form.phone.trim() || null,
       address: form.address.trim(),
       postcode: form.postcode.trim(),
-    });
+    }).select().single();
     setSubmitting(false);
-    if (insertError) {
+    if (insertError || !inserted) {
       setError("Something went wrong. Please try again.");
       return;
+    }
+
+    // Redirect to Stripe Checkout for first payment
+    try {
+      const res = await fetch("/api/create-subscription-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subscriberId: (inserted as { id: string }).id,
+          name: form.name.trim(),
+          email: form.email.trim(),
+          price: Number(settings?.price || 0),
+          boxName: settings?.box_name || "Slime Subscription",
+        }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+        return;
+      }
+    } catch {
+      // If Stripe fails, show success anyway
     }
     setSubmitted(true);
   }

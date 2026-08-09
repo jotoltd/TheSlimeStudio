@@ -14,6 +14,10 @@ export default function DashboardPage() {
   const [siteSettings, setSiteSettings] = useState<SiteSettings | null>(null);
   const [maintDate, setMaintDate] = useState("");
   const [savingMaint, setSavingMaint] = useState(false);
+  const [stripeMode, setStripeMode] = useState<"live" | "test">("test");
+  const [stripeConfigured, setStripeConfigured] = useState(false);
+  const [switchingMode, setSwitchingMode] = useState(false);
+  const [stripeMsg, setStripeMsg] = useState("");
 
   useEffect(() => {
     loadData();
@@ -51,6 +55,31 @@ export default function DashboardPage() {
     }
 
     setLoadingData(false);
+
+    // Load Stripe mode
+    try {
+      const res = await fetch("/api/stripe-mode");
+      const data = await res.json();
+      if (data.mode) setStripeMode(data.mode);
+      setStripeConfigured(data.configured);
+    } catch {}
+  }
+
+  async function switchStripeMode(newMode: "live" | "test") {
+    setSwitchingMode(true);
+    setStripeMsg("");
+    try {
+      const res = await fetch("/api/stripe-mode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: newMode }),
+      });
+      const data = await res.json();
+      if (data.note) {
+        setStripeMsg(data.note);
+      }
+    } catch {}
+    setSwitchingMode(false);
   }
 
   async function toggleMaintenance() {
@@ -128,6 +157,56 @@ export default function DashboardPage() {
           </div>
           <p className="text-[0.8rem] text-ink-soft mt-2">
             This date powers the countdown timer on the maintenance page.
+          </p>
+        </div>
+      </div>
+
+      {/* Stripe Mode */}
+      <div className="bg-white rounded-[20px] p-7 shadow-sm mb-8">
+        <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
+          <div>
+            <h2 className="font-display text-[1.1rem] mb-1">Stripe Payment Mode</h2>
+            <p className="text-[0.85rem] text-ink-soft">
+              {stripeConfigured
+                ? stripeMode === "live"
+                  ? "LIVE — real payments are being processed"
+                  : "TEST — sandbox mode, no real charges are made"
+                : "Not configured — add Stripe API keys to .env.local to enable payments"}
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => switchStripeMode("test")}
+              disabled={switchingMode}
+              className={`px-5 py-2.5 rounded-full text-[0.85rem] font-medium transition-all ${
+                stripeMode === "test"
+                  ? "bg-canary-yellow text-ink shadow-sm"
+                  : "bg-ink/5 text-ink-soft hover:bg-ink/10"
+              }`}
+            >
+              Test (Sandbox)
+            </button>
+            <button
+              onClick={() => switchStripeMode("live")}
+              disabled={switchingMode}
+              className={`px-5 py-2.5 rounded-full text-[0.85rem] font-medium transition-all ${
+                stripeMode === "live"
+                  ? "bg-green-500 text-white shadow-sm"
+                  : "bg-ink/5 text-ink-soft hover:bg-ink/10"
+              }`}
+            >
+              Live
+            </button>
+          </div>
+        </div>
+        {stripeMsg && (
+          <div className="bg-sky-blue-light/20 rounded-xl p-4 text-[0.85rem] text-ink-soft">
+            {stripeMsg}
+          </div>
+        )}
+        <div className="border-t border-ink/[0.08] pt-4 mt-4">
+          <p className="text-[0.8rem] text-ink-soft">
+            Switching modes requires setting <code className="bg-ink/5 px-1.5 py-0.5 rounded">STRIPE_MODE=live</code> or <code className="bg-ink/5 px-1.5 py-0.5 rounded">STRIPE_MODE=test</code> in <code className="bg-ink/5 px-1.5 py-0.5 rounded">.env.local</code> and restarting the server. Both booking and subscription payments use the active mode.
           </p>
         </div>
       </div>

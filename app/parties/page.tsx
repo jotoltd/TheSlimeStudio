@@ -121,7 +121,7 @@ export default function PartiesPage() {
       return;
     }
 
-    const { error } = await supabase.from("bookings").insert({
+    const { data: inserted, error } = await supabase.from("bookings").insert({
       date,
       time_slot: timeSlot,
       people: children,
@@ -130,9 +130,9 @@ export default function PartiesPage() {
       email,
       phone: phone || null,
       is_party: true,
-    });
+    }).select().single();
 
-    if (error) {
+    if (error || !inserted) {
       setStatus("error");
       setErrorMsg("Something went wrong. Please try again.");
     } else {
@@ -142,6 +142,31 @@ export default function PartiesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, date, timeSlot, people: children, totalPrice, isParty: true }),
       }).catch(() => {});
+
+      // Create Stripe Checkout session and redirect
+      try {
+        const res = await fetch("/api/create-checkout-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            bookingId: (inserted as { id: string }).id,
+            name,
+            email,
+            date,
+            timeSlot,
+            people: children,
+            totalPrice,
+            isParty: true,
+          }),
+        });
+        const data = await res.json();
+        if (data.url) {
+          window.location.href = data.url;
+          return;
+        }
+      } catch {
+        // If Stripe fails, still show confirmation
+      }
       setStatus("sent");
       setName("");
       setEmail("");
