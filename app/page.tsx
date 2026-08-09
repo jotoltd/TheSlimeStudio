@@ -8,7 +8,15 @@ export default function HomePage() {
       <Navbar />
 
       {/* Hero */}
-      <header className="relative pt-[60px] pb-[70px] overflow-hidden text-center" style={{ backgroundColor: "#ffc4fb" }}>
+      <header className="relative pt-[60px] pb-[70px] overflow-hidden text-center">
+        <div className="absolute inset-0 z-[1]">
+          <img
+            src="/images/hero.JPG"
+            alt=""
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(255,196,251,0.85) 0%, rgba(171,247,220,0.75) 100%)" }} />
+        </div>
         <div className="container relative z-[2]">
           <div className="max-w-lg mx-auto">
             <img
@@ -19,7 +27,7 @@ export default function HomePage() {
             <h1 className="font-display text-[1.8rem] md:text-[2.4rem] leading-[1.15] mb-5 text-ink">
               Get Ready To Make Some Slime!
             </h1>
-            <p className="text-[1.05rem] text-ink/75 mb-8 max-w-[480px] mx-auto leading-relaxed">
+            <p className="text-[1.05rem] text-ink/80 mb-8 max-w-[480px] mx-auto leading-relaxed">
               Welcome to The Slime Studio — a colourful, hands-on experience
               where you can mix, stretch and create your very own slime.
               Choose your colours, add your favourite extras and make a slime
