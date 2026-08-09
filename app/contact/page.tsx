@@ -25,12 +25,6 @@ const INFO_CARDS = [
     title: "Email",
     lines: ["hello@theslimestudio.co.uk"],
   },
-  {
-    bg: "#3fa9f5",
-    icon: "📞",
-    title: "Telephone",
-    lines: ["01263 123 456"],
-  },
 ];
 
 export default function ContactPage() {
@@ -105,16 +99,6 @@ export default function ContactPage() {
             </div>
 
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-ink/40">📞</span>
-              <input
-                name="phone"
-                type="tel"
-                placeholder="Your phone number"
-                className="w-full pl-11 pr-4 py-3.5 rounded-xl border-2 border-white bg-white text-sm focus:outline-none focus:border-[#ff2d78]"
-              />
-            </div>
-
-            <div className="relative">
               <span className="absolute left-4 top-4 text-ink/40">💬</span>
               <textarea
                 name="message"
@@ -136,7 +120,7 @@ export default function ContactPage() {
             </div>
           </form>
 
-          <div className="space-y-6">
+          <div className="space-y-6 flex flex-col items-center text-center">
             {INFO_CARDS.map((card) => (
               <div key={card.title} className="flex items-start gap-4">
                 <div
@@ -145,7 +129,7 @@ export default function ContactPage() {
                 >
                   {card.icon}
                 </div>
-                <div>
+                <div className="text-left">
                   <h3 className="font-display text-[0.95rem] uppercase tracking-wide text-ink mb-1">
                     {card.title}
                   </h3>
