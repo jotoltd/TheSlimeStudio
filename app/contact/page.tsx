@@ -59,7 +59,7 @@ export default function ContactPage() {
       <Navbar />
 
       {/* Hero */}
-      <section className="pt-16 pb-14 md:pt-20 md:pb-16 text-center" style={{ backgroundColor: "#ffc4fb" }}>
+      <section className="pt-16 pb-14 md:pt-20 md:pb-16 text-center px-4" style={{ backgroundColor: "#ffc4fb" }}>
         <div className="container">
           <h1 className="font-display text-[2.2rem] md:text-[3.4rem] text-ink mb-3 uppercase">
             Contact Us
@@ -73,10 +73,10 @@ export default function ContactPage() {
       </section>
 
       {/* Form + Info */}
-      <section className="py-14 md:py-16" style={{ backgroundColor: "#ffc4fb" }}>
-        <div className="container grid lg:grid-cols-[1.6fr_1fr] gap-10">
+      <section className="py-14 md:py-16 px-4" style={{ backgroundColor: "#ffc4fb" }}>
+        <div className="container grid lg:grid-cols-[1.6fr_1fr] gap-8 md:gap-10">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-ink/40">👤</span>
                 <input

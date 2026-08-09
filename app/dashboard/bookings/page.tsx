@@ -127,22 +127,22 @@ export default function BookingsAdminPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-5 mb-8">
-        <div className="bg-white rounded-[20px] p-6 shadow-sm">
-          <div className="text-[0.75rem] text-ink-soft uppercase tracking-wider mb-2">Bookings Shown</div>
-          <div className="font-display text-[1.8rem]">{loading ? "--" : bookings.length}</div>
+      <div className="grid grid-cols-3 md:grid-cols-3 gap-3 md:gap-5 mb-6 md:mb-8">
+        <div className="bg-white rounded-[16px] md:rounded-[20px] p-4 md:p-6 shadow-sm">
+          <div className="text-[0.65rem] md:text-[0.75rem] text-ink-soft uppercase tracking-wider mb-1 md:mb-2">Bookings Shown</div>
+          <div className="font-display text-[1.2rem] md:text-[1.8rem]">{loading ? "--" : bookings.length}</div>
         </div>
-        <div className="bg-white rounded-[20px] p-6 shadow-sm">
-          <div className="text-[0.75rem] text-ink-soft uppercase tracking-wider mb-2">Total People</div>
-          <div className="font-display text-[1.8rem]">{loading ? "--" : totalPeople}</div>
+        <div className="bg-white rounded-[16px] md:rounded-[20px] p-4 md:p-6 shadow-sm">
+          <div className="text-[0.65rem] md:text-[0.75rem] text-ink-soft uppercase tracking-wider mb-1 md:mb-2">Total People</div>
+          <div className="font-display text-[1.2rem] md:text-[1.8rem]">{loading ? "--" : totalPeople}</div>
         </div>
-        <div className="bg-white rounded-[20px] p-6 shadow-sm">
-          <div className="text-[0.75rem] text-ink-soft uppercase tracking-wider mb-2">Revenue</div>
-          <div className="font-display text-[1.8rem]">{loading ? "--" : `£${totalRevenue.toFixed(2)}`}</div>
+        <div className="bg-white rounded-[16px] md:rounded-[20px] p-4 md:p-6 shadow-sm">
+          <div className="text-[0.65rem] md:text-[0.75rem] text-ink-soft uppercase tracking-wider mb-1 md:mb-2">Revenue</div>
+          <div className="font-display text-[1.2rem] md:text-[1.8rem]">{loading ? "--" : `£${totalRevenue.toFixed(2)}`}</div>
         </div>
       </div>
 
-      <div className="bg-white rounded-[20px] p-8 shadow-sm">
+      <div className="bg-white rounded-[16px] md:rounded-[20px] p-4 md:p-8 shadow-sm">
         {loading ? (
           <div className="text-center py-10 text-ink-soft text-[0.9rem]">Loading bookings...</div>
         ) : bookings.length === 0 ? (

@@ -84,31 +84,31 @@ export default function SubscribePage() {
     <>
       <Navbar />
 
-      <section className="py-[70px] text-center" style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}>
+      <section className="py-[50px] md:py-[70px] text-center px-4" style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}>
         <div className="container">
-          <h1 className="font-display text-[2rem] md:text-[3.2rem] mt-3 mb-3 text-ink">{settings.box_name}</h1>
-          <p className="text-[1.1rem] text-ink/80 max-w-[560px] mx-auto">
+          <h1 className="font-display text-[1.5rem] md:text-[3.2rem] mt-3 mb-3 text-ink">{settings.box_name}</h1>
+          <p className="text-[0.95rem] md:text-[1.1rem] text-ink/80 max-w-[560px] mx-auto">
             A brand new themed slime, delivered to your door every month.
           </p>
         </div>
       </section>
 
       <section className="section">
-        <div className="container max-w-4xl grid md:grid-cols-2 gap-10">
+        <div className="container max-w-4xl grid md:grid-cols-2 gap-6 md:gap-10">
           {/* Details */}
           <div>
             {settings.current_theme && (
-              <div className="bg-white rounded-3xl p-8 shadow-sm mb-6">
+              <div className="bg-white rounded-3xl p-5 md:p-8 shadow-sm mb-4 md:mb-6">
                 <span className="eyebrow">This Month&apos;s Theme</span>
-                <h2 className="font-display text-xl mt-2 mb-3">{settings.current_theme}</h2>
+                <h2 className="font-display text-lg md:text-xl mt-2 mb-3">{settings.current_theme}</h2>
                 {settings.current_theme_description && (
                   <p className="text-sm text-ink-soft">{settings.current_theme_description}</p>
                 )}
               </div>
             )}
 
-            <div className="bg-white rounded-3xl p-8 shadow-sm mb-6">
-              <div className="font-display text-3xl mb-1">
+            <div className="bg-white rounded-3xl p-5 md:p-8 shadow-sm mb-4 md:mb-6">
+              <div className="font-display text-2xl md:text-3xl mb-1">
                 £{Number(settings.price).toFixed(2)}
                 <span className="text-sm text-ink-soft font-body"> / {settings.frequency}</span>
               </div>
@@ -116,8 +116,8 @@ export default function SubscribePage() {
             </div>
 
             {settings.perks && settings.perks.length > 0 && (
-              <div className="bg-white rounded-3xl p-8 shadow-sm">
-                <h3 className="font-display text-lg mb-4">What&apos;s Included</h3>
+              <div className="bg-white rounded-3xl p-5 md:p-8 shadow-sm">
+                <h3 className="font-display text-base md:text-lg mb-3 md:mb-4">What&apos;s Included</h3>
                 <ul className="space-y-3">
                   {settings.perks.map((perk, i) => (
                     <li key={i} className="flex items-start gap-3 text-sm text-ink-soft">
@@ -131,11 +131,11 @@ export default function SubscribePage() {
           </div>
 
           {/* Signup form */}
-          <div className="bg-white rounded-3xl p-8 shadow-sm">
+          <div className="bg-white rounded-3xl p-5 md:p-8 shadow-sm">
             {submitted ? (
-              <div className="text-center py-10">
-                <div className="text-4xl mb-4">🎉</div>
-                <h3 className="font-display text-xl mb-2">You&apos;re In!</h3>
+              <div className="text-center py-8 md:py-10">
+                <div className="text-3xl md:text-4xl mb-4">🎉</div>
+                <h3 className="font-display text-lg md:text-xl mb-2">You&apos;re In!</h3>
                 <p className="text-sm text-ink-soft">
                   Thanks for subscribing — we&apos;ll be in touch with payment
                   details and your first box will be on its way soon.
@@ -143,7 +143,7 @@ export default function SubscribePage() {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
-                <h3 className="font-display text-lg mb-2">Subscribe Now</h3>
+                <h3 className="font-display text-base md:text-lg mb-2">Subscribe Now</h3>
                 <div>
                   <label className="block text-sm font-medium mb-2">Full Name *</label>
                   <input

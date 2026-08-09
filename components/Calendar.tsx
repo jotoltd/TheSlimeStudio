@@ -121,7 +121,7 @@ export default function Calendar({
       </button>
 
       {open && (
-        <div className="absolute z-20 mt-2 bg-white rounded-2xl shadow-lg border border-ink/10 p-4 w-[300px]">
+        <div className="absolute z-20 mt-2 bg-white rounded-2xl shadow-lg border border-ink/10 p-3 md:p-4 w-[270px] md:w-[300px] left-0 sm:left-auto sm:right-0">
           <div className="flex items-center justify-between mb-3">
             <button type="button" onClick={prevMonth} className="w-8 h-8 rounded-full hover:bg-ink/5 grid place-items-center text-ink/60">
               ‹

@@ -4,7 +4,7 @@ export default function Footer() {
   return (
     <footer className="text-ink pt-[60px] pb-[30px]" style={{ backgroundColor: "#FBF8F5" }}>
       <div className="container">
-        <div className="grid md:grid-cols-[2fr_1fr_1fr_1fr] gap-10 pb-12 border-b border-ink/15">
+        <div className="grid grid-cols-2 md:grid-cols-[2fr_1fr_1fr_1fr] gap-6 md:gap-10 pb-8 md:pb-12 border-b border-ink/15">
           <div>
             <div className="flex items-center gap-2.5 mb-4">
               <img
@@ -49,7 +49,7 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="flex flex-wrap justify-between items-center pt-6 text-[0.85rem] text-ink-soft">
+        <div className="flex flex-wrap justify-between items-center gap-3 pt-6 text-[0.85rem] text-ink-soft">
           <p>© 2026 The Slime Studio. All rights reserved.</p>
           <div className="flex gap-4 items-center">
             <Link href="/admin" className="text-[0.8rem] text-ink-soft/60 hover:text-ink transition-colors">Admin</Link>

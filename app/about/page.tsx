@@ -103,26 +103,26 @@ export default function AboutPage() {
           <span className="absolute bottom-6 left-16 w-5 h-5 rounded-full bg-[#64d8ec]" />
         </div>
 
-        <div className="container relative z-[1] text-center max-w-2xl">
+        <div className="container relative z-[1] text-center max-w-2xl px-4">
           <div className="flex items-center justify-center gap-3 mb-4">
             <span className="text-[#64d8ec]">↝</span>
-            <h2 className="font-display text-[1.1rem] tracking-wide text-[#64d8ec] uppercase">About</h2>
+            <h2 className="font-display text-[1rem] md:text-[1.1rem] tracking-wide text-[#64d8ec] uppercase">About</h2>
             <span className="text-[#64d8ec]">↜</span>
           </div>
-          <h1 className="font-display text-[2rem] md:text-[2.8rem] leading-[1.15] mb-6 text-ink">
+          <h1 className="font-display text-[1.6rem] md:text-[2.8rem] leading-[1.15] mb-6 text-ink">
             The Slime Studio
           </h1>
-          <p className="text-[1.05rem] text-ink/80 mb-4 leading-relaxed">
+          <p className="text-[0.95rem] md:text-[1.05rem] text-ink/80 mb-4 leading-relaxed">
             The Slime Studio is a colourful, hands-on experience where you can
             mix, stretch and create your very own slime.
           </p>
-          <p className="text-[1.05rem] text-ink/80 mb-14 leading-relaxed">
+          <p className="text-[0.95rem] md:text-[1.05rem] text-ink/80 mb-10 md:mb-14 leading-relaxed">
             Choose your colours, experiment with textures and add your
             favourite extras to make something completely your own — then
             take your creation home with you.
           </p>
 
-          <div className="grid sm:grid-cols-3 gap-8 mb-16 text-left sm:text-center">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 md:gap-8 mb-10 md:mb-16 text-left sm:text-center">
             {features.map((f) => (
               <div key={f.title} className="flex flex-col items-center">
                 <div
@@ -138,7 +138,7 @@ export default function AboutPage() {
             ))}
           </div>
 
-          <p className="font-display text-[1.3rem] md:text-[1.6rem] text-ink mb-6 italic">
+          <p className="font-display text-[1.1rem] md:text-[1.6rem] text-ink mb-6 italic">
             Ready to make your own?
           </p>
           <div className="flex gap-4 justify-center flex-wrap">

@@ -160,12 +160,12 @@ export default function PartiesPage() {
       </div>
 
       {/* Intro */}
-      <section className="text-center py-14 md:py-16 px-6" style={{ backgroundColor: "#ffc4fb" }}>
+      <section className="text-center py-10 md:py-16 px-4" style={{ backgroundColor: "#ffc4fb" }}>
         <div className="container max-w-2xl">
-          <h1 className="font-display text-[1.8rem] md:text-[2.6rem] leading-[1.2] mb-3 text-ink">
+          <h1 className="font-display text-[1.4rem] md:text-[2.6rem] leading-[1.2] mb-3 text-ink">
             Make Their Celebration <span style={{ color: "#ff2d78" }}>Extra Slimy!</span> 🥳
           </h1>
-          <p className="text-[1rem] text-ink/80 leading-relaxed mb-4">
+          <p className="text-[0.9rem] md:text-[1rem] text-ink/80 leading-relaxed mb-4">
             Celebrate at The Slime Studio with your own private slime-making
             experience. Our parties include 1.5 hours of private studio time,
             where every guest gets to choose their type of slime, add their
@@ -187,7 +187,7 @@ export default function PartiesPage() {
             <span className="text-ink/40">↜</span>
           </div>
 
-          <div className="grid sm:grid-cols-3 gap-5 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-5 mb-8">
             {PRICE_TIERS.map((tier) => (
               <div key={tier.label} className="bg-white rounded-2xl p-7 text-center shadow-sm">
                 <div className="mb-2 flex justify-center"><Heart size={24} color={tier.color} /></div>
@@ -201,7 +201,7 @@ export default function PartiesPage() {
             ))}
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5">
             {AGE_GROUPS.map((g) => (
               <div key={g.title} className="bg-white/70 rounded-2xl p-6 flex items-center gap-4 border border-ink/5">
                 <Heart size={24} />
@@ -224,7 +224,7 @@ export default function PartiesPage() {
             <span className="text-ink/40">↜</span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 md:gap-6">
             {INCLUDED.map((item) => (
               <div key={item.label} className="flex flex-col items-center text-center">
                 <div className="w-16 h-16 rounded-full overflow-hidden bg-white grid place-items-center mb-3 shadow-sm">
@@ -247,9 +247,9 @@ export default function PartiesPage() {
           </div>
 
           {status === "sent" ? (
-            <div className="bg-white rounded-3xl p-10 shadow-sm text-center">
-              <div className="text-5xl mb-4">🎉</div>
-              <h3 className="font-display text-2xl mb-3">Party Booking Confirmed!</h3>
+            <div className="bg-white rounded-3xl p-6 md:p-10 shadow-sm text-center">
+              <div className="text-4xl md:text-5xl mb-4">🎉</div>
+              <h3 className="font-display text-lg md:text-2xl mb-3">Party Booking Confirmed!</h3>
               <p className="text-ink-soft mb-6">
                 Thanks for booking your Slime Studio party. We&apos;ve sent a
                 confirmation to your email — see you soon!
@@ -259,9 +259,9 @@ export default function PartiesPage() {
               </button>
             </div>
           ) : dateFull ? (
-            <div className="bg-white rounded-3xl p-10 shadow-sm text-center">
+            <div className="bg-white rounded-3xl p-6 md:p-10 shadow-sm text-center">
               <div className="mb-4 flex justify-center"><Heart size={32} /></div>
-              <h3 className="font-display text-xl mb-3">Date Fully Booked</h3>
+              <h3 className="font-display text-lg md:text-xl mb-3">Date Fully Booked</h3>
               <p className="text-ink-soft mb-6">
                 Sorry, this date is fully booked. Please choose another date.
               </p>
@@ -270,7 +270,7 @@ export default function PartiesPage() {
               </div>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-8 shadow-sm">
+            <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-5 md:p-8 shadow-sm">
               <div className="mb-6">
                 <label className="block text-sm font-medium mb-2">Date</label>
                 <Calendar value={date} onChange={setDate} min={todayISO()} />
@@ -281,7 +281,7 @@ export default function PartiesPage() {
                 {loadingSlots ? (
                   <div className="text-sm text-ink-soft py-4 text-center">Checking availability...</div>
                 ) : (
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 md:gap-3">
                     {TIME_SLOTS.map((slot) => {
                       const rem = remaining[slot] ?? SLOT_CAPACITY;
                       const full = rem === 0;
@@ -331,7 +331,7 @@ export default function PartiesPage() {
                 </div>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-4 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">Your Name</label>
                   <input
@@ -367,9 +367,9 @@ export default function PartiesPage() {
                 />
               </div>
 
-              <div className="flex items-center justify-between bg-sky-blue-light/20 rounded-xl p-5 mb-6">
-                <span className="text-sm text-ink-soft">Total ({children} × £{priceForCount(children).toFixed(2)})</span>
-                <span className="font-display text-2xl">£{totalPrice.toFixed(2)}</span>
+              <div className="flex items-center justify-between bg-sky-blue-light/20 rounded-xl p-4 md:p-5 mb-6">
+                <span className="text-xs md:text-sm text-ink-soft">Total ({children} × £{priceForCount(children).toFixed(2)})</span>
+                <span className="font-display text-xl md:text-2xl">£{totalPrice.toFixed(2)}</span>
               </div>
 
               {errorMsg && (

@@ -131,10 +131,10 @@ export default function BookingPage() {
     <>
       <Navbar />
 
-      <section className="py-[70px] text-center" style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}>
+      <section className="py-[50px] md:py-[70px] text-center" style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}>
         <div className="container">
-          <h1 className="font-display text-[2rem] md:text-[3.2rem] mt-3 mb-3 text-ink">Book a Slime-Making Session</h1>
-          <p className="text-[1.1rem] text-ink/80 max-w-[560px] mx-auto">
+          <h1 className="font-display text-[1.5rem] md:text-[3.2rem] mt-3 mb-3 text-ink">Book a Slime-Making Session</h1>
+          <p className="text-[0.95rem] md:text-[1.1rem] text-ink/80 max-w-[560px] mx-auto">
             One-hour sessions, every hour. Up to {SLOT_CAPACITY} slime makers per slot at
             £{pricePerPerson.toFixed(2)} per person.
           </p>
@@ -144,9 +144,9 @@ export default function BookingPage() {
       <section className="section">
         <div className="container max-w-2xl">
           {status === "sent" ? (
-            <div className="bg-white rounded-3xl p-10 shadow-sm text-center">
-              <div className="text-5xl mb-4">🎉</div>
-              <h2 className="font-display text-2xl mb-3">Booking Confirmed!</h2>
+            <div className="bg-white rounded-3xl p-6 md:p-10 shadow-sm text-center">
+              <div className="text-4xl md:text-5xl mb-4">🎉</div>
+              <h2 className="font-display text-xl md:text-2xl mb-3">Booking Confirmed!</h2>
               <p className="text-ink-soft mb-6">
                 Thanks for booking with The Slime Studio. We&apos;ve sent a
                 confirmation to your email — see you soon!
@@ -156,8 +156,8 @@ export default function BookingPage() {
               </button>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-8 shadow-sm">
-              <h2 className="font-display text-xl mb-6 text-center">Choose Your Session</h2>
+            <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-5 md:p-8 shadow-sm">
+              <h2 className="font-display text-lg md:text-xl mb-5 md:mb-6 text-center">Choose Your Session</h2>
 
               <div className="mb-6">
                 <label className="block text-sm font-medium mb-2">Date</label>
@@ -169,7 +169,7 @@ export default function BookingPage() {
                 {loadingSlots ? (
                   <div className="text-sm text-ink-soft py-4 text-center">Checking availability...</div>
                 ) : (
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 md:gap-3">
                     {TIME_SLOTS.map((slot) => {
                       const rem = remaining[slot] ?? SLOT_CAPACITY;
                       const full = rem === 0;
@@ -221,7 +221,7 @@ export default function BookingPage() {
                 </div>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-4 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">Your Name</label>
                   <input
@@ -257,9 +257,9 @@ export default function BookingPage() {
                 />
               </div>
 
-              <div className="flex items-center justify-between bg-sky-blue-light/20 rounded-xl p-5 mb-6">
-                <span className="text-sm text-ink-soft">Total ({people} × £{pricePerPerson.toFixed(2)})</span>
-                <span className="font-display text-2xl">£{totalPrice.toFixed(2)}</span>
+              <div className="flex items-center justify-between bg-sky-blue-light/20 rounded-xl p-4 md:p-5 mb-6">
+                <span className="text-xs md:text-sm text-ink-soft">Total ({people} × £{pricePerPerson.toFixed(2)})</span>
+                <span className="font-display text-xl md:text-2xl">£{totalPrice.toFixed(2)}</span>
               </div>
 
               {errorMsg && (

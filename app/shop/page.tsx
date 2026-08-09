@@ -92,30 +92,30 @@ export default function ShopPage() {
       {!settingsLoaded ? (
         <div className="min-h-[60vh] grid place-items-center text-ink-soft">Loading...</div>
       ) : !shopLive ? (
-        <section className="py-[70px] text-center" style={{ backgroundColor: "#ffc4fb" }}>
+        <section className="py-[50px] md:py-[70px] text-center px-4" style={{ backgroundColor: "#ffc4fb" }}>
           <div className="container max-w-2xl">
             <div className="flex items-center justify-center gap-3 mb-4">
               <span className="text-[#64d8ec]">↝</span>
               <h2 className="font-display text-[1.3rem] tracking-wide text-[#64d8ec] uppercase">Shop</h2>
               <span className="text-[#64d8ec]">↜</span>
             </div>
-            <h1 className="font-display text-[2.2rem] md:text-[3.2rem] leading-[1.1] mb-2 text-ink">
+            <h1 className="font-display text-[1.6rem] md:text-[3.2rem] leading-[1.1] mb-2 text-ink">
               Something Slimy
             </h1>
-            <h1 className="font-display text-[2.2rem] md:text-[3.2rem] leading-[1.1] mb-6" style={{ color: "#E91E8C" }}>
+            <h1 className="font-display text-[1.6rem] md:text-[3.2rem] leading-[1.1] mb-4 md:mb-6" style={{ color: "#E91E8C" }}>
               Is Coming...
             </h1>
             <div className="mb-6">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="#ff2d78" className="mx-auto"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
             </div>
-            <p className="text-[1.05rem] text-ink/80 mb-2">
+            <p className="text-[0.9rem] md:text-[1.05rem] text-ink/80 mb-2">
               We&apos;re busy getting <span className="font-semibold" style={{ color: "#E91E8C" }}>The Slime Studio Shop</span> ready!
             </p>
-            <p className="text-[1.05rem] text-ink/80 mb-6">
+            <p className="text-[0.9rem] md:text-[1.05rem] text-ink/80 mb-6">
               Soon you&apos;ll be able to bring the Slime Studio experience home
               with our range of <span className="font-semibold" style={{ color: "#E91E8C" }}>DIY slime kits, ready-made slimes, accessories, charms, add-ins and more.</span>
             </p>
-            <p className="text-[1.05rem] text-ink/80 mb-10">
+            <p className="text-[0.9rem] md:text-[1.05rem] text-ink/80 mb-8 md:mb-10">
               Perfect for slime lovers, gifts, rainy days or simply when you
               need a little more slime in your life.
             </p>
@@ -126,15 +126,15 @@ export default function ShopPage() {
               <span className="text-[#64d8ec]">↜</span>
             </div>
 
-            <div className="grid grid-cols-4 gap-3 md:gap-5 mb-8">
+            <div className="grid grid-cols-4 gap-2 md:gap-5 mb-6 md:mb-8">
               {[
                 { label: "Days", value: countdown.days },
                 { label: "Hours", value: countdown.hours },
                 { label: "Minutes", value: countdown.minutes },
                 { label: "Seconds", value: countdown.seconds },
               ].map((unit) => (
-                <div key={unit.label} className="bg-white rounded-2xl py-4 shadow-md">
-                  <div className="font-display text-[1.8rem] md:text-[2.4rem]" style={{ color: "#E91E8C" }}>
+                <div key={unit.label} className="bg-white rounded-xl md:rounded-2xl py-3 md:py-4 shadow-md">
+                  <div className="font-display text-[1.2rem] md:text-[2.4rem]" style={{ color: "#E91E8C" }}>
                     {String(unit.value).padStart(2, "0")}
                   </div>
                   <div className="text-[0.75rem] font-semibold text-ink uppercase tracking-wide">{unit.label}</div>
@@ -142,17 +142,17 @@ export default function ShopPage() {
               ))}
             </div>
 
-            <p className="flex items-center justify-center gap-3 font-display text-[1rem] mb-10" style={{ color: "#E91E8C" }}>
+            <p className="flex items-center justify-center gap-2 md:gap-3 font-display text-[0.85rem] md:text-[1rem] mb-8 md:mb-10" style={{ color: "#E91E8C" }}>
               <span>★</span> Our online shop is almost ready! <span>★</span>
             </p>
 
-            <div className="border-2 border-dashed rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 bg-white/40" style={{ borderColor: "#E91E8C" }}>
+            <div className="border-2 border-dashed rounded-2xl p-4 md:p-8 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 bg-white/40" style={{ borderColor: "#E91E8C" }}>
               <div className="flex items-center gap-4 text-left">
                 <span className="text-3xl">💬</span>
                 <div>
                   <p className="font-display text-[1.05rem]" style={{ color: "#E91E8C" }}>Can&apos;t Wait?</p>
                   <p className="font-display text-[0.95rem] text-ink">Our gift cards are available!</p>
-                  <p className="text-[0.85rem] text-ink-soft mt-1">Please send us a message.</p>
+                  <p className="text-[0.85rem] md:text-[0.9rem] text-ink-soft mt-6 md:mt-8">Please send us a message.</p>
                 </div>
               </div>
 

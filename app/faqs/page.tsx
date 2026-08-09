@@ -22,9 +22,9 @@ export default function FAQsPage() {
       <Navbar />
 
       {/* Hero */}
-      <section className="pt-16 pb-14 md:pt-20 md:pb-16 text-center" style={{ backgroundColor: "#ffc4fb" }}>
+      <section className="pt-16 pb-14 md:pt-20 md:pb-16 text-center px-4" style={{ backgroundColor: "#ffc4fb" }}>
         <div className="container">
-          <h1 className="font-display text-[2.2rem] md:text-[3.4rem] text-ink mb-3 uppercase">
+          <h1 className="font-display text-[1.5rem] md:text-[3.4rem] text-ink mb-3 uppercase">
             Frequently Asked Questions
           </h1>
           <div className="mb-4 flex justify-center"><Heart size={28} /></div>
@@ -35,12 +35,12 @@ export default function FAQsPage() {
       </section>
 
       {/* FAQ Accordion */}
-      <section className="py-14 md:py-16" style={{ backgroundColor: "#ffc4fb" }}>
+      <section className="py-10 md:py-16 px-4" style={{ backgroundColor: "#ffc4fb" }}>
         <div className="container max-w-3xl">
-          <div className="space-y-4">
+          <div className="space-y-3 md:space-y-4">
             {faqs.map((faq, i) => (
-              <details key={i} className="bg-white rounded-2xl p-6 shadow-sm group">
-                <summary className="font-display text-[1.05rem] cursor-pointer list-none flex justify-between items-center gap-4">
+              <details key={i} className="bg-white rounded-2xl p-4 md:p-6 shadow-sm group">
+                <summary className="font-display text-[0.9rem] md:text-[1.05rem] cursor-pointer list-none flex justify-between items-center gap-3 md:gap-4">
                   <span>{faq.q}</span>
                   <span
                     className="text-2xl flex-shrink-0 transition-transform group-open:rotate-45"
