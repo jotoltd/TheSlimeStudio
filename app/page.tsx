@@ -79,17 +79,17 @@ export default function HomePage() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {[
-              { icon: "📅", title: "Pick a Slot", desc: "Choose a date and hour that suits you" },
-              { icon: "🧪", title: "Mix & Create", desc: "Colours, scents and textures — all included" },
-              { icon: "🫧", title: "Squish & Play", desc: "An hour of hands-on sensory fun" },
-              { icon: "🎁", title: "Take It Home", desc: "Pack up your creation to keep" },
-            ].map((step, i) => (
+              { img: "/images/slime_studio_slime_toppings.jpg.jpeg", title: "Pick a Slot", desc: "Choose a date and hour that suits you" },
+              { img: "/images/slime_mixing.jpg.jpeg", title: "Mix & Create", desc: "Colours, scents and textures — all included" },
+              { img: "/images/pink_slime_action.jpg.jpeg", title: "Squish & Play", desc: "An hour of hands-on sensory fun" },
+              { img: "/images/purple_finished_slime.jpg.jpeg", title: "Take It Home", desc: "Pack up your creation to keep" },
+            ].map((step) => (
               <div
                 key={step.title}
                 className="reveal bg-white rounded-[20px] p-9 text-center shadow-sm hover:-translate-y-1.5 hover:shadow-lg transition-all"
               >
-                <div className="w-[72px] h-[72px] rounded-full grid place-items-center text-[2rem] mx-auto mb-4" style={{ backgroundColor: i % 2 === 0 ? "#abf7dc" : "#ffc4fb" }}>
-                  {step.icon}
+                <div className="w-[72px] h-[72px] rounded-full overflow-hidden mx-auto mb-4">
+                  <img src={step.img} alt={step.title} className="w-full h-full object-cover" />
                 </div>
                 <h3 className="font-display text-[1.15rem] mb-1.5">{step.title}</h3>
                 <p className="text-[0.9rem] text-ink-soft">{step.desc}</p>
