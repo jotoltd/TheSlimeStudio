@@ -29,6 +29,7 @@ export default function MaintenanceGate({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const [checked, setChecked] = useState(false);
   const [inMaintenance, setInMaintenance] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [launchDate, setLaunchDate] = useState(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
   const countdown = useCountdown(launchDate);
 
@@ -38,19 +39,18 @@ export default function MaintenanceGate({ children }: { children: React.ReactNod
       return;
     }
 
-    supabase
-      .from("site_settings")
-      .select("*")
-      .eq("id", 1)
-      .single()
-      .then(({ data }) => {
-        if (data) {
-          const s = data as SiteSettings;
-          setInMaintenance(s.maintenance_mode);
-          setLaunchDate(new Date(s.launch_date));
-        }
-        setChecked(true);
-      });
+    Promise.all([
+      supabase.from("site_settings").select("*").eq("id", 1).single(),
+      fetch("/api/session").then((res) => (res.ok ? res.json() : null)),
+    ]).then(([{ data }, session]) => {
+      if (data) {
+        const s = data as SiteSettings;
+        setInMaintenance(s.maintenance_mode);
+        setLaunchDate(new Date(s.launch_date));
+      }
+      setIsAdmin(!!session?.authenticated);
+      setChecked(true);
+    });
   }, [pathname]);
 
   if (!checked) {
@@ -59,6 +59,18 @@ export default function MaintenanceGate({ children }: { children: React.ReactNod
 
   if (!inMaintenance) {
     return <>{children}</>;
+  }
+
+  if (isAdmin) {
+    return (
+      <>
+        <div className="bg-red-400 text-white text-center text-[0.8rem] py-2 px-4 sticky top-0 z-[2000]">
+          🔧 Maintenance mode is ON for visitors — you're viewing the live site as admin.{" "}
+          <a href="/dashboard" className="underline font-medium">Go to dashboard</a>
+        </div>
+        {children}
+      </>
+    );
   }
 
   return (
