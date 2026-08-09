@@ -1,9 +1,37 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { supabase } from "@/lib/supabase";
+
+const INFO_CARDS = [
+  {
+    bg: "#ff2d78",
+    icon: "📍",
+    title: "Visit Us",
+    lines: ["The Slime Studio", "Unit A Feathers Yard", "Holt", "NR25 6BF"],
+  },
+  {
+    bg: "#3fc9a0",
+    icon: "🕐",
+    title: "Opening Hours",
+    lines: ["Mon–Sat 10am–4pm", "Sunday closed"],
+  },
+  {
+    bg: "#8b5fbf",
+    icon: "✉️",
+    title: "Email",
+    lines: ["hello@theslimestudio.co.uk"],
+  },
+  {
+    bg: "#3fa9f5",
+    icon: "📞",
+    title: "Telephone",
+    lines: ["01263 123 456"],
+  },
+];
 
 export default function ContactPage() {
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
@@ -17,8 +45,7 @@ export default function ContactPage() {
     const { error } = await supabase.from("enquiries").insert({
       name: formData.get("name"),
       email: formData.get("email"),
-      enquiry_type: formData.get("type"),
-      preferred_date: formData.get("date") || null,
+      phone: formData.get("phone") || null,
       message: formData.get("message"),
     });
 
@@ -35,92 +62,132 @@ export default function ContactPage() {
   return (
     <>
       <Navbar />
-      <section className="py-[70px] text-center" style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}>
+
+      {/* Hero */}
+      <section className="pt-16 pb-14 md:pt-20 md:pb-16 text-center" style={{ backgroundColor: "#ffc4fb" }}>
         <div className="container">
-          <h1 className="font-display text-[2rem] md:text-[3.2rem] mt-3 mb-3 text-ink">Contact Us</h1>
-          <p className="text-[1.1rem] text-ink/80 max-w-[560px] mx-auto">
-            Visit us in Holt, Norfolk or send us a message — we'd love to hear
-            from you.
+          <h1 className="font-display text-[2.2rem] md:text-[3.4rem] text-ink mb-3 uppercase">
+            Contact Us
+          </h1>
+          <div className="text-2xl mb-4" style={{ color: "#ff2d78" }}>♥</div>
+          <p className="text-[1rem] text-ink/75 max-w-[560px] mx-auto leading-relaxed">
+            Got a question about visiting The Slime Studio, your booking or
+            anything else? Drop us a message and we&apos;ll get back to you soon.
           </p>
         </div>
       </section>
 
-      <section className="section">
-        <div className="container max-w-2xl">
-          <div className="bg-white rounded-3xl p-8 shadow-sm mb-8">
-            <h2 className="font-display text-xl mb-4">Visit the Studio</h2>
-            <p className="text-ink-soft text-sm mb-2">12 Market Place, Holt, Norfolk, NR25 6BW</p>
-            <p className="text-ink-soft text-sm mb-2">hello@theslimestudio.co.uk</p>
-            <p className="text-ink-soft text-sm">07900 123456</p>
-            <p className="text-ink-soft text-sm mt-4">
-              <strong>Opening Hours:</strong><br />
-              Saturday — 10am–4pm<br />
-              School holidays — Mon–Sat, 10am–4pm
-            </p>
-            <div className="flex gap-3 mt-5">
-              <a href="#" aria-label="Instagram" className="w-10 h-10 rounded-full bg-bright-lavender/15 grid place-items-center text-lg hover:bg-bright-lavender transition-colors">📷</a>
-              <a href="#" aria-label="TikTok" className="w-10 h-10 rounded-full bg-bright-lavender/15 grid place-items-center text-lg hover:bg-bright-lavender transition-colors">🎵</a>
-              <a href="#" aria-label="Facebook" className="w-10 h-10 rounded-full bg-bright-lavender/15 grid place-items-center text-lg hover:bg-bright-lavender transition-colors">👍</a>
+      {/* Form + Info */}
+      <section className="py-14 md:py-16" style={{ backgroundColor: "#ffc4fb" }}>
+        <div className="container grid lg:grid-cols-[1.6fr_1fr] gap-10">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-ink/40">👤</span>
+                <input
+                  name="name"
+                  type="text"
+                  required
+                  placeholder="Your name"
+                  className="w-full pl-11 pr-4 py-3.5 rounded-xl border-2 border-white bg-white text-sm focus:outline-none focus:border-[#ff2d78]"
+                />
+              </div>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-ink/40">✉️</span>
+                <input
+                  name="email"
+                  type="email"
+                  required
+                  placeholder="Your email"
+                  className="w-full pl-11 pr-4 py-3.5 rounded-xl border-2 border-white bg-white text-sm focus:outline-none focus:border-[#ff2d78]"
+                />
+              </div>
             </div>
-          </div>
 
-          <div className="rounded-3xl overflow-hidden shadow-sm mb-8 aspect-[16/9]">
-            <iframe
-              title="The Slime Studio location map"
-              src="https://www.google.com/maps?q=12+Market+Place,+Holt,+Norfolk,+NR25+6BW&output=embed"
-              width="100%"
-              height="100%"
-              style={{ border: 0 }}
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-            />
-          </div>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-ink/40">📞</span>
+              <input
+                name="phone"
+                type="tel"
+                placeholder="Your phone number"
+                className="w-full pl-11 pr-4 py-3.5 rounded-xl border-2 border-white bg-white text-sm focus:outline-none focus:border-[#ff2d78]"
+              />
+            </div>
 
-          <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-8 shadow-sm">
-            <h2 className="font-display text-xl mb-6 text-center">Send a Message</h2>
-            <div className="grid md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Your Name</label>
-                <input name="name" type="text" required placeholder="Jane Smith"
-                  className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Email Address</label>
-                <input name="email" type="email" required placeholder="jane@example.com"
-                  className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
-              </div>
+            <div className="relative">
+              <span className="absolute left-4 top-4 text-ink/40">💬</span>
+              <textarea
+                name="message"
+                required
+                rows={5}
+                placeholder="How can we help?"
+                className="w-full pl-11 pr-4 py-3.5 rounded-xl border-2 border-white bg-white text-sm focus:outline-none focus:border-[#ff2d78] resize-none"
+              />
             </div>
-            <div className="grid md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Enquiry Type</label>
-                <select name="type"
-                  className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light">
-                  <option>Book a Workshop</option>
-                  <option>Birthday Party</option>
-                  <option>School Visit</option>
-                  <option>General Enquiry</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Preferred Date</label>
-                <input name="date" type="date"
-                  className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
-              </div>
-            </div>
-            <div className="mb-6">
-              <label className="block text-sm font-medium mb-2">Message</label>
-              <textarea name="message" required rows={4} placeholder="Tell us about your group size, ages, and what you'd love to create..."
-                className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
-            </div>
-            <div className="text-center">
-              <button type="submit" disabled={status === "sending"}
-                className="btn-primary disabled:opacity-60">
+
+            <div className="text-center pt-2">
+              <button
+                type="submit"
+                disabled={status === "sending"}
+                className="px-10 py-3.5 rounded-full font-display text-[1rem] text-white shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all disabled:opacity-60"
+                style={{ backgroundColor: "#ff2d78" }}
+              >
                 {status === "sending" ? "Sending..." : status === "sent" ? "Sent! ✓" : status === "error" ? "Error — try again" : "Send Message"}
               </button>
             </div>
           </form>
+
+          <div className="space-y-6">
+            {INFO_CARDS.map((card) => (
+              <div key={card.title} className="flex items-start gap-4">
+                <div
+                  className="w-11 h-11 rounded-full grid place-items-center flex-shrink-0 text-lg text-white shadow-sm"
+                  style={{ backgroundColor: card.bg }}
+                >
+                  {card.icon}
+                </div>
+                <div>
+                  <h3 className="font-display text-[0.95rem] uppercase tracking-wide text-ink mb-1">
+                    {card.title}
+                  </h3>
+                  {card.lines.map((line) => (
+                    <p key={line} className="text-[0.9rem] text-ink/75 leading-snug">
+                      {line}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
+
+      {/* CTA */}
+      <section className="py-12 text-center" style={{ backgroundColor: "#ffc4fb" }}>
+        <div className="container">
+          <h2 className="font-display text-[1.2rem] md:text-[1.5rem] text-ink mb-6 uppercase">
+            Ready To Make Some Slime?
+          </h2>
+          <div className="flex gap-4 justify-center items-center flex-wrap">
+            <Link
+              href="/booking"
+              className="px-8 py-3.5 rounded-full font-display text-[1rem] text-white shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all"
+              style={{ backgroundColor: "#ff2d78" }}
+            >
+              Book Now
+            </Link>
+            <span style={{ color: "#ff2d78" }}>♥</span>
+            <Link
+              href="/shop"
+              className="px-8 py-3.5 rounded-full font-display text-[1rem] text-white shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all"
+              style={{ backgroundColor: "#3fc9a0" }}
+            >
+              Shop
+            </Link>
+          </div>
+        </div>
+      </section>
+
       <Footer />
     </>
   );

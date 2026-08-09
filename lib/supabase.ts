@@ -22,6 +22,7 @@ export type Enquiry = {
   id: string;
   name: string | null;
   email: string | null;
+  phone: string | null;
   enquiry_type: string | null;
   preferred_date: string | null;
   message: string | null;

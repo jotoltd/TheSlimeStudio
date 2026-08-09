@@ -43,6 +43,7 @@ export default function EnquiriesAdminPage() {
                 <tr className="text-left text-[0.75rem] text-ink-soft uppercase tracking-wider">
                   <th className="pb-3 pr-4">Name</th>
                   <th className="pb-3 pr-4">Email</th>
+                  <th className="pb-3 pr-4">Phone</th>
                   <th className="pb-3 pr-4">Type</th>
                   <th className="pb-3 pr-4">Preferred Date</th>
                   <th className="pb-3 pr-4">Message</th>
@@ -57,6 +58,7 @@ export default function EnquiriesAdminPage() {
                     <td className="py-3 pr-4 text-[0.9rem]">
                       {e.email ? <a href={`mailto:${e.email}`} className="hover:text-bright-lavender">{e.email}</a> : "--"}
                     </td>
+                    <td className="py-3 pr-4 text-[0.9rem]">{e.phone || "--"}</td>
                     <td className="py-3 pr-4 text-[0.9rem]">{e.enquiry_type || "--"}</td>
                     <td className="py-3 pr-4 text-[0.9rem]">
                       {e.preferred_date ? new Date(e.preferred_date).toLocaleDateString("en-GB") : "--"}
