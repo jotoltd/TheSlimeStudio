@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Heart } from "@/components/Heart";
+import Calendar from "@/components/Calendar";
 import { supabase, TIME_SLOTS, SLOT_CAPACITY, MAX_DAILY_BOOKINGS } from "@/lib/supabase";
 
 function todayISO() {
@@ -264,26 +265,15 @@ export default function PartiesPage() {
               <p className="text-ink-soft mb-6">
                 Sorry, this date is fully booked. Please choose another date.
               </p>
-              <input
-                type="date"
-                value={date}
-                min={todayISO()}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full max-w-xs mx-auto px-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-[#ff2d78] text-center"
-              />
+              <div className="max-w-xs mx-auto">
+                <Calendar value={date} onChange={setDate} min={todayISO()} />
+              </div>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-8 shadow-sm">
               <div className="mb-6">
                 <label className="block text-sm font-medium mb-2">Date</label>
-                <input
-                  type="date"
-                  value={date}
-                  min={todayISO()}
-                  onChange={(e) => setDate(e.target.value)}
-                  required
-                  className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-[#ff2d78]"
-                />
+                <Calendar value={date} onChange={setDate} min={todayISO()} />
               </div>
 
               <div className="mb-6">

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import Calendar from "@/components/Calendar";
 import { supabase, TIME_SLOTS, SLOT_CAPACITY, PRICE_PER_PERSON, MAX_DAILY_BOOKINGS } from "@/lib/supabase";
 import type { BookingSettings } from "@/lib/supabase";
 
@@ -160,14 +161,7 @@ export default function BookingPage() {
 
               <div className="mb-6">
                 <label className="block text-sm font-medium mb-2">Date</label>
-                <input
-                  type="date"
-                  value={date}
-                  min={todayISO()}
-                  onChange={(e) => setDate(e.target.value)}
-                  required
-                  className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
-                />
+                <Calendar value={date} onChange={setDate} min={todayISO()} />
               </div>
 
               <div className="mb-6">
