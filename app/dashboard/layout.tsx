@@ -7,9 +7,13 @@ import Link from "next/link";
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: "🏠" },
   { href: "/dashboard/bookings", label: "Bookings", icon: "📅" },
-  { href: "/dashboard/shop", label: "Shop", icon: "🛍️" },
-  { href: "/dashboard/subscriptions", label: "Subscriptions", icon: "📦" },
+  { href: "/dashboard/revenue", label: "Revenue", icon: "�" },
+  { href: "/dashboard/subscribers", label: "Subscribers", icon: "📦" },
+  { href: "/dashboard/shop", label: "Shop", icon: "�️" },
   { href: "/dashboard/enquiries", label: "Enquiries", icon: "✉️" },
+  { href: "/dashboard/email-logs", label: "Email Logs", icon: "📧" },
+  { href: "/dashboard/content", label: "Content", icon: "📝" },
+  { href: "/dashboard/export", label: "Export", icon: "📤" },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

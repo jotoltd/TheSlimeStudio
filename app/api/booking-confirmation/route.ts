@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getResend, EMAIL_FROM, bookingConfirmationHtml } from "@/lib/email";
+import { getResend, EMAIL_FROM, bookingConfirmationHtml, logEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
 
@@ -32,9 +32,12 @@ export async function POST(req: NextRequest) {
       subject: isParty ? "Party Booking Confirmed — The Slime Studio" : "Booking Confirmed — The Slime Studio",
       html: bookingConfirmationHtml({ name, date, timeSlot, people, totalPrice, isParty }),
     });
+    const subject = isParty ? "Party Booking Confirmed — The Slime Studio" : "Booking Confirmed — The Slime Studio";
+    await logEmail(email, subject, isParty ? "booking_confirmation" : "booking_confirmation", "sent");
     return NextResponse.json({ success: true, emailSent: true });
   } catch (e) {
     console.error("Failed to send confirmation email:", e);
+    await logEmail(email, "Booking confirmation", "booking_confirmation", "failed");
     return NextResponse.json({ success: true, emailSent: false });
   }
 }

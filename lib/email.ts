@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { supabaseAdmin } from "@/lib/supabase";
 
 let _resend: Resend | null = null;
 
@@ -7,6 +8,12 @@ export function getResend(): Resend | null {
     _resend = new Resend(process.env.RESEND_API_KEY);
   }
   return _resend;
+}
+
+export async function logEmail(recipient: string, subject: string, type: string, status: string = "sent") {
+  try {
+    await supabaseAdmin.from("email_logs").insert({ recipient, subject, type, status });
+  } catch {}
 }
 
 export const EMAIL_FROM = "The Slime Studio <noreply@theslimestudio.co.uk>";

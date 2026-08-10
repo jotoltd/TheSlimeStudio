@@ -1,20 +1,27 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase, type Booking, type BookingSettings } from "@/lib/supabase";
+import { supabase, type Booking, type BookingSettings, TIME_SLOTS } from "@/lib/supabase";
+
+type ViewMode = "calendar" | "table";
 
 export default function BookingsAdminPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"upcoming" | "past" | "all">("upcoming");
+  const [viewMode, setViewMode] = useState<ViewMode>("calendar");
   const [price, setPrice] = useState("");
   const [savingPrice, setSavingPrice] = useState(false);
   const [priceMsg, setPriceMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
+  const [editForm, setEditForm] = useState({ date: "", time_slot: "", people: 1, name: "", email: "", phone: "" });
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editMsg, setEditMsg] = useState("");
+  const [calMonth, setCalMonth] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadBookings();
-  }, [filter]);
+  useEffect(() => { loadBookings(); }, [filter]);
 
   useEffect(() => {
     supabase.from("booking_settings").select("*").eq("id", 1).single().then(({ data }) => {
@@ -22,31 +29,12 @@ export default function BookingsAdminPage() {
     });
   }, []);
 
-  async function savePrice() {
-    const value = parseFloat(price);
-    if (isNaN(value) || value < 0) {
-      setPriceMsg({ type: "err", text: "Please enter a valid price." });
-      return;
-    }
-    setSavingPrice(true);
-    setPriceMsg(null);
-    const { error } = await supabase.from("booking_settings").update({ price_per_person: value }).eq("id", 1);
-    setSavingPrice(false);
-    if (error) {
-      setPriceMsg({ type: "err", text: "Failed to save — you may need to run the database migration. See Supabase SQL editor." });
-    } else {
-      setPriceMsg({ type: "ok", text: "Price updated successfully!" });
-    }
-  }
-
   async function loadBookings() {
     setLoading(true);
     const todayStr = new Date().toISOString().split("T")[0];
     let query = supabase.from("bookings").select("*");
-
     if (filter === "upcoming") query = query.gte("date", todayStr);
     if (filter === "past") query = query.lt("date", todayStr);
-
     const { data } = await query.order("date", { ascending: filter !== "past" }).order("time_slot", { ascending: true });
     if (data) setBookings(data as Booking[]);
     setLoading(false);
@@ -56,22 +44,52 @@ export default function BookingsAdminPage() {
     if (!confirm(`Cancel the booking for "${name}"? This cannot be undone. An email will be sent to the customer.`)) return;
     setCancellingId(id);
     try {
-      const res = await fetch("/api/cancel-booking", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingId: id }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        alert(data.error || "Failed to cancel booking");
-      }
-    } catch {
-      alert("Failed to cancel booking");
-    }
+      const res = await fetch("/api/cancel-booking", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bookingId: id }) });
+      if (!res.ok) { const data = await res.json(); alert(data.error || "Failed to cancel booking"); }
+    } catch { alert("Failed to cancel booking"); }
     setCancellingId(null);
     loadBookings();
   }
 
+  function startEdit(b: Booking) {
+    setEditingBooking(b);
+    setEditForm({ date: b.date, time_slot: b.time_slot, people: b.people, name: b.name, email: b.email, phone: b.phone || "" });
+    setEditMsg("");
+  }
+
+  async function saveEdit() {
+    if (!editingBooking) return;
+    setSavingEdit(true); setEditMsg("");
+    const { error } = await supabase.from("bookings").update({
+      date: editForm.date, time_slot: editForm.time_slot, people: editForm.people,
+      name: editForm.name, email: editForm.email, phone: editForm.phone || null,
+    }).eq("id", editingBooking.id);
+    setSavingEdit(false);
+    if (error) { setEditMsg("Failed to save: " + error.message); }
+    else { setEditMsg("Booking updated successfully!"); setEditingBooking(null); loadBookings(); }
+  }
+
+  async function savePrice() {
+    const value = parseFloat(price);
+    if (isNaN(value) || value < 0) { setPriceMsg({ type: "err", text: "Please enter a valid price." }); return; }
+    setSavingPrice(true); setPriceMsg(null);
+    const { error } = await supabase.from("booking_settings").update({ price_per_person: value }).eq("id", 1);
+    setSavingPrice(false);
+    if (error) setPriceMsg({ type: "err", text: "Failed to save." });
+    else setPriceMsg({ type: "ok", text: "Price updated successfully!" });
+  }
+
+  const calYear = calMonth.getFullYear();
+  const calMonthIdx = calMonth.getMonth();
+  const firstDay = new Date(calYear, calMonthIdx, 1);
+  const lastDay = new Date(calYear, calMonthIdx + 1, 0);
+  const startWeekday = firstDay.getDay();
+  const daysInMonth = lastDay.getDate();
+  const monthName = calMonth.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+
+  const bookingsByDate: Record<string, Booking[]> = {};
+  bookings.forEach((b) => { const d = b.date; if (!bookingsByDate[d]) bookingsByDate[d] = []; bookingsByDate[d].push(b); });
+  const selectedDateBookings = selectedDate ? (bookingsByDate[selectedDate] || []) : [];
   const totalPeople = bookings.reduce((sum, b) => sum + b.people, 0);
   const totalRevenue = bookings.reduce((sum, b) => sum + Number(b.total_price), 0);
 
@@ -82,18 +100,17 @@ export default function BookingsAdminPage() {
           <h1 className="font-display text-[1.6rem] md:text-[2rem]">Bookings</h1>
           <p className="text-ink-soft text-[0.9rem] mt-1">Manage all slime-making session bookings.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {(["upcoming", "past", "all"] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-4 py-2 rounded-full text-[0.85rem] font-medium capitalize transition-all ${
-                filter === f ? "bg-sky-blue-light text-ink shadow-sm" : "bg-white text-ink hover:bg-sky-blue-light/20"
-              }`}
-            >
+            <button key={f} onClick={() => setFilter(f)}
+              className={`px-4 py-2 rounded-full text-[0.85rem] font-medium capitalize transition-all ${filter === f ? "bg-sky-blue-light text-ink shadow-sm" : "bg-white text-ink hover:bg-sky-blue-light/20"}`}>
               {f}
             </button>
           ))}
+          <div className="flex rounded-full overflow-hidden border border-ink/10">
+            <button onClick={() => setViewMode("calendar")} className={`px-4 py-2 text-[0.85rem] font-medium ${viewMode === "calendar" ? "bg-ink text-white" : "bg-white text-ink"}`}>Calendar</button>
+            <button onClick={() => setViewMode("table")} className={`px-4 py-2 text-[0.85rem] font-medium ${viewMode === "table" ? "bg-ink text-white" : "bg-white text-ink"}`}>Table</button>
+          </div>
         </div>
       </div>
 
@@ -103,33 +120,18 @@ export default function BookingsAdminPage() {
         <div className="flex items-center gap-3">
           <div className="flex items-center border-2 border-ink/15 rounded-xl px-4 py-2.5 w-40">
             <span className="text-ink-soft mr-1">£</span>
-            <input
-              type="number"
-              step="0.50"
-              min="0"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              className="w-full outline-none text-sm"
-            />
+            <input type="number" step="0.50" min="0" value={price} onChange={(e) => setPrice(e.target.value)} className="w-full outline-none text-sm" />
           </div>
-          <button
-            onClick={savePrice}
-            disabled={savingPrice}
-            className="px-6 py-2.5 rounded-full bg-sky-blue-light text-ink text-[0.9rem] font-medium disabled:opacity-60 hover:-translate-y-0.5 hover:shadow-sm transition-all"
-          >
+          <button onClick={savePrice} disabled={savingPrice} className="px-6 py-2.5 rounded-full bg-sky-blue-light text-ink text-[0.9rem] font-medium disabled:opacity-60 hover:-translate-y-0.5 hover:shadow-sm transition-all">
             {savingPrice ? "Saving..." : "Save Price"}
           </button>
         </div>
-        {priceMsg && (
-          <p className={`text-[0.85rem] mt-3 ${priceMsg.type === "ok" ? "text-green-600" : "text-red-600"}`}>
-            {priceMsg.text}
-          </p>
-        )}
+        {priceMsg && <p className={`text-[0.85rem] mt-3 ${priceMsg.type === "ok" ? "text-green-600" : "text-red-600"}`}>{priceMsg.text}</p>}
       </div>
 
-      <div className="grid grid-cols-3 md:grid-cols-3 gap-3 md:gap-5 mb-6 md:mb-8">
+      <div className="grid grid-cols-3 gap-3 md:gap-5 mb-6 md:mb-8">
         <div className="bg-white rounded-[16px] md:rounded-[20px] p-4 md:p-6 shadow-sm">
-          <div className="text-[0.65rem] md:text-[0.75rem] text-ink-soft uppercase tracking-wider mb-1 md:mb-2">Bookings Shown</div>
+          <div className="text-[0.65rem] md:text-[0.75rem] text-ink-soft uppercase tracking-wider mb-1 md:mb-2">Bookings</div>
           <div className="font-display text-[1.2rem] md:text-[1.8rem]">{loading ? "--" : bookings.length}</div>
         </div>
         <div className="bg-white rounded-[16px] md:rounded-[20px] p-4 md:p-6 shadow-sm">
@@ -142,63 +144,183 @@ export default function BookingsAdminPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-[16px] md:rounded-[20px] p-4 md:p-8 shadow-sm">
-        {loading ? (
-          <div className="text-center py-10 text-ink-soft text-[0.9rem]">Loading bookings...</div>
-        ) : bookings.length === 0 ? (
-          <div className="text-center py-10 text-ink-soft text-[0.9rem]">No {filter !== "all" ? filter : ""} bookings found.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="text-left text-[0.75rem] text-ink-soft uppercase tracking-wider">
-                  <th className="pb-3 pr-4">Date</th>
-                  <th className="pb-3 pr-4">Time</th>
-                  <th className="pb-3 pr-4">People</th>
-                  <th className="pb-3 pr-4">Price</th>
-                  <th className="pb-3 pr-4">Payment</th>
-                  <th className="pb-3 pr-4">Name</th>
-                  <th className="pb-3 pr-4">Contact</th>
-                  <th className="pb-3">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {bookings.map((b) => (
-                  <tr key={b.id} className="border-t border-ink/[0.08]">
-                    <td className="py-3 pr-4 text-[0.9rem]">{new Date(b.date).toLocaleDateString("en-GB")}</td>
-                    <td className="py-3 pr-4 text-[0.9rem]">{b.time_slot}</td>
-                    <td className="py-3 pr-4 text-[0.9rem]">{b.people}</td>
-                    <td className="py-3 pr-4 text-[0.9rem]">£{Number(b.total_price).toFixed(2)}</td>
-                    <td className="py-3 pr-4 text-[0.9rem]">
-                      <span className={`px-2 py-0.5 rounded-full text-[0.75rem] font-medium ${
-                        b.payment_status === "paid" ? "bg-green-100 text-green-700" :
-                        b.payment_status === "refunded" ? "bg-orange-100 text-orange-700" :
-                        b.payment_status === "expired" ? "bg-red-100 text-red-700" :
-                        "bg-ink/5 text-ink-soft"
-                      }`}>
-                        {b.payment_status || "unpaid"}
+      {loading ? (
+        <div className="bg-white rounded-[20px] p-8 shadow-sm text-center text-ink-soft text-[0.9rem]">Loading bookings...</div>
+      ) : viewMode === "calendar" ? (
+        <div className="grid lg:grid-cols-[1fr_400px] gap-6">
+          <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm">
+            <div className="flex items-center justify-between mb-6">
+              <button onClick={() => setCalMonth(new Date(calYear, calMonthIdx - 1, 1))} className="w-10 h-10 rounded-full bg-ink/5 hover:bg-ink/10 transition-colors text-ink">←</button>
+              <h2 className="font-display text-[1.2rem]">{monthName}</h2>
+              <button onClick={() => setCalMonth(new Date(calYear, calMonthIdx + 1, 1))} className="w-10 h-10 rounded-full bg-ink/5 hover:bg-ink/10 transition-colors text-ink">→</button>
+            </div>
+            <div className="grid grid-cols-7 gap-1 md:gap-2 mb-2">
+              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+                <div key={d} className="text-center text-[0.7rem] md:text-[0.8rem] text-ink-soft font-medium py-2">{d}</div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-1 md:gap-2">
+              {Array.from({ length: startWeekday }).map((_, i) => <div key={`empty-${i}`} />)}
+              {Array.from({ length: daysInMonth }).map((_, i) => {
+                const day = i + 1;
+                const dateStr = `${calYear}-${String(calMonthIdx + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                const dayBookings = bookingsByDate[dateStr] || [];
+                const hasBookings = dayBookings.length > 0;
+                const isSelected = selectedDate === dateStr;
+                const isToday = dateStr === new Date().toISOString().split("T")[0];
+                return (
+                  <button key={day} onClick={() => setSelectedDate(dateStr)}
+                    className={`aspect-square rounded-lg md:rounded-xl text-[0.75rem] md:text-[0.9rem] font-medium transition-all relative ${
+                      isSelected ? "bg-sky-blue-light text-ink shadow-sm" :
+                      hasBookings ? "bg-bright-lavender/15 text-ink hover:bg-bright-lavender/25" :
+                      "bg-ink/[0.03] text-ink-soft hover:bg-ink/[0.06]"
+                    } ${isToday ? "ring-2 ring-bright-lavender" : ""}`}>
+                    {day}
+                    {hasBookings && (
+                      <span className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5">
+                        {dayBookings.slice(0, 3).map((_, idx) => <span key={idx} className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-bright-lavender" />)}
                       </span>
-                    </td>
-                    <td className="py-3 pr-4 text-[0.9rem]">{b.name}</td>
-                    <td className="py-3 pr-4 text-[0.9rem]">
-                      <div>{b.email}</div>
-                      {b.phone && <div className="text-ink-soft text-[0.8rem]">{b.phone}</div>}
-                    </td>
-                    <td className="py-3">
-                      <button
-                        onClick={() => cancelBooking(b.id, b.name)}
-                        disabled={cancellingId === b.id}
-                        className="px-3 py-1.5 rounded-lg bg-red-100 text-red-700 text-[0.8rem] hover:bg-red-200 transition-colors disabled:opacity-60"
-                      >
-                        {cancellingId === b.id ? "Cancelling..." : "Cancel"}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        )}
+
+          <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm">
+            {selectedDate ? (
+              <>
+                <h2 className="font-display text-[1.1rem] mb-1">
+                  {new Date(selectedDate).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}
+                </h2>
+                <p className="text-[0.85rem] text-ink-soft mb-5">{selectedDateBookings.length} booking{selectedDateBookings.length !== 1 ? "s" : ""}</p>
+                {selectedDateBookings.length === 0 ? (
+                  <div className="text-center py-8 text-ink-soft text-[0.9rem]">No bookings on this date.</div>
+                ) : (
+                  <div className="space-y-3">
+                    {selectedDateBookings.map((b) => (
+                      <BookingCard key={b.id} b={b} onEdit={() => startEdit(b)} onCancel={() => cancelBooking(b.id, b.name)} cancelling={cancellingId === b.id} />
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-12 text-ink-soft text-[0.9rem]"><div className="text-3xl mb-3">📅</div>Click a date to view bookings</div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="bg-white rounded-[16px] md:rounded-[20px] p-4 md:p-8 shadow-sm">
+          {bookings.length === 0 ? (
+            <div className="text-center py-10 text-ink-soft text-[0.9rem]">No {filter !== "all" ? filter : ""} bookings found.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="text-left text-[0.75rem] text-ink-soft uppercase tracking-wider">
+                    <th className="pb-3 pr-4">Date</th><th className="pb-3 pr-4">Time</th><th className="pb-3 pr-4">People</th>
+                    <th className="pb-3 pr-4">Price</th><th className="pb-3 pr-4">Payment</th><th className="pb-3 pr-4">Name</th>
+                    <th className="pb-3 pr-4">Contact</th><th className="pb-3">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bookings.map((b) => (
+                    <tr key={b.id} className="border-t border-ink/[0.08]">
+                      <td className="py-3 pr-4 text-[0.9rem]">{new Date(b.date).toLocaleDateString("en-GB")}</td>
+                      <td className="py-3 pr-4 text-[0.9rem]">{b.time_slot}</td>
+                      <td className="py-3 pr-4 text-[0.9rem]">{b.people}</td>
+                      <td className="py-3 pr-4 text-[0.9rem]">£{Number(b.total_price).toFixed(2)}</td>
+                      <td className="py-3 pr-4 text-[0.9rem]">
+                        <span className={`px-2 py-0.5 rounded-full text-[0.75rem] font-medium ${
+                          b.payment_status === "paid" ? "bg-green-100 text-green-700" :
+                          b.payment_status === "refunded" ? "bg-orange-100 text-orange-700" :
+                          b.payment_status === "expired" ? "bg-red-100 text-red-700" : "bg-ink/5 text-ink-soft"
+                        }`}>{b.payment_status || "unpaid"}</span>
+                      </td>
+                      <td className="py-3 pr-4 text-[0.9rem]">{b.name}</td>
+                      <td className="py-3 pr-4 text-[0.9rem]"><div>{b.email}</div>{b.phone && <div className="text-ink-soft text-[0.8rem]">{b.phone}</div>}</td>
+                      <td className="py-3">
+                        <div className="flex gap-2">
+                          <button onClick={() => startEdit(b)} className="px-3 py-1.5 rounded-lg bg-sky-blue-light/30 text-ink text-[0.8rem] hover:bg-sky-blue-light/50 transition-colors">Edit</button>
+                          <button onClick={() => cancelBooking(b.id, b.name)} disabled={cancellingId === b.id} className="px-3 py-1.5 rounded-lg bg-red-100 text-red-700 text-[0.8rem] hover:bg-red-200 transition-colors disabled:opacity-60">
+                            {cancellingId === b.id ? "..." : "Cancel"}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {editingBooking && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setEditingBooking(null)}>
+          <div className="bg-white rounded-[24px] p-8 max-w-md w-full shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h2 className="font-display text-[1.2rem] mb-5">Edit Booking</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Date</label>
+                <input type="date" value={editForm.date} onChange={(e) => setEditForm({ ...editForm, date: e.target.value })} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Time Slot</label>
+                <select value={editForm.time_slot} onChange={(e) => setEditForm({ ...editForm, time_slot: e.target.value })} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light">
+                  {TIME_SLOTS.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">People</label>
+                <input type="number" min="1" value={editForm.people} onChange={(e) => setEditForm({ ...editForm, people: parseInt(e.target.value) || 1 })} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Name</label>
+                <input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Email</label>
+                <input type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Phone</label>
+                <input value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
+              </div>
+            </div>
+            {editMsg && <p className={`text-[0.85rem] mt-3 ${editMsg.includes("success") ? "text-green-600" : "text-red-600"}`}>{editMsg}</p>}
+            <div className="flex gap-3 mt-6">
+              <button onClick={saveEdit} disabled={savingEdit} className="flex-1 px-5 py-2.5 rounded-full bg-sky-blue-light text-ink text-[0.9rem] font-medium disabled:opacity-60">{savingEdit ? "Saving..." : "Save Changes"}</button>
+              <button onClick={() => setEditingBooking(null)} className="px-5 py-2.5 rounded-full bg-ink/5 text-ink text-[0.9rem] font-medium hover:bg-ink/10">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BookingCard({ b, onEdit, onCancel, cancelling }: { b: Booking; onEdit: () => void; onCancel: () => void; cancelling: boolean }) {
+  return (
+    <div className="border border-ink/[0.08] rounded-xl p-4 hover:border-ink/15 transition-colors">
+      <div className="flex justify-between items-start mb-2">
+        <div>
+          <span className="font-display text-[1rem]">{b.time_slot}</span>
+          <span className="text-[0.8rem] text-ink-soft ml-2">{b.people} {b.people === 1 ? "person" : "people"}</span>
+        </div>
+        <span className={`px-2 py-0.5 rounded-full text-[0.7rem] font-medium ${
+          b.payment_status === "paid" ? "bg-green-100 text-green-700" :
+          b.payment_status === "refunded" ? "bg-orange-100 text-orange-700" :
+          b.payment_status === "expired" ? "bg-red-100 text-red-700" : "bg-ink/5 text-ink-soft"
+        }`}>{b.payment_status || "unpaid"}</span>
+      </div>
+      <div className="text-[0.9rem] font-medium">{b.name}</div>
+      <div className="text-[0.8rem] text-ink-soft">{b.email}</div>
+      {b.phone && <div className="text-[0.8rem] text-ink-soft">{b.phone}</div>}
+      <div className="text-[0.85rem] font-display mt-1">£{Number(b.total_price).toFixed(2)}</div>
+      <div className="flex gap-2 mt-3">
+        <button onClick={onEdit} className="px-3 py-1.5 rounded-lg bg-sky-blue-light/30 text-ink text-[0.8rem] hover:bg-sky-blue-light/50 transition-colors">Edit</button>
+        <button onClick={onCancel} disabled={cancelling} className="px-3 py-1.5 rounded-lg bg-red-100 text-red-700 text-[0.8rem] hover:bg-red-200 transition-colors disabled:opacity-60">{cancelling ? "Cancelling..." : "Cancel"}</button>
       </div>
     </div>
   );

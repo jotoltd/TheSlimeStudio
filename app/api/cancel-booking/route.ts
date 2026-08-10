@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { verifyToken } from "@/lib/auth";
-import { getResend, EMAIL_FROM, cancellationHtml } from "@/lib/email";
+import { getResend, EMAIL_FROM, cancellationHtml, logEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
 
@@ -84,9 +84,11 @@ export async function POST(req: NextRequest) {
             isParty: b.is_party,
           }),
         });
+        await logEmail(b.email, "Booking Cancelled — The Slime Studio", "cancellation", "sent");
       }
     } catch (e) {
       console.error("Failed to send cancellation email:", e);
+      if (b.email) await logEmail(b.email, "Booking Cancelled — The Slime Studio", "cancellation", "failed");
     }
   }
 
