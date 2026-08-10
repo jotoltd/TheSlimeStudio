@@ -25,7 +25,7 @@ export default function Navbar() {
           <img
             src="/images/header_logo.png"
             alt="The Slime Studio"
-            className="h-[38px] w-auto object-contain flex-shrink-0"
+            className="h-[76px] w-auto object-contain flex-shrink-0"
           />
         </Link>
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Calendar from "@/components/Calendar";
@@ -13,7 +14,8 @@ function todayISO() {
   return d.toISOString().split("T")[0];
 }
 
-export default function BookingPage() {
+function BookingPageInner() {
+  const searchParams = useSearchParams();
   const [date, setDate] = useState(todayISO());
   const [timeSlot, setTimeSlot] = useState<string>("");
   const [people, setPeople] = useState(1);
@@ -22,12 +24,18 @@ export default function BookingPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error" | "paid" | "cancelled">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [pricePerPerson, setPricePerPerson] = useState(PRICE_PER_PERSON);
   const [timeSlots, setTimeSlots] = useState<string[]>(DEFAULT_SLOTS);
   const [slotCapacity, setSlotCapacity] = useState(DEFAULT_CAP);
   const [maxDaily, setMaxDaily] = useState(DEFAULT_MAX);
+
+  useEffect(() => {
+    const urlStatus = searchParams.get("status");
+    if (urlStatus === "paid") setStatus("paid");
+    if (urlStatus === "cancelled") setStatus("cancelled");
+  }, [searchParams]);
 
   useEffect(() => {
     supabase.from("booking_settings").select("*").eq("id", 1).single().then(({ data }) => {
@@ -187,16 +195,30 @@ export default function BookingPage() {
 
       <section className="section">
         <div className="container max-w-2xl">
-          {status === "sent" ? (
+          {status === "sent" || status === "paid" ? (
             <div className="bg-white rounded-3xl p-6 md:p-10 shadow-sm text-center">
               <div className="text-4xl md:text-5xl mb-4">🎉</div>
-              <h2 className="font-display text-xl md:text-2xl mb-3">Booking Confirmed!</h2>
+              <h2 className="font-display text-xl md:text-2xl mb-3">
+                {status === "paid" ? "Payment Successful — Booking Confirmed!" : "Booking Confirmed!"}
+              </h2>
               <p className="text-ink-soft mb-6">
-                Thanks for booking with The Slime Studio. We&apos;ve sent a
-                confirmation to your email — see you soon!
+                {status === "paid"
+                  ? "Your payment has been received and your booking is confirmed. We've sent a confirmation to your email — see you soon!"
+                  : "Thanks for booking with The Slime Studio. We've sent a confirmation to your email — see you soon!"}
               </p>
               <button onClick={() => setStatus("idle")} className="btn-primary">
                 Make Another Booking
+              </button>
+            </div>
+          ) : status === "cancelled" ? (
+            <div className="bg-white rounded-3xl p-6 md:p-10 shadow-sm text-center">
+              <div className="text-4xl md:text-5xl mb-4">😕</div>
+              <h2 className="font-display text-xl md:text-2xl mb-3">Payment Cancelled</h2>
+              <p className="text-ink-soft mb-6">
+                Your booking was created but payment wasn't completed. Don't worry — you can try again below.
+              </p>
+              <button onClick={() => setStatus("idle")} className="btn-primary">
+                Try Again
               </button>
             </div>
           ) : (
@@ -324,5 +346,13 @@ export default function BookingPage() {
 
       <Footer />
     </>
+  );
+}
+
+export default function BookingPage() {
+  return (
+    <Suspense fallback={<div className="min-h-[60vh] grid place-items-center text-ink-soft">Loading...</div>}>
+      <BookingPageInner />
+    </Suspense>
   );
 }

@@ -112,7 +112,6 @@ export default function HomePage() {
       <section className="section">
         <div className="container">
           <div className="text-center mb-12 reveal">
-            <span className="eyebrow">Why Choose Us</span>
             <h2 className="font-display text-[1.8rem] md:text-[2.8rem] mt-4 max-w-3xl mx-auto text-ink">
               Families love making memories at The Slime Studio
             </h2>

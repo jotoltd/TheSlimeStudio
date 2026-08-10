@@ -10,7 +10,7 @@ export default function Footer() {
               <img
                 src="/images/header_logo.png"
                 alt="The Slime Studio"
-                className="w-[140px] h-auto object-contain"
+                className="w-[170px] h-auto object-contain"
               />
             </div>
             <p className="text-[0.9rem] leading-relaxed text-ink-soft">

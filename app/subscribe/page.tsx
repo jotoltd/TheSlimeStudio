@@ -1,17 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { supabase, type SubscriptionSettings } from "@/lib/supabase";
 
-export default function SubscribePage() {
+function SubscribePageInner() {
+  const searchParams = useSearchParams();
   const [settings, setSettings] = useState<SubscriptionSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ name: "", email: "", phone: "", address: "", postcode: "" });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [paid, setPaid] = useState(false);
+  const [cancelled, setCancelled] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    const urlStatus = searchParams.get("status");
+    if (urlStatus === "paid") setPaid(true);
+    if (urlStatus === "cancelled") setCancelled(true);
+  }, [searchParams]);
 
   useEffect(() => {
     supabase
@@ -154,12 +164,28 @@ export default function SubscribePage() {
 
           {/* Signup form */}
           <div className="bg-white rounded-3xl p-5 md:p-8 shadow-sm">
-            {submitted ? (
+            {paid ? (
               <div className="text-center py-8 md:py-10">
                 <div className="text-3xl md:text-4xl mb-4">🎉</div>
-                <h3 className="font-display text-lg md:text-xl mb-2">You&apos;re In!</h3>
+                <h3 className="font-display text-lg md:text-xl mb-2">Payment Successful!</h3>
                 <p className="text-sm text-ink-soft">
-                  Thanks for subscribing — we&apos;ll be in touch with payment
+                  Your subscription is active! Your first slime box will be on its way soon. Keep an eye on your email for updates.
+                </p>
+              </div>
+            ) : cancelled ? (
+              <div className="text-center py-8 md:py-10">
+                <div className="text-3xl md:text-4xl mb-4">😕</div>
+                <h3 className="font-display text-lg md:text-xl mb-2">Payment Cancelled</h3>
+                <p className="text-sm text-ink-soft">
+                  Your subscription wasn't completed. You can try again below.
+                </p>
+              </div>
+            ) : submitted ? (
+              <div className="text-center py-8 md:py-10">
+                <div className="text-3xl md:text-4xl mb-4">🎉</div>
+                <h3 className="font-display text-lg md:text-xl mb-2">You're In!</h3>
+                <p className="text-sm text-ink-soft">
+                  Thanks for subscribing — we'll be in touch with payment
                   details and your first box will be on its way soon.
                 </p>
               </div>
@@ -223,5 +249,13 @@ export default function SubscribePage() {
 
       <Footer />
     </>
+  );
+}
+
+export default function SubscribePage() {
+  return (
+    <Suspense fallback={<div className="min-h-[60vh] grid place-items-center text-ink-soft">Loading...</div>}>
+      <SubscribePageInner />
+    </Suspense>
   );
 }
