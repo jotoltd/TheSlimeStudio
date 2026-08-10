@@ -59,6 +59,7 @@ export default function PartiesPage() {
   const [errorMsg, setErrorMsg] = useState("");
   const [clientSecret, setClientSecret] = useState("");
   const [publishableKey, setPublishableKey] = useState("");
+  const [blockedDates, setBlockedDates] = useState<string[]>([]);
 
   useEffect(() => {
     supabase.from("booking_settings").select("*").eq("id", 1).single().then(({ data }) => {
@@ -69,6 +70,9 @@ export default function PartiesPage() {
         if (s.max_daily_bookings) setMaxDaily(s.max_daily_bookings);
       }
     });
+    fetch("/api/blocked-dates").then(r => r.json()).then(d => {
+      if (d.blockedDates) setBlockedDates(d.blockedDates.map((b: { date: string }) => b.date));
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -357,14 +361,14 @@ export default function PartiesPage() {
                 Sorry, this date is fully booked. Please choose another date.
               </p>
               <div className="max-w-xs mx-auto">
-                <Calendar value={date} onChange={setDate} min={todayISO()} disableDays={[0]} />
+                <Calendar value={date} onChange={setDate} min={todayISO()} disableDays={[0]} blockedDates={blockedDates} />
               </div>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-5 md:p-8 shadow-sm">
               <div className="mb-6">
                 <label className="block text-sm font-medium mb-2">Date</label>
-                <Calendar value={date} onChange={setDate} min={todayISO()} disableDays={[0]} />
+                <Calendar value={date} onChange={setDate} min={todayISO()} disableDays={[0]} blockedDates={blockedDates} />
               </div>
 
               <div className="mb-6">

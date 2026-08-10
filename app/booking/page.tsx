@@ -32,6 +32,7 @@ function BookingPageInner() {
   const [clientSecret, setClientSecret] = useState("");
   const [publishableKey, setPublishableKey] = useState("");
   const [bookingId, setBookingId] = useState("");
+  const [blockedDates, setBlockedDates] = useState<string[]>([]);
   const [pricePerPerson, setPricePerPerson] = useState(PRICE_PER_PERSON);
   const [timeSlots, setTimeSlots] = useState<string[]>(DEFAULT_SLOTS);
   const [slotCapacity, setSlotCapacity] = useState(DEFAULT_CAP);
@@ -53,6 +54,9 @@ function BookingPageInner() {
         if (s.max_daily_bookings) setMaxDaily(s.max_daily_bookings);
       }
     });
+    fetch("/api/blocked-dates").then(r => r.json()).then(d => {
+      if (d.blockedDates) setBlockedDates(d.blockedDates.map((b: { date: string }) => b.date));
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -268,7 +272,7 @@ function BookingPageInner() {
 
               <div className="mb-6">
                 <label className="block text-sm font-medium mb-2">Date</label>
-                <Calendar value={date} onChange={setDate} min={todayISO()} disableDays={[0]} />
+                <Calendar value={date} onChange={setDate} min={todayISO()} disableDays={[0]} blockedDates={blockedDates} />
               </div>
 
               <div className="mb-6">

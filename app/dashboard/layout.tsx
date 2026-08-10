@@ -7,9 +7,10 @@ import Link from "next/link";
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: "🏠" },
   { href: "/dashboard/bookings", label: "Bookings", icon: "📅" },
-  { href: "/dashboard/revenue", label: "Revenue", icon: "�" },
+  { href: "/dashboard/blocked-dates", label: "Blocked Dates", icon: "🚫" },
+  { href: "/dashboard/revenue", label: "Revenue", icon: "💰" },
   { href: "/dashboard/subscribers", label: "Subscribers", icon: "📦" },
-  { href: "/dashboard/shop", label: "Shop", icon: "�️" },
+  { href: "/dashboard/shop", label: "Shop", icon: "🛍️" },
   { href: "/dashboard/enquiries", label: "Enquiries", icon: "✉️" },
   { href: "/dashboard/email-logs", label: "Email Logs", icon: "📧" },
   { href: "/dashboard/content", label: "Content", icon: "📝" },
