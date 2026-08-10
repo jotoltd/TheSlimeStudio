@@ -82,7 +82,7 @@ export default function ContentPage() {
       await supabase.from("site_content").upsert({ key, value }, { onConflict: "key" });
     }
     setSaving(false);
-    setMsg("Content saved! Note: changes to homepage/parties/about text will show on the site once the pages are updated to read from the site_content table.");
+    setMsg("Content saved successfully!");
   }
 
   return (
@@ -138,20 +138,6 @@ export default function ContentPage() {
           {msg && <p className="text-[0.85rem] text-green-600">{msg}</p>}
         </div>
 
-        <div className="mt-6 p-4 bg-sky-blue-light/10 rounded-xl">
-          <p className="text-[0.8rem] text-ink-soft">
-            Note: The site_content table needs to be created in Supabase. Run this SQL in the SQL Editor:
-          </p>
-          <pre className="text-left bg-ink/5 rounded-lg p-3 mt-2 text-[0.7rem] overflow-x-auto">{`CREATE TABLE IF NOT EXISTS public.site_content (
-  key TEXT PRIMARY KEY,
-  value TEXT,
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
-ALTER TABLE public.site_content ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Anon can select site_content" ON public.site_content FOR SELECT TO anon USING (true);
-CREATE POLICY "Anon can update site_content" ON public.site_content FOR UPDATE TO anon USING (true) WITH CHECK (true);
-CREATE POLICY "Anon can insert site_content" ON public.site_content FOR INSERT TO anon WITH CHECK (true);`}</pre>
-        </div>
       </div>
     </div>
   );

@@ -98,9 +98,7 @@ export async function POST(req: NextRequest) {
 
     if (deleteError) {
       return NextResponse.json({
-        error: "Failed to cancel booking. You need to run this SQL in your Supabase SQL Editor:\n\n" +
-          "drop policy if exists \"Anon can delete bookings\" on public.bookings;\n" +
-          "create policy \"Anon can delete bookings\" on public.bookings for delete to anon using (true);"
+        error: "Failed to cancel booking. Please try again."
       }, { status: 500 });
     }
   }

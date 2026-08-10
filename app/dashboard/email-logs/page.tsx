@@ -52,18 +52,6 @@ export default function EmailLogsPage() {
           <div className="text-center py-10 text-ink-soft text-[0.9rem]">
             <div className="text-3xl mb-3">📧</div>
             No email logs yet. Logs will appear here when booking confirmations or cancellations are sent.
-            <p className="text-[0.8rem] mt-3">Note: The email_logs table needs to be created in Supabase. Run this SQL in the SQL Editor:</p>
-            <pre className="text-left bg-ink/5 rounded-xl p-4 mt-2 text-[0.75rem] overflow-x-auto">{`CREATE TABLE IF NOT EXISTS public.email_logs (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  recipient TEXT NOT NULL,
-  subject TEXT NOT NULL,
-  type TEXT NOT NULL,
-  status TEXT DEFAULT 'sent',
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-ALTER TABLE public.email_logs ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Anon can select email_logs" ON public.email_logs FOR SELECT TO anon USING (true);
-CREATE POLICY "Anon can insert email_logs" ON public.email_logs FOR INSERT TO anon WITH CHECK (true);`}</pre>
           </div>
         ) : (
           <div className="overflow-x-auto">

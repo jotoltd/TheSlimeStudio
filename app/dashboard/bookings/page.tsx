@@ -194,12 +194,6 @@ export default function BookingsAdminPage() {
           </button>
           {slotsMsg && <p className={`text-[0.85rem] ${slotsMsg.includes("saved") ? "text-green-600" : "text-red-600"}`}>{slotsMsg}</p>}
         </div>
-        <p className="text-[0.8rem] text-ink-soft mt-3">
-          Note: Requires <code className="bg-ink/5 px-1.5 py-0.5 rounded">time_slots</code>, <code className="bg-ink/5 px-1.5 py-0.5 rounded">slot_capacity</code>, and <code className="bg-ink/5 px-1.5 py-0.5 rounded">max_daily_bookings</code> columns on the booking_settings table. Run this SQL if not yet added:
-        </p>
-        <pre className="text-left bg-ink/5 rounded-lg p-3 mt-2 text-[0.7rem] overflow-x-auto">{`ALTER TABLE public.booking_settings ADD COLUMN IF NOT EXISTS time_slots TEXT[] DEFAULT '{"10:00","11:00","12:00","13:00","14:00","15:00"}';
-ALTER TABLE public.booking_settings ADD COLUMN IF NOT EXISTS slot_capacity INT DEFAULT 5;
-ALTER TABLE public.booking_settings ADD COLUMN IF NOT EXISTS max_daily_bookings INT DEFAULT 5;`}</pre>
       </div>
 
       <div className="grid grid-cols-3 gap-3 md:gap-5 mb-6 md:mb-8">
