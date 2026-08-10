@@ -43,10 +43,7 @@ export default function DashboardPage() {
     const { data: bks } = await supabase
       .from("bookings")
       .select("*")
-      .gte("date", todayStr)
-      .order("date", { ascending: true })
-      .order("time_slot", { ascending: true })
-      .limit(5);
+      .order("date", { ascending: true });
     if (bks) setBookings(bks as Booking[]);
 
     const { data: ss } = await supabase.from("site_settings").select("*").eq("id", 1).single();
@@ -122,6 +119,32 @@ export default function DashboardPage() {
   const lowStock = products.filter((p) => (p.stock || 0) <= 5);
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+
+  // Chart: last 8 weeks bookings count
+  const last8Weeks: { label: string; count: number; revenue: number }[] = [];
+  for (let i = 7; i >= 0; i--) {
+    const weekStart = new Date();
+    weekStart.setDate(weekStart.getDate() - i * 7);
+    const weekStartStr = weekStart.toISOString().split("T")[0];
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 7);
+    const weekEndStr = weekEnd.toISOString().split("T")[0];
+    const weekBookings = bookings.filter((b) => b.date >= weekStartStr && b.date < weekEndStr);
+    last8Weeks.push({
+      label: weekStart.toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
+      count: weekBookings.length,
+      revenue: weekBookings.reduce((sum, b) => sum + Number(b.total_price), 0),
+    });
+  }
+  const maxWeekCount = Math.max(...last8Weeks.map((w) => w.count), 1);
+
+  // Chart: popular time slots
+  const slotCounts: Record<string, number> = {};
+  bookings.forEach((b) => {
+    slotCounts[b.time_slot] = (slotCounts[b.time_slot] || 0) + 1;
+  });
+  const topSlots = Object.entries(slotCounts).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  const maxSlotCount = Math.max(...topSlots.map(([, c]) => c), 1);
 
   return (
     <div className="py-8 md:py-10 px-5 md:px-10">
@@ -267,6 +290,57 @@ export default function DashboardPage() {
         </Link>
       </div>
 
+      {/* Charts */}
+      <div className="grid md:grid-cols-2 gap-6 mb-8">
+        {/* Weekly bookings chart */}
+        <div className="bg-white rounded-[20px] p-7 shadow-sm">
+          <h2 className="font-display text-[1.1rem] mb-5">Bookings — Last 8 Weeks</h2>
+          {loadingData ? (
+            <div className="text-center py-8 text-ink-soft text-[0.9rem]">Loading...</div>
+          ) : (
+            <div className="flex items-end justify-between gap-2 h-40">
+              {last8Weeks.map((w, i) => (
+                <div key={i} className="flex-1 flex flex-col items-center gap-2">
+                  <div className="text-[0.7rem] font-display text-ink-soft">{w.count}</div>
+                  <div
+                    className="w-full rounded-t-lg bg-gradient-to-t from-bright-lavender to-sky-blue-light transition-all hover:opacity-80"
+                    style={{ height: `${(w.count / maxWeekCount) * 100}%`, minHeight: w.count > 0 ? "8px" : "2px" }}
+                  />
+                  <div className="text-[0.65rem] text-ink-soft text-center leading-tight">{w.label}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Popular time slots */}
+        <div className="bg-white rounded-[20px] p-7 shadow-sm">
+          <h2 className="font-display text-[1.1rem] mb-5">Popular Time Slots</h2>
+          {loadingData ? (
+            <div className="text-center py-8 text-ink-soft text-[0.9rem]">Loading...</div>
+          ) : topSlots.length === 0 ? (
+            <div className="text-center py-8 text-ink-soft text-[0.9rem]">No bookings yet.</div>
+          ) : (
+            <div className="space-y-3">
+              {topSlots.map(([slot, count]) => (
+                <div key={slot}>
+                  <div className="flex justify-between text-[0.85rem] mb-1">
+                    <span className="font-medium">{slot}</span>
+                    <span className="text-ink-soft">{count} bookings</span>
+                  </div>
+                  <div className="h-2.5 bg-ink/[0.06] rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-bright-lavender"
+                      style={{ width: `${(count / maxSlotCount) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className="grid md:grid-cols-2 gap-6">
         {/* Upcoming bookings preview */}
         <div className="bg-white rounded-[20px] p-7 shadow-sm">
@@ -278,11 +352,11 @@ export default function DashboardPage() {
           </div>
           {loadingData ? (
             <div className="text-center py-8 text-ink-soft text-[0.9rem]">Loading...</div>
-          ) : bookings.length === 0 ? (
+          ) : bookings.filter((b) => b.date >= new Date().toISOString().split("T")[0]).length === 0 ? (
             <div className="text-center py-8 text-ink-soft text-[0.9rem]">No upcoming bookings yet.</div>
           ) : (
             <ul className="space-y-3">
-              {bookings.map((b) => (
+              {bookings.filter((b) => b.date >= new Date().toISOString().split("T")[0]).slice(0, 5).map((b) => (
                 <li key={b.id} className="flex items-center justify-between border-b border-ink/[0.06] pb-3 last:border-0 last:pb-0">
                   <div>
                     <div className="text-[0.9rem] font-medium">{b.name}</div>

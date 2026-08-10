@@ -57,7 +57,10 @@ export default function BookingsAdminPage() {
     setCancellingId(id);
     try {
       const res = await fetch("/api/cancel-booking", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bookingId: id }) });
-      if (!res.ok) { const data = await res.json(); alert(data.error || "Failed to cancel booking"); }
+      const data = await res.json();
+      if (!res.ok) { alert(data.error || "Failed to cancel booking"); }
+      else if (data.refunded) { alert("Booking cancelled and Stripe refund processed successfully."); }
+      else if (data.refundError) { alert("Booking cancelled but refund failed: " + data.refundError); }
     } catch { alert("Failed to cancel booking"); }
     setCancellingId(null);
     loadBookings();
