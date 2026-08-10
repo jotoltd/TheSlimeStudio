@@ -40,7 +40,6 @@ export default function ContactPage() {
     const { error } = await supabase.from("enquiries").insert({
       name: formData.get("name"),
       email: formData.get("email"),
-      phone: formData.get("phone") || null,
       message: formData.get("message"),
     });
 
