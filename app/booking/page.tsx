@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Calendar from "@/components/Calendar";
+import InlinePayment from "@/components/InlinePayment";
 import { supabase, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, PRICE_PER_PERSON, MAX_DAILY_BOOKINGS as DEFAULT_MAX } from "@/lib/supabase";
 import type { BookingSettings } from "@/lib/supabase";
 
@@ -24,8 +25,11 @@ function BookingPageInner() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error" | "paid" | "cancelled">("idle");
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error" | "paid" | "cancelled" | "payment">("idle");
   const [errorMsg, setErrorMsg] = useState("");
+  const [clientSecret, setClientSecret] = useState("");
+  const [publishableKey, setPublishableKey] = useState("");
+  const [bookingId, setBookingId] = useState("");
   const [pricePerPerson, setPricePerPerson] = useState(PRICE_PER_PERSON);
   const [timeSlots, setTimeSlots] = useState<string[]>(DEFAULT_SLOTS);
   const [slotCapacity, setSlotCapacity] = useState(DEFAULT_CAP);
@@ -134,20 +138,16 @@ function BookingPageInner() {
       setStatus("error");
       setErrorMsg("Something went wrong. Please try again.");
     } else {
-      // Send confirmation email (fire-and-forget)
-      fetch("/api/booking-confirmation", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, date, timeSlot, people, totalPrice, isParty: false }),
-      }).catch(() => {});
+      const bId = (inserted as { id: string }).id;
+      setBookingId(bId);
 
-      // Create Stripe Checkout session and redirect
+      // Try to create a payment intent for inline payment
       try {
-        const res = await fetch("/api/create-checkout-session", {
+        const res = await fetch("/api/create-payment-intent", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            bookingId: (inserted as { id: string }).id,
+            bookingId: bId,
             name,
             email,
             date,
@@ -158,13 +158,24 @@ function BookingPageInner() {
           }),
         });
         const data = await res.json();
-        if (data.url) {
-          window.location.href = data.url;
+        if (data.clientSecret) {
+          setClientSecret(data.clientSecret);
+          // Fetch the publishable key
+          const modeRes = await fetch("/api/stripe-mode");
+          const modeData = await modeRes.json();
+          setPublishableKey(modeData.publishableKey || "");
+          setStatus("payment");
           return;
         }
       } catch {
         // If Stripe fails, still show confirmation
       }
+      // Send confirmation email (fire-and-forget)
+      fetch("/api/booking-confirmation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, date, timeSlot, people, totalPrice, isParty: false }),
+      }).catch(() => {});
       setStatus("sent");
       setName("");
       setEmail("");
@@ -220,6 +231,30 @@ function BookingPageInner() {
               <button onClick={() => setStatus("idle")} className="btn-primary">
                 Try Again
               </button>
+            </div>
+          ) : status === "payment" ? (
+            <div className="bg-white rounded-3xl p-5 md:p-8 shadow-sm">
+              <h2 className="font-display text-lg md:text-xl mb-2 text-center">Complete Your Payment</h2>
+              <p className="text-sm text-ink-soft text-center mb-5">
+                {people} {people === 1 ? "person" : "people"} · {date} at {timeSlot} · £{totalPrice.toFixed(2)}
+              </p>
+              <InlinePayment
+                clientSecret={clientSecret}
+                publishableKey={publishableKey}
+                amount={totalPrice}
+                onSuccess={() => {
+                  fetch("/api/booking-confirmation", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name, email, date, timeSlot, people, totalPrice, isParty: false }),
+                  }).catch(() => {});
+                  setStatus("paid");
+                }}
+                onCancel={() => {
+                  setStatus("idle");
+                  setClientSecret("");
+                }}
+              />
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-5 md:p-8 shadow-sm">

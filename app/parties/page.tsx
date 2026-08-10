@@ -5,6 +5,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Heart } from "@/components/Heart";
 import Calendar from "@/components/Calendar";
+import InlinePayment from "@/components/InlinePayment";
 import { supabase, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, MAX_DAILY_BOOKINGS as DEFAULT_MAX } from "@/lib/supabase";
 import type { BookingSettings } from "@/lib/supabase";
 
@@ -52,8 +53,10 @@ export default function PartiesPage() {
   const [slotCapacity, setSlotCapacity] = useState(DEFAULT_CAP);
   const [maxDaily, setMaxDaily] = useState(DEFAULT_MAX);
   const [timeSlots, setTimeSlots] = useState<string[]>(DEFAULT_SLOTS);
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error" | "paid" | "payment">("idle");
   const [errorMsg, setErrorMsg] = useState("");
+  const [clientSecret, setClientSecret] = useState("");
+  const [publishableKey, setPublishableKey] = useState("");
 
   useEffect(() => {
     supabase.from("booking_settings").select("*").eq("id", 1).single().then(({ data }) => {
@@ -151,20 +154,15 @@ export default function PartiesPage() {
       setStatus("error");
       setErrorMsg("Something went wrong. Please try again.");
     } else {
-      // Send confirmation email (fire-and-forget)
-      fetch("/api/booking-confirmation", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, date, timeSlot, people: children, totalPrice, isParty: true }),
-      }).catch(() => {});
+      const bId = (inserted as { id: string }).id;
 
-      // Create Stripe Checkout session and redirect
+      // Try to create a payment intent for inline payment
       try {
-        const res = await fetch("/api/create-checkout-session", {
+        const res = await fetch("/api/create-payment-intent", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            bookingId: (inserted as { id: string }).id,
+            bookingId: bId,
             name,
             email,
             date,
@@ -175,13 +173,23 @@ export default function PartiesPage() {
           }),
         });
         const data = await res.json();
-        if (data.url) {
-          window.location.href = data.url;
+        if (data.clientSecret) {
+          setClientSecret(data.clientSecret);
+          const modeRes = await fetch("/api/stripe-mode");
+          const modeData = await modeRes.json();
+          setPublishableKey(modeData.publishableKey || "");
+          setStatus("payment");
           return;
         }
       } catch {
         // If Stripe fails, still show confirmation
       }
+      // Send confirmation email (fire-and-forget)
+      fetch("/api/booking-confirmation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, date, timeSlot, people: children, totalPrice, isParty: true }),
+      }).catch(() => {});
       setStatus("sent");
       setName("");
       setEmail("");
@@ -296,17 +304,44 @@ export default function PartiesPage() {
             <span className="text-ink/40">↜</span>
           </div>
 
-          {status === "sent" ? (
+          {status === "sent" || status === "paid" ? (
             <div className="bg-white rounded-3xl p-6 md:p-10 shadow-sm text-center">
               <div className="text-4xl md:text-5xl mb-4">🎉</div>
-              <h3 className="font-display text-lg md:text-2xl mb-3">Booking Confirmed!</h3>
+              <h3 className="font-display text-lg md:text-2xl mb-3">
+                {status === "paid" ? "Payment Successful — Booking Confirmed!" : "Booking Confirmed!"}
+              </h3>
               <p className="text-ink-soft mb-6">
-                Thanks for booking your Slime Studio party or trip. We&apos;ve sent a
-                confirmation to your email — see you soon!
+                {status === "paid"
+                  ? "Your payment has been received and your party booking is confirmed. We've sent a confirmation to your email — see you soon!"
+                  : "Thanks for booking your Slime Studio party or trip. We've sent a confirmation to your email — see you soon!"}
               </p>
               <button onClick={() => setStatus("idle")} className="btn-primary">
                 Book Another
               </button>
+            </div>
+          ) : status === "payment" ? (
+            <div className="bg-white rounded-3xl p-5 md:p-8 shadow-sm">
+              <h3 className="font-display text-lg md:text-xl mb-2 text-center">Complete Your Payment</h3>
+              <p className="text-sm text-ink-soft text-center mb-5">
+                {children} children · {date} at {timeSlot} · £{totalPrice.toFixed(2)}
+              </p>
+              <InlinePayment
+                clientSecret={clientSecret}
+                publishableKey={publishableKey}
+                amount={totalPrice}
+                onSuccess={() => {
+                  fetch("/api/booking-confirmation", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name, email, date, timeSlot, people: children, totalPrice, isParty: true }),
+                  }).catch(() => {});
+                  setStatus("paid");
+                }}
+                onCancel={() => {
+                  setStatus("idle");
+                  setClientSecret("");
+                }}
+              />
             </div>
           ) : dateFull ? (
             <div className="bg-white rounded-3xl p-6 md:p-10 shadow-sm text-center">
