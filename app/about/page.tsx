@@ -116,11 +116,15 @@ export default function AboutPage() {
             The Slime Studio is a colourful, hands-on experience where you can
             mix, stretch and create your very own slime.
           </p>
-          <p className="text-[0.95rem] md:text-[1.05rem] text-ink/80 mb-10 md:mb-14 leading-relaxed">
+          <p className="text-[0.95rem] md:text-[1.05rem] text-ink/80 mb-4 leading-relaxed">
             Choose your colours, experiment with textures and add your
             favourite extras to make something completely your own — then
             take your creation home with you.
           </p>
+          <div className="inline-flex items-center gap-2 bg-white/50 rounded-full px-4 py-2 text-[0.85rem] text-ink mb-10 md:mb-14">
+            <span>📍</span>
+            <span className="font-medium">Unit A, Feathers Yard, Holt, NR25 6BF</span>
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 md:gap-8 mb-10 md:mb-16 text-left sm:text-center">
             {features.map((f) => (

@@ -24,7 +24,7 @@ const INFO_CARDS = [
     bg: "#8b5fbf",
     icon: "✉️",
     title: "Email",
-    lines: ["hello@theslimestudio.co.uk"],
+    lines: ["studio@theslimestudio.co.uk"],
   },
 ];
 
