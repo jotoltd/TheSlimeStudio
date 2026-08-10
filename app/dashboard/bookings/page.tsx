@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase, type Booking, type BookingSettings, TIME_SLOTS } from "@/lib/supabase";
+import { supabase, type Booking, type BookingSettings, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, MAX_DAILY_BOOKINGS as DEFAULT_MAX } from "@/lib/supabase";
 
 type ViewMode = "calendar" | "table";
 
@@ -20,12 +20,24 @@ export default function BookingsAdminPage() {
   const [editMsg, setEditMsg] = useState("");
   const [calMonth, setCalMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [timeSlots, setTimeSlots] = useState<string[]>(DEFAULT_SLOTS);
+  const [slotCapacity, setSlotCapacity] = useState(DEFAULT_CAP);
+  const [maxDaily, setMaxDaily] = useState(DEFAULT_MAX);
+  const [slotsText, setSlotsText] = useState(DEFAULT_SLOTS.join("\n"));
+  const [savingSlots, setSavingSlots] = useState(false);
+  const [slotsMsg, setSlotsMsg] = useState("");
 
   useEffect(() => { loadBookings(); }, [filter]);
 
   useEffect(() => {
     supabase.from("booking_settings").select("*").eq("id", 1).single().then(({ data }) => {
-      if (data) setPrice(String((data as BookingSettings).price_per_person));
+      if (data) {
+        const s = data as BookingSettings;
+        setPrice(String(s.price_per_person));
+        if (s.time_slots && s.time_slots.length > 0) { setTimeSlots(s.time_slots); setSlotsText(s.time_slots.join("\n")); }
+        if (s.slot_capacity) setSlotCapacity(s.slot_capacity);
+        if (s.max_daily_bookings) setMaxDaily(s.max_daily_bookings);
+      }
     });
   }, []);
 
@@ -67,6 +79,19 @@ export default function BookingsAdminPage() {
     setSavingEdit(false);
     if (error) { setEditMsg("Failed to save: " + error.message); }
     else { setEditMsg("Booking updated successfully!"); setEditingBooking(null); loadBookings(); }
+  }
+
+  async function saveSlotConfig() {
+    setSavingSlots(true); setSlotsMsg("");
+    const parsedSlots = slotsText.split("\n").map((s) => s.trim()).filter(Boolean);
+    const { error } = await supabase.from("booking_settings").update({
+      time_slots: parsedSlots,
+      slot_capacity: slotCapacity,
+      max_daily_bookings: maxDaily,
+    }).eq("id", 1);
+    setSavingSlots(false);
+    if (error) setSlotsMsg("Failed to save: " + error.message);
+    else { setSlotsMsg("Settings saved!"); setTimeSlots(parsedSlots); }
   }
 
   async function savePrice() {
@@ -127,6 +152,51 @@ export default function BookingsAdminPage() {
           </button>
         </div>
         {priceMsg && <p className={`text-[0.85rem] mt-3 ${priceMsg.type === "ok" ? "text-green-600" : "text-red-600"}`}>{priceMsg.text}</p>}
+      </div>
+
+      <div className="bg-white rounded-[20px] p-7 shadow-sm mb-8">
+        <h2 className="font-display text-[1.1rem] mb-1">Time Slots &amp; Capacity</h2>
+        <p className="text-[0.85rem] text-ink-soft mb-4">Configure available time slots, max people per slot, and daily booking limit.</p>
+        <div className="grid md:grid-cols-3 gap-5">
+          <div className="md:col-span-1">
+            <label className="block text-sm font-medium mb-2">Time Slots (one per line, 24h format)</label>
+            <textarea
+              value={slotsText}
+              onChange={(e) => setSlotsText(e.target.value)}
+              rows={6}
+              placeholder={"10:00\n11:00\n12:00\n13:00\n14:00\n15:00"}
+              className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light resize-none font-mono"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Max People Per Slot</label>
+            <input
+              type="number" min="1" value={slotCapacity}
+              onChange={(e) => setSlotCapacity(parseInt(e.target.value) || 1)}
+              className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Max Daily Bookings</label>
+            <input
+              type="number" min="1" value={maxDaily}
+              onChange={(e) => setMaxDaily(parseInt(e.target.value) || 1)}
+              className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
+            />
+          </div>
+        </div>
+        <div className="mt-5 flex items-center gap-4">
+          <button onClick={saveSlotConfig} disabled={savingSlots} className="px-6 py-2.5 rounded-full bg-sky-blue-light text-ink text-[0.9rem] font-medium disabled:opacity-60 hover:-translate-y-0.5 hover:shadow-sm transition-all">
+            {savingSlots ? "Saving..." : "Save Settings"}
+          </button>
+          {slotsMsg && <p className={`text-[0.85rem] ${slotsMsg.includes("saved") ? "text-green-600" : "text-red-600"}`}>{slotsMsg}</p>}
+        </div>
+        <p className="text-[0.8rem] text-ink-soft mt-3">
+          Note: Requires <code className="bg-ink/5 px-1.5 py-0.5 rounded">time_slots</code>, <code className="bg-ink/5 px-1.5 py-0.5 rounded">slot_capacity</code>, and <code className="bg-ink/5 px-1.5 py-0.5 rounded">max_daily_bookings</code> columns on the booking_settings table. Run this SQL if not yet added:
+        </p>
+        <pre className="text-left bg-ink/5 rounded-lg p-3 mt-2 text-[0.7rem] overflow-x-auto">{`ALTER TABLE public.booking_settings ADD COLUMN IF NOT EXISTS time_slots TEXT[] DEFAULT '{"10:00","11:00","12:00","13:00","14:00","15:00"}';
+ALTER TABLE public.booking_settings ADD COLUMN IF NOT EXISTS slot_capacity INT DEFAULT 5;
+ALTER TABLE public.booking_settings ADD COLUMN IF NOT EXISTS max_daily_bookings INT DEFAULT 5;`}</pre>
       </div>
 
       <div className="grid grid-cols-3 gap-3 md:gap-5 mb-6 md:mb-8">
@@ -268,7 +338,7 @@ export default function BookingsAdminPage() {
               <div>
                 <label className="block text-sm font-medium mb-1.5">Time Slot</label>
                 <select value={editForm.time_slot} onChange={(e) => setEditForm({ ...editForm, time_slot: e.target.value })} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light">
-                  {TIME_SLOTS.map((t) => <option key={t} value={t}>{t}</option>)}
+                  {timeSlots.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
               <div>

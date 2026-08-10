@@ -5,7 +5,8 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Heart } from "@/components/Heart";
 import Calendar from "@/components/Calendar";
-import { supabase, TIME_SLOTS, SLOT_CAPACITY, MAX_DAILY_BOOKINGS } from "@/lib/supabase";
+import { supabase, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, MAX_DAILY_BOOKINGS as DEFAULT_MAX } from "@/lib/supabase";
+import type { BookingSettings } from "@/lib/supabase";
 
 function todayISO() {
   const d = new Date();
@@ -48,8 +49,22 @@ export default function PartiesPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [slotCapacity, setSlotCapacity] = useState(DEFAULT_CAP);
+  const [maxDaily, setMaxDaily] = useState(DEFAULT_MAX);
+  const [timeSlots, setTimeSlots] = useState<string[]>(DEFAULT_SLOTS);
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
+
+  useEffect(() => {
+    supabase.from("booking_settings").select("*").eq("id", 1).single().then(({ data }) => {
+      if (data) {
+        const s = data as BookingSettings;
+        if (s.time_slots && s.time_slots.length > 0) setTimeSlots(s.time_slots);
+        if (s.slot_capacity) setSlotCapacity(s.slot_capacity);
+        if (s.max_daily_bookings) setMaxDaily(s.max_daily_bookings);
+      }
+    });
+  }, []);
 
   useEffect(() => {
     loadAvailability(date);
@@ -66,12 +81,12 @@ export default function PartiesPage() {
       used[b.time_slot] = (used[b.time_slot] || 0) + b.people;
       totalBookings++;
     });
-    if (totalBookings >= MAX_DAILY_BOOKINGS) {
+    if (totalBookings >= maxDaily) {
       setDateFull(true);
     }
     const rem: Record<string, number> = {};
-    TIME_SLOTS.forEach((slot) => {
-      rem[slot] = Math.max(0, SLOT_CAPACITY - (used[slot] || 0));
+    timeSlots.forEach((slot) => {
+      rem[slot] = Math.max(0, slotCapacity - (used[slot] || 0));
     });
     setRemaining(rem);
     setLoadingSlots(false);
@@ -99,7 +114,7 @@ export default function PartiesPage() {
       .from("bookings")
       .select("id")
       .eq("date", date);
-    if ((dailyBookings || []).length >= MAX_DAILY_BOOKINGS) {
+    if ((dailyBookings || []).length >= maxDaily) {
       setStatus("error");
       setErrorMsg("Sorry, this date is fully booked. Please choose another date.");
       loadAvailability(date);
@@ -114,9 +129,9 @@ export default function PartiesPage() {
       .eq("time_slot", timeSlot);
     const used = (existing || []).reduce((sum: number, b: { people: number }) => sum + b.people, 0);
 
-    if (used + children > SLOT_CAPACITY) {
+    if (used + children > slotCapacity) {
       setStatus("error");
-      setErrorMsg(`Sorry, only ${Math.max(0, SLOT_CAPACITY - used)} spot(s) left in that slot. Please choose another.`);
+      setErrorMsg(`Sorry, only ${Math.max(0, slotCapacity - used)} spot(s) left in that slot. Please choose another.`);
       loadAvailability(date);
       return;
     }
@@ -313,8 +328,8 @@ export default function PartiesPage() {
                   <div className="text-sm text-ink-soft py-4 text-center">Checking availability...</div>
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 md:gap-3">
-                    {TIME_SLOTS.map((slot) => {
-                      const rem = remaining[slot] ?? SLOT_CAPACITY;
+                    {timeSlots.map((slot) => {
+                      const rem = remaining[slot] ?? slotCapacity;
                       const full = rem === 0;
                       return (
                         <button

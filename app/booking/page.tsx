@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Calendar from "@/components/Calendar";
-import { supabase, TIME_SLOTS, SLOT_CAPACITY, PRICE_PER_PERSON, MAX_DAILY_BOOKINGS } from "@/lib/supabase";
+import { supabase, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, PRICE_PER_PERSON, MAX_DAILY_BOOKINGS as DEFAULT_MAX } from "@/lib/supabase";
 import type { BookingSettings } from "@/lib/supabase";
 
 function todayISO() {
@@ -25,10 +25,19 @@ export default function BookingPage() {
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [pricePerPerson, setPricePerPerson] = useState(PRICE_PER_PERSON);
+  const [timeSlots, setTimeSlots] = useState<string[]>(DEFAULT_SLOTS);
+  const [slotCapacity, setSlotCapacity] = useState(DEFAULT_CAP);
+  const [maxDaily, setMaxDaily] = useState(DEFAULT_MAX);
 
   useEffect(() => {
     supabase.from("booking_settings").select("*").eq("id", 1).single().then(({ data }) => {
-      if (data) setPricePerPerson((data as BookingSettings).price_per_person);
+      if (data) {
+        const s = data as BookingSettings;
+        setPricePerPerson(s.price_per_person);
+        if (s.time_slots && s.time_slots.length > 0) setTimeSlots(s.time_slots);
+        if (s.slot_capacity) setSlotCapacity(s.slot_capacity);
+        if (s.max_daily_bookings) setMaxDaily(s.max_daily_bookings);
+      }
     });
   }, []);
 
@@ -45,19 +54,19 @@ export default function BookingPage() {
       used[b.time_slot] = (used[b.time_slot] || 0) + b.people;
     });
     const rem: Record<string, number> = {};
-    TIME_SLOTS.forEach((slot) => {
-      rem[slot] = Math.max(0, SLOT_CAPACITY - (used[slot] || 0));
+    timeSlots.forEach((slot) => {
+      rem[slot] = Math.max(0, slotCapacity - (used[slot] || 0));
     });
     setRemaining(rem);
     setLoadingSlots(false);
   }
 
-  const maxPeopleForSlot = timeSlot ? remaining[timeSlot] ?? SLOT_CAPACITY : SLOT_CAPACITY;
+  const maxPeopleForSlot = timeSlot ? remaining[timeSlot] ?? slotCapacity : slotCapacity;
   const totalPrice = useMemo(() => people * pricePerPerson, [people, pricePerPerson]);
 
   function selectSlot(slot: string) {
     setTimeSlot(slot);
-    const rem = remaining[slot] ?? SLOT_CAPACITY;
+    const rem = remaining[slot] ?? slotCapacity;
     if (people > rem) setPeople(Math.max(1, rem));
   }
 
@@ -69,8 +78,8 @@ export default function BookingPage() {
       setErrorMsg("Please select a time slot.");
       return;
     }
-    if (people < 1 || people > SLOT_CAPACITY) {
-      setErrorMsg(`Group size must be between 1 and ${SLOT_CAPACITY}.`);
+    if (people < 1 || people > slotCapacity) {
+      setErrorMsg(`Group size must be between 1 and ${slotCapacity}.`);
       return;
     }
 
@@ -81,7 +90,7 @@ export default function BookingPage() {
       .from("bookings")
       .select("id")
       .eq("date", date);
-    if ((dailyBookings || []).length >= MAX_DAILY_BOOKINGS) {
+    if ((dailyBookings || []).length >= maxDaily) {
       setStatus("error");
       setErrorMsg(`Sorry, this date is fully booked. Please choose another date.`);
       loadAvailability(date);
@@ -96,9 +105,9 @@ export default function BookingPage() {
       .eq("time_slot", timeSlot);
     const used = (existing || []).reduce((sum: number, b: { people: number }) => sum + b.people, 0);
 
-    if (used + people > SLOT_CAPACITY) {
+    if (used + people > slotCapacity) {
       setStatus("error");
-      setErrorMsg(`Sorry, only ${Math.max(0, SLOT_CAPACITY - used)} spot(s) left in that slot. Please choose another.`);
+      setErrorMsg(`Sorry, only ${Math.max(0, slotCapacity - used)} spot(s) left in that slot. Please choose another.`);
       loadAvailability(date);
       return;
     }
@@ -166,7 +175,7 @@ export default function BookingPage() {
         <div className="container">
           <h1 className="font-display text-[1.5rem] md:text-[3.2rem] mt-3 mb-3 text-ink">Book a Slime-Making Session</h1>
           <p className="text-[0.95rem] md:text-[1.1rem] text-ink/80 max-w-[560px] mx-auto">
-            One-hour sessions, every hour. Up to {SLOT_CAPACITY} slime makers per slot at
+            One-hour sessions, every hour. Up to {slotCapacity} slime makers per slot at
             £{pricePerPerson.toFixed(2)} per person.
           </p>
         </div>
@@ -201,8 +210,8 @@ export default function BookingPage() {
                   <div className="text-sm text-ink-soft py-4 text-center">Checking availability...</div>
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 md:gap-3">
-                    {TIME_SLOTS.map((slot) => {
-                      const rem = remaining[slot] ?? SLOT_CAPACITY;
+                    {timeSlots.map((slot) => {
+                      const rem = remaining[slot] ?? slotCapacity;
                       const full = rem === 0;
                       return (
                         <button
@@ -244,7 +253,7 @@ export default function BookingPage() {
                   <span className="font-display text-2xl w-10 text-center">{people}</span>
                   <button
                     type="button"
-                    onClick={() => setPeople((p) => Math.min(SLOT_CAPACITY, maxPeopleForSlot, p + 1))}
+                    onClick={() => setPeople((p) => Math.min(slotCapacity, maxPeopleForSlot, p + 1))}
                     className="w-10 h-10 rounded-full bg-ink/10 text-ink text-lg hover:bg-ink/15 transition-colors"
                   >
                     +

@@ -47,6 +47,9 @@ export type Booking = {
 export type BookingSettings = {
   id: number;
   price_per_person: number;
+  time_slots?: string[];
+  slot_capacity?: number;
+  max_daily_bookings?: number;
   updated_at: string;
 };
 
