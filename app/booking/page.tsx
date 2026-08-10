@@ -178,6 +178,10 @@ export default function BookingPage() {
             One-hour sessions, every hour. Up to {slotCapacity} slime makers per slot at
             £{pricePerPerson.toFixed(2)} per person.
           </p>
+          <div className="mt-4 inline-flex items-center gap-2 bg-white/50 rounded-full px-4 py-2 text-[0.85rem] text-ink">
+            <span>📍</span>
+            <span className="font-medium">Unit A, Feathers Yard, Holt, NR25 6BF</span>
+          </div>
         </div>
       </section>
 

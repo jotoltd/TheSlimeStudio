@@ -43,7 +43,7 @@ export default function Footer() {
             <h4 className="font-display text-[1rem] mb-4 text-ink">Find Us</h4>
             <ul className="space-y-2.5">
               <li className="text-[0.9rem] text-ink-soft">Unit A, Feathers Yard</li>
-              <li className="text-[0.9rem] text-ink-soft">Holt, NR25 2BF</li>
+              <li className="text-[0.9rem] text-ink-soft">Holt, NR25 6BF</li>
               <li><a href="mailto:studio@theslimestudio.co.uk" className="text-[0.9rem] hover:text-ink transition-colors">studio@theslimestudio.co.uk</a></li>
             </ul>
           </div>

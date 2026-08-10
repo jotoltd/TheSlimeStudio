@@ -22,7 +22,7 @@ export default function HomePage() {
             <img
               src="/images/logo.png"
               alt="The Slime Studio — Make Your Own Slime"
-              className="w-full max-w-[280px] md:max-w-[380px] mx-auto mb-6 md:mb-10 object-contain rounded-full shadow-lg"
+              className="w-full max-w-[360px] md:max-w-[480px] mx-auto mb-6 md:mb-10 object-contain rounded-full shadow-lg"
               style={{ backgroundColor: "#ffffff" }}
             />
             <h1 className="font-display text-[1.5rem] md:text-[2.4rem] leading-[1.15] mb-4 md:mb-5 text-ink">
@@ -63,6 +63,10 @@ export default function HomePage() {
             squish, stretch and create their own slime. Every session is
             playful, sensory and totally squish-worthy — no experience needed.
           </p>
+          <div className="mt-5 inline-flex items-center gap-2 bg-white/70 rounded-full px-5 py-2.5 text-[0.9rem] text-ink">
+            <span className="text-base">📍</span>
+            <span className="font-medium">Unit A, Feathers Yard, Holt, NR25 6BF</span>
+          </div>
         </div>
       </section>
 

@@ -218,9 +218,13 @@ export default function PartiesPage() {
             own colour and scent, decorate it with charms and create
             something completely their own to take home.
           </p>
-          <p className="font-display text-[1.05rem]" style={{ color: "#ff2d78" }}>
+          <p className="font-display text-[1.05rem] mb-4" style={{ color: "#ff2d78" }}>
             Fun, creative and just the right amount of messy!
           </p>
+          <div className="inline-flex items-center gap-2 bg-white/50 rounded-full px-4 py-2 text-[0.85rem] text-ink">
+            <span>📍</span>
+            <span className="font-medium">Unit A, Feathers Yard, Holt, NR25 6BF</span>
+          </div>
         </div>
       </section>
 
