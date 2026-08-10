@@ -5,15 +5,11 @@ import { loadStripe, type Stripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
 let stripePromise: Promise<Stripe | null> | null = null;
-
-async function getStripePublishableKey(): Promise<string> {
-  const res = await fetch("/api/stripe-mode");
-  const data = await res.json();
-  return data.publishableKey || "";
-}
+let stripePromiseKey: string = "";
 
 function loadStripeInstance(key: string): Promise<Stripe | null> {
-  if (!stripePromise || (stripePromise as Promise<Stripe | null>) === null) {
+  if (!stripePromise || stripePromiseKey !== key) {
+    stripePromiseKey = key;
     stripePromise = loadStripe(key);
   }
   return stripePromise;
@@ -98,7 +94,7 @@ export default function InlinePayment({
 
   useEffect(() => {
     if (publishableKey) {
-      loadStripe(publishableKey).then(setStripe);
+      loadStripeInstance(publishableKey).then(setStripe);
     }
   }, [publishableKey]);
 

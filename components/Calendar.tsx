@@ -23,10 +23,12 @@ export default function Calendar({
   value,
   onChange,
   min,
+  disableDays = [],
 }: {
   value: string;
   onChange: (iso: string) => void;
   min?: string;
+  disableDays?: number[];
 }) {
   const [open, setOpen] = useState(false);
   const selected = fromISO(value);
@@ -55,8 +57,9 @@ export default function Calendar({
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
 
   function isDisabled(day: number) {
-    if (!minDate) return false;
     const d = new Date(viewYear, viewMonth, day);
+    if (disableDays.includes(d.getDay())) return true;
+    if (!minDate) return false;
     const minMidnight = new Date(minDate.getFullYear(), minDate.getMonth(), minDate.getDate());
     return d < minMidnight;
   }

@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense, lazy } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Heart } from "@/components/Heart";
 import Calendar from "@/components/Calendar";
-import InlinePayment from "@/components/InlinePayment";
 import { supabase, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, MAX_DAILY_BOOKINGS as DEFAULT_MAX } from "@/lib/supabase";
 import type { BookingSettings } from "@/lib/supabase";
 
+const InlinePayment = lazy(() => import("@/components/InlinePayment"));
+
 function todayISO() {
   const d = new Date();
+  if (d.getDay() === 0) d.setDate(d.getDate() + 1);
   d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
   return d.toISOString().split("T")[0];
 }
@@ -180,9 +182,11 @@ export default function PartiesPage() {
           setPublishableKey(modeData.publishableKey || "");
           setStatus("payment");
           return;
+        } else {
+          console.error("Payment intent error:", data.error);
         }
-      } catch {
-        // If Stripe fails, still show confirmation
+      } catch (err) {
+        console.error("Payment intent fetch failed:", err);
       }
       // Send confirmation email (fire-and-forget)
       fetch("/api/booking-confirmation", {
@@ -325,23 +329,25 @@ export default function PartiesPage() {
               <p className="text-sm text-ink-soft text-center mb-5">
                 {children} children · {date} at {timeSlot} · £{totalPrice.toFixed(2)}
               </p>
-              <InlinePayment
-                clientSecret={clientSecret}
-                publishableKey={publishableKey}
-                amount={totalPrice}
-                onSuccess={() => {
-                  fetch("/api/booking-confirmation", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ name, email, date, timeSlot, people: children, totalPrice, isParty: true }),
-                  }).catch(() => {});
-                  setStatus("paid");
-                }}
-                onCancel={() => {
-                  setStatus("idle");
-                  setClientSecret("");
-                }}
-              />
+              <Suspense fallback={<div className="py-8 text-center text-ink-soft text-sm">Loading payment form...</div>}>
+                <InlinePayment
+                  clientSecret={clientSecret}
+                  publishableKey={publishableKey}
+                  amount={totalPrice}
+                  onSuccess={() => {
+                    fetch("/api/booking-confirmation", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ name, email, date, timeSlot, people: children, totalPrice, isParty: true }),
+                    }).catch(() => {});
+                    setStatus("paid");
+                  }}
+                  onCancel={() => {
+                    setStatus("idle");
+                    setClientSecret("");
+                  }}
+                />
+              </Suspense>
             </div>
           ) : dateFull ? (
             <div className="bg-white rounded-3xl p-6 md:p-10 shadow-sm text-center">
@@ -351,14 +357,14 @@ export default function PartiesPage() {
                 Sorry, this date is fully booked. Please choose another date.
               </p>
               <div className="max-w-xs mx-auto">
-                <Calendar value={date} onChange={setDate} min={todayISO()} />
+                <Calendar value={date} onChange={setDate} min={todayISO()} disableDays={[0]} />
               </div>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-5 md:p-8 shadow-sm">
               <div className="mb-6">
                 <label className="block text-sm font-medium mb-2">Date</label>
-                <Calendar value={date} onChange={setDate} min={todayISO()} />
+                <Calendar value={date} onChange={setDate} min={todayISO()} disableDays={[0]} />
               </div>
 
               <div className="mb-6">

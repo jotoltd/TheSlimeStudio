@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState, Suspense } from "react";
+import { useEffect, useMemo, useState, Suspense, lazy } from "react";
 import { useSearchParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Calendar from "@/components/Calendar";
-import InlinePayment from "@/components/InlinePayment";
 import { supabase, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, PRICE_PER_PERSON, MAX_DAILY_BOOKINGS as DEFAULT_MAX } from "@/lib/supabase";
 import type { BookingSettings } from "@/lib/supabase";
 
+const InlinePayment = lazy(() => import("@/components/InlinePayment"));
+
 function todayISO() {
   const d = new Date();
+  if (d.getDay() === 0) d.setDate(d.getDate() + 1);
   d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
   return d.toISOString().split("T")[0];
 }
@@ -166,9 +168,11 @@ function BookingPageInner() {
           setPublishableKey(modeData.publishableKey || "");
           setStatus("payment");
           return;
+        } else {
+          console.error("Payment intent error:", data.error);
         }
-      } catch {
-        // If Stripe fails, still show confirmation
+      } catch (err) {
+        console.error("Payment intent fetch failed:", err);
       }
       // Send confirmation email (fire-and-forget)
       fetch("/api/booking-confirmation", {
@@ -238,23 +242,25 @@ function BookingPageInner() {
               <p className="text-sm text-ink-soft text-center mb-5">
                 {people} {people === 1 ? "person" : "people"} · {date} at {timeSlot} · £{totalPrice.toFixed(2)}
               </p>
-              <InlinePayment
-                clientSecret={clientSecret}
-                publishableKey={publishableKey}
-                amount={totalPrice}
-                onSuccess={() => {
-                  fetch("/api/booking-confirmation", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ name, email, date, timeSlot, people, totalPrice, isParty: false }),
-                  }).catch(() => {});
-                  setStatus("paid");
-                }}
-                onCancel={() => {
-                  setStatus("idle");
-                  setClientSecret("");
-                }}
-              />
+              <Suspense fallback={<div className="py-8 text-center text-ink-soft text-sm">Loading payment form...</div>}>
+                <InlinePayment
+                  clientSecret={clientSecret}
+                  publishableKey={publishableKey}
+                  amount={totalPrice}
+                  onSuccess={() => {
+                    fetch("/api/booking-confirmation", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ name, email, date, timeSlot, people, totalPrice, isParty: false }),
+                    }).catch(() => {});
+                    setStatus("paid");
+                  }}
+                  onCancel={() => {
+                    setStatus("idle");
+                    setClientSecret("");
+                  }}
+                />
+              </Suspense>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-5 md:p-8 shadow-sm">
@@ -262,7 +268,7 @@ function BookingPageInner() {
 
               <div className="mb-6">
                 <label className="block text-sm font-medium mb-2">Date</label>
-                <Calendar value={date} onChange={setDate} min={todayISO()} />
+                <Calendar value={date} onChange={setDate} min={todayISO()} disableDays={[0]} />
               </div>
 
               <div className="mb-6">
