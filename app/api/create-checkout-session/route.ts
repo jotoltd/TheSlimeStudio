@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getStripe, getStripeMode } from "@/lib/stripe";
+import { getStripeAsync, getStripeModeAsync, getPublishableKeyAsync } from "@/lib/stripe";
 import { supabase } from "@/lib/supabase";
 
 export const runtime = "nodejs";
@@ -21,12 +21,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
-  const stripe = getStripe();
+  const stripe = await getStripeAsync();
   if (!stripe) {
     return NextResponse.json({ error: "Stripe is not configured. Set STRIPE_TEST_SECRET_KEY or STRIPE_LIVE_SECRET_KEY in .env.local" }, { status: 500 });
   }
 
-  const mode = getStripeMode();
+  const mode = await getStripeModeAsync();
   const origin = req.headers.get("origin") || "http://localhost:3000";
 
   try {

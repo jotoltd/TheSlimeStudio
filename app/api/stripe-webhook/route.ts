@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getStripe, getStripeKeys } from "@/lib/stripe";
+import { getStripeAsync, getStripeModeAsync, getStripeKeysForMode } from "@/lib/stripe";
 import { supabase } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
-  const stripe = getStripe();
+  const mode = await getStripeModeAsync();
+  const stripe = await getStripeAsync();
   if (!stripe) {
     return NextResponse.json({ error: "Stripe not configured" }, { status: 500 });
   }
 
-  const keys = getStripeKeys();
+  const keys = getStripeKeysForMode(mode);
   const webhookSecret = keys.webhookSecret;
 
   if (!webhookSecret) {
