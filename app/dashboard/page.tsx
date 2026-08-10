@@ -18,6 +18,8 @@ export default function DashboardPage() {
   const [stripeConfigured, setStripeConfigured] = useState(false);
   const [switchingMode, setSwitchingMode] = useState(false);
   const [stripeMsg, setStripeMsg] = useState("");
+  const [migrating, setMigrating] = useState(false);
+  const [migrationMsg, setMigrationMsg] = useState("");
 
   useEffect(() => {
     loadData();
@@ -80,6 +82,25 @@ export default function DashboardPage() {
       }
     } catch {}
     setSwitchingMode(false);
+  }
+
+  async function runMigration() {
+    setMigrating(true);
+    setMigrationMsg("");
+    try {
+      const res = await fetch("/api/run-migration", { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        setMigrationMsg("Database migration completed successfully!");
+      } else if (data.sql) {
+        setMigrationMsg(`Automatic migration failed. Run this SQL in your Supabase SQL Editor:\n\n${data.sql}`);
+      } else {
+        setMigrationMsg(data.error || "Migration failed.");
+      }
+    } catch {
+      setMigrationMsg("Migration request failed.");
+    }
+    setMigrating(false);
   }
 
   async function toggleMaintenance() {
@@ -205,9 +226,24 @@ export default function DashboardPage() {
           </div>
         )}
         <div className="border-t border-ink/[0.08] pt-4 mt-4">
-          <p className="text-[0.8rem] text-ink-soft">
+          <p className="text-[0.8rem] text-ink-soft mb-3">
             Switching modes requires setting <code className="bg-ink/5 px-1.5 py-0.5 rounded">STRIPE_MODE=live</code> or <code className="bg-ink/5 px-1.5 py-0.5 rounded">STRIPE_MODE=test</code> in <code className="bg-ink/5 px-1.5 py-0.5 rounded">.env.local</code> and restarting the server. Both booking and subscription payments use the active mode.
           </p>
+          <div className="flex items-center gap-3 flex-wrap">
+            <button
+              onClick={runMigration}
+              disabled={migrating}
+              className="px-5 py-2.5 rounded-full bg-bright-lavender text-white text-[0.85rem] font-medium disabled:opacity-60 hover:-translate-y-0.5 hover:shadow-sm transition-all"
+            >
+              {migrating ? "Running..." : "Run DB Migration"}
+            </button>
+            <span className="text-[0.8rem] text-ink-soft">Adds payment_status, stripe_session_id columns to the database</span>
+          </div>
+          {migrationMsg && (
+            <div className={`mt-3 rounded-xl p-4 text-[0.85rem] whitespace-pre-wrap ${migrationMsg.includes("successfully") ? "bg-green-100 text-green-700" : "bg-sky-blue-light/20 text-ink-soft"}`}>
+              {migrationMsg}
+            </div>
+          )}
         </div>
       </div>
 

@@ -156,6 +156,7 @@ export default function BookingsAdminPage() {
                   <th className="pb-3 pr-4">Time</th>
                   <th className="pb-3 pr-4">People</th>
                   <th className="pb-3 pr-4">Price</th>
+                  <th className="pb-3 pr-4">Payment</th>
                   <th className="pb-3 pr-4">Name</th>
                   <th className="pb-3 pr-4">Contact</th>
                   <th className="pb-3">Actions</th>
@@ -168,6 +169,16 @@ export default function BookingsAdminPage() {
                     <td className="py-3 pr-4 text-[0.9rem]">{b.time_slot}</td>
                     <td className="py-3 pr-4 text-[0.9rem]">{b.people}</td>
                     <td className="py-3 pr-4 text-[0.9rem]">£{Number(b.total_price).toFixed(2)}</td>
+                    <td className="py-3 pr-4 text-[0.9rem]">
+                      <span className={`px-2 py-0.5 rounded-full text-[0.75rem] font-medium ${
+                        b.payment_status === "paid" ? "bg-green-100 text-green-700" :
+                        b.payment_status === "refunded" ? "bg-orange-100 text-orange-700" :
+                        b.payment_status === "expired" ? "bg-red-100 text-red-700" :
+                        "bg-ink/5 text-ink-soft"
+                      }`}>
+                        {b.payment_status || "unpaid"}
+                      </span>
+                    </td>
                     <td className="py-3 pr-4 text-[0.9rem]">{b.name}</td>
                     <td className="py-3 pr-4 text-[0.9rem]">
                       <div>{b.email}</div>

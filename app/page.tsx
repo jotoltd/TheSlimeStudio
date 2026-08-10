@@ -179,7 +179,7 @@ export default function HomePage() {
               Book Now
             </Link>
             <Link href="/parties" className="btn-ghost" style={{ color: "#fff", borderColor: "rgba(255,255,255,0.35)", background: "rgba(255,255,255,0.08)" }}>
-              Plan a Birthday Party
+              Plan a Party or Trip
             </Link>
           </div>
         </div>

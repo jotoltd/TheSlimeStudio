@@ -39,6 +39,8 @@ export type Booking = {
   email: string;
   phone: string | null;
   is_party: boolean;
+  payment_status?: string;
+  stripe_session_id?: string;
   created_at: string;
 };
 
@@ -75,6 +77,8 @@ export type Subscriber = {
   address: string | null;
   postcode: string | null;
   status: string;
+  stripe_session_id?: string;
+  payment_status?: string;
   created_at: string;
 };
 
@@ -90,6 +94,7 @@ export type SiteSettings = {
   id: number;
   maintenance_mode: boolean;
   launch_date: string;
+  stripe_mode?: string;
   updated_at: string;
 };
 

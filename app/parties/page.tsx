@@ -88,7 +88,7 @@ export default function PartiesPage() {
       return;
     }
     if (children < 5 || children > 15) {
-      setErrorMsg("Party size must be between 5 and 15 children.");
+      setErrorMsg("Group size must be between 5 and 15 children.");
       return;
     }
 
@@ -185,7 +185,7 @@ export default function PartiesPage() {
       <div className="relative w-full aspect-[16/7] md:aspect-[16/5] overflow-hidden bg-ink">
         <img
           src="/images/pink_slime_stretch.jpg.jpeg"
-          alt="Parties & Birthdays at The Slime Studio"
+          alt="Parties & Trips at The Slime Studio"
           className="absolute inset-0 w-full h-full object-cover"
         />
       </div>
@@ -198,7 +198,7 @@ export default function PartiesPage() {
           </h1>
           <p className="text-[0.9rem] md:text-[1rem] text-ink/80 leading-relaxed mb-4">
             Celebrate at The Slime Studio with your own private slime-making
-            experience. Our parties include 1.5 hours of private studio time,
+            experience. Our parties and trips include 1.5 hours of private studio time,
             where every guest gets to choose their type of slime, add their
             own colour and scent, decorate it with charms and create
             something completely their own to take home.
@@ -214,7 +214,7 @@ export default function PartiesPage() {
         <div className="container max-w-4xl">
           <div className="flex items-center justify-center gap-3 mb-10">
             <span className="text-ink/40">↝</span>
-            <h2 className="font-display text-[1.4rem] md:text-[1.7rem] text-ink">Party Prices</h2>
+            <h2 className="font-display text-[1.4rem] md:text-[1.7rem] text-ink">Party & Trip Prices</h2>
             <span className="text-ink/40">↜</span>
           </div>
 
@@ -273,20 +273,20 @@ export default function PartiesPage() {
         <div className="container max-w-2xl">
           <div className="flex items-center justify-center gap-3 mb-8">
             <span className="text-ink/40">↝</span>
-            <h2 className="font-display text-[1.4rem] md:text-[1.7rem] text-ink">Book Your Party</h2>
+            <h2 className="font-display text-[1.4rem] md:text-[1.7rem] text-ink">Book Your Party or Trip</h2>
             <span className="text-ink/40">↜</span>
           </div>
 
           {status === "sent" ? (
             <div className="bg-white rounded-3xl p-6 md:p-10 shadow-sm text-center">
               <div className="text-4xl md:text-5xl mb-4">🎉</div>
-              <h3 className="font-display text-lg md:text-2xl mb-3">Party Booking Confirmed!</h3>
+              <h3 className="font-display text-lg md:text-2xl mb-3">Booking Confirmed!</h3>
               <p className="text-ink-soft mb-6">
-                Thanks for booking your Slime Studio party. We&apos;ve sent a
+                Thanks for booking your Slime Studio party or trip. We&apos;ve sent a
                 confirmation to your email — see you soon!
               </p>
               <button onClick={() => setStatus("idle")} className="btn-primary">
-                Book Another Party
+                Book Another
               </button>
             </div>
           ) : dateFull ? (
@@ -411,7 +411,7 @@ export default function PartiesPage() {
 
               <div className="text-center">
                 <button type="submit" disabled={status === "sending"} className="btn-primary disabled:opacity-60 w-full justify-center">
-                  {status === "sending" ? "Booking..." : `Confirm Party Booking — £${totalPrice.toFixed(2)}`}
+                  {status === "sending" ? "Booking..." : `Confirm Booking — £${totalPrice.toFixed(2)}`}
                 </button>
               </div>
             </form>
@@ -425,7 +425,7 @@ export default function PartiesPage() {
           <div className="bg-white rounded-[28px] p-8 md:p-10 shadow-sm text-center">
             <h2 className="font-display text-[1.3rem] mb-2 text-ink">Get In Touch</h2>
             <p className="text-ink-soft text-[0.95rem] mb-6">
-              Got questions? Contact us and we&apos;ll help arrange your Slime Studio party.
+              Got questions? Contact us and we&apos;ll help arrange your Slime Studio party or trip.
             </p>
             <div className="flex flex-col items-center gap-3 mb-8">
               <a href="https://instagram.com/theslimestudioexperience" target="_blank" rel="noopener noreferrer" className="text-[0.95rem] text-ink hover:text-[#ff2d78] transition-colors">
