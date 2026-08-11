@@ -115,6 +115,11 @@ export default function PartiesPage() {
       setErrorMsg("Group size must be between 5 and 15 children.");
       return;
     }
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if (!emailOk) {
+      setErrorMsg("Please enter a valid email address.");
+      return;
+    }
 
     setStatus("sending");
 

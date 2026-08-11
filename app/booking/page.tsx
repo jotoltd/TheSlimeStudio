@@ -100,6 +100,11 @@ function BookingPageInner() {
       setErrorMsg(`Group size must be between 1 and ${slotCapacity}.`);
       return;
     }
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if (!emailOk) {
+      setErrorMsg("Please enter a valid email address.");
+      return;
+    }
 
     setStatus("sending");
 
