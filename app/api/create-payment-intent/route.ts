@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripeAsync, getStripeModeAsync } from "@/lib/stripe";
-import { supabase } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { bookingId, name, email, date, timeSlot, people, totalPrice, isParty } = body as {
-    bookingId: string;
+  const { name, email, date, timeSlot, people, totalPrice, isParty } = body as {
     name: string;
     email: string;
     date: string;
@@ -17,7 +15,7 @@ export async function POST(req: NextRequest) {
     isParty?: boolean;
   };
 
-  if (!bookingId || !email || !totalPrice) {
+  if (!email || !totalPrice || !date || !timeSlot) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
@@ -25,6 +23,14 @@ export async function POST(req: NextRequest) {
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   if (!emailOk) {
     return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
+  }
+
+  // Don't allow booking in the past
+  const [h, m] = timeSlot.split(":").map(Number);
+  const slotTime = new Date(date + "T00:00:00");
+  slotTime.setHours(h, m, 0, 0);
+  if (slotTime.getTime() < Date.now()) {
+    return NextResponse.json({ error: "Cannot book a session in the past. Please choose a future time slot." }, { status: 400 });
   }
 
   const stripe = await getStripeAsync();
@@ -40,9 +46,15 @@ export async function POST(req: NextRequest) {
       currency: "gbp",
       automatic_payment_methods: { enabled: true },
       metadata: {
-        bookingId,
         type: isParty ? "party" : "booking",
         stripeMode: mode,
+        name,
+        email,
+        date,
+        timeSlot,
+        people: String(people),
+        totalPrice: String(totalPrice),
+        phone: body.phone || "",
       },
       receipt_email: email,
       description: isParty
@@ -50,12 +62,7 @@ export async function POST(req: NextRequest) {
         : `Slime Studio Session — ${people} ${people === 1 ? "person" : "people"} — ${date} at ${timeSlot}`,
     });
 
-    await supabase
-      .from("bookings")
-      .update({ payment_status: "pending", stripe_session_id: intent.id })
-      .eq("id", bookingId);
-
-    return NextResponse.json({ clientSecret: intent.client_secret, mode });
+    return NextResponse.json({ clientSecret: intent.client_secret, paymentIntentId: intent.id, mode });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error("Payment intent error:", msg);

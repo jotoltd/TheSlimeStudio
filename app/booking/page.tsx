@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState, Suspense, lazy } from "react";
-import { useSearchParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Calendar from "@/components/Calendar";
@@ -18,7 +17,6 @@ function todayISO() {
 }
 
 function BookingPageInner() {
-  const searchParams = useSearchParams();
   const [date, setDate] = useState(todayISO());
   const [timeSlot, setTimeSlot] = useState<string>("");
   const [people, setPeople] = useState(1);
@@ -27,22 +25,17 @@ function BookingPageInner() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error" | "paid" | "cancelled" | "payment">("idle");
+  const [status, setStatus] = useState<"idle" | "sending" | "error" | "paid" | "cancelled" | "payment">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [clientSecret, setClientSecret] = useState("");
   const [publishableKey, setPublishableKey] = useState("");
-  const [bookingId, setBookingId] = useState("");
+  const [paymentIntentId, setPaymentIntentId] = useState("");
   const [blockedDates, setBlockedDates] = useState<string[]>([]);
   const [pricePerPerson, setPricePerPerson] = useState(PRICE_PER_PERSON);
   const [timeSlots, setTimeSlots] = useState<string[]>(DEFAULT_SLOTS);
   const [slotCapacity, setSlotCapacity] = useState(DEFAULT_CAP);
   const [maxDaily, setMaxDaily] = useState(DEFAULT_MAX);
 
-  useEffect(() => {
-    const urlStatus = searchParams.get("status");
-    if (urlStatus === "paid") setStatus("paid");
-    if (urlStatus === "cancelled") setStatus("cancelled");
-  }, [searchParams]);
 
   useEffect(() => {
     supabase.from("booking_settings").select("*").eq("id", 1).single().then(({ data }) => {
@@ -64,16 +57,14 @@ function BookingPageInner() {
     setTimeSlot("");
   }, [date]);
 
-  // Delete booking if user navigates away or closes tab during payment
-  useEffect(() => {
-    if (status !== "payment" || !bookingId) return;
-    const handler = () => {
-      const blob = new Blob([JSON.stringify({ bookingId })], { type: "application/json" });
-      navigator.sendBeacon("/api/delete-booking", blob);
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [status, bookingId]);
+
+  function isSlotInPast(slot: string, forDate: string) {
+    const now = new Date();
+    const [h, m] = slot.split(":").map(Number);
+    const slotTime = new Date(forDate + "T00:00:00");
+    slotTime.setHours(h, m, 0, 0);
+    return slotTime.getTime() < now.getTime();
+  }
 
   async function loadAvailability(forDate: string) {
     setLoadingSlots(true);
@@ -119,27 +110,36 @@ function BookingPageInner() {
       return;
     }
 
+    // Don't allow booking in the past
+    if (isSlotInPast(timeSlot, date)) {
+      setErrorMsg("Cannot book a session in the past. Please choose a future time slot.");
+      return;
+    }
+
     setStatus("sending");
 
-    // Check total bookings for this date (daily cap)
+    // Check total bookings for this date (daily cap) — only paid bookings count
     const { data: dailyBookings } = await supabase
       .from("bookings")
-      .select("id")
+      .select("id, payment_status")
       .eq("date", date);
-    if ((dailyBookings || []).length >= maxDaily) {
+    const paidDaily = (dailyBookings || []).filter((b: { payment_status: string }) => b.payment_status === "paid");
+    if (paidDaily.length >= maxDaily) {
       setStatus("error");
       setErrorMsg(`Sorry, this date is fully booked. Please choose another date.`);
       loadAvailability(date);
       return;
     }
 
-    // Re-check slot capacity right before booking to avoid race conditions
+    // Re-check slot capacity — only paid bookings count
     const { data: existing } = await supabase
       .from("bookings")
-      .select("people")
+      .select("people, payment_status")
       .eq("date", date)
       .eq("time_slot", timeSlot);
-    const used = (existing || []).reduce((sum: number, b: { people: number }) => sum + b.people, 0);
+    const used = (existing || [])
+      .filter((b: { payment_status: string }) => b.payment_status === "paid")
+      .reduce((sum: number, b: { people: number }) => sum + b.people, 0);
 
     if (used + people > slotCapacity) {
       setStatus("error");
@@ -148,64 +148,42 @@ function BookingPageInner() {
       return;
     }
 
-    const { data: inserted, error } = await supabase.from("bookings").insert({
-      date,
-      time_slot: timeSlot,
-      people,
-      total_price: totalPrice,
-      name,
-      email,
-      phone: phone || null,
-    }).select().single();
-
-    if (error || !inserted) {
-      setStatus("error");
-      setErrorMsg("Something went wrong. Please try again.");
-    } else {
-      const bId = (inserted as { id: string }).id;
-      setBookingId(bId);
-
-      // Try to create a payment intent for inline payment
-      try {
-        const res = await fetch("/api/create-payment-intent", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            bookingId: bId,
-            name,
-            email,
-            date,
-            timeSlot,
-            people,
-            totalPrice,
-            isParty: false,
-          }),
-        });
-        const data = await res.json();
-        if (data.clientSecret) {
-          setClientSecret(data.clientSecret);
-          // Fetch the publishable key
-          const modeRes = await fetch("/api/stripe-mode");
-          const modeData = await modeRes.json();
-          setPublishableKey(modeData.publishableKey || "");
-          setStatus("payment");
-          return;
-        } else {
-          console.error("Payment intent error:", data.error);
-          // Delete the unpaid booking so it doesn't block slots
-          await supabase.from("bookings").delete().eq("id", bId);
-          setStatus("error");
-          setErrorMsg(data.error || "Payment setup failed. Please try again.");
-          return;
-        }
-      } catch (err) {
-        console.error("Payment intent fetch failed:", err);
-        // Delete the unpaid booking so it doesn't block slots
-        await supabase.from("bookings").delete().eq("id", bId);
+    // Create payment intent — NO booking in DB yet
+    try {
+      const res = await fetch("/api/create-payment-intent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          email,
+          phone,
+          date,
+          timeSlot,
+          people,
+          totalPrice,
+          isParty: false,
+        }),
+      });
+      const data = await res.json();
+      if (data.clientSecret) {
+        setClientSecret(data.clientSecret);
+        setPaymentIntentId(data.paymentIntentId);
+        const modeRes = await fetch("/api/stripe-mode");
+        const modeData = await modeRes.json();
+        setPublishableKey(modeData.publishableKey || "");
+        setStatus("payment");
+        return;
+      } else {
+        console.error("Payment intent error:", data.error);
         setStatus("error");
-        setErrorMsg("Payment setup failed. Please try again.");
+        setErrorMsg(data.error || "Payment setup failed. Please try again.");
         return;
       }
+    } catch (err) {
+      console.error("Payment intent fetch failed:", err);
+      setStatus("error");
+      setErrorMsg("Payment setup failed. Please try again.");
+      return;
     }
   }
 
@@ -229,16 +207,14 @@ function BookingPageInner() {
 
       <section className="section">
         <div className="container max-w-2xl">
-          {status === "sent" || status === "paid" ? (
+          {status === "paid" ? (
             <div className="bg-white rounded-3xl p-6 md:p-10 shadow-sm text-center">
               <div className="text-4xl md:text-5xl mb-4">🎉</div>
               <h2 className="font-display text-xl md:text-2xl mb-3">
-                {status === "paid" ? "Payment Successful — Booking Confirmed!" : "Booking Confirmed!"}
+                Payment Successful — Booking Confirmed!
               </h2>
               <p className="text-ink-soft mb-6">
-                {status === "paid"
-                  ? "Your payment has been received and your booking is confirmed. We've sent a confirmation to your email — see you soon!"
-                  : "Thanks for booking with The Slime Studio. We've sent a confirmation to your email — see you soon!"}
+                Your payment has been received and your booking is confirmed. We've sent a confirmation to your email — see you soon!
               </p>
               <button onClick={() => setStatus("idle")} className="btn-primary">
                 Make Another Booking
@@ -267,30 +243,34 @@ function BookingPageInner() {
                   publishableKey={publishableKey}
                   amount={totalPrice}
                   onSuccess={() => {
-                    // Update booking to paid in database (fallback to webhook)
-                    if (bookingId) {
-                      fetch("/api/update-booking-status", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ bookingId, status: "paid" }),
-                      }).catch(() => {});
-                    }
-                    fetch("/api/booking-confirmation", {
+                    // Payment succeeded — NOW create the booking in the database
+                    fetch("/api/confirm-booking", {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ name, email, date, timeSlot, people, totalPrice, isParty: false }),
-                    }).catch(() => {});
-                    setStatus("paid");
-                  }}
-                  onCancel={() => {
-                    // Delete the unpaid booking so it doesn't block slots
-                    if (bookingId) {
-                      fetch("/api/delete-booking", {
+                      body: JSON.stringify({
+                        paymentIntentId,
+                        name,
+                        email,
+                        phone,
+                        date,
+                        timeSlot,
+                        people,
+                        totalPrice,
+                        isParty: false,
+                      }),
+                    }).then(() => {
+                      fetch("/api/booking-confirmation", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ bookingId }),
+                        body: JSON.stringify({ name, email, date, timeSlot, people, totalPrice, isParty: false }),
                       }).catch(() => {});
-                    }
+                      setStatus("paid");
+                    }).catch(() => {
+                      setStatus("error");
+                      setErrorMsg("Payment succeeded but booking creation failed. Please contact us.");
+                    });
+                  }}
+                  onCancel={() => {
                     setStatus("cancelled");
                     setClientSecret("");
                   }}
@@ -315,14 +295,16 @@ function BookingPageInner() {
                     {timeSlots.map((slot) => {
                       const rem = remaining[slot] ?? slotCapacity;
                       const full = rem === 0;
+                      const past = isSlotInPast(slot, date);
+                      const disabled = full || past;
                       return (
                         <button
                           type="button"
                           key={slot}
-                          disabled={full}
+                          disabled={disabled}
                           onClick={() => selectSlot(slot)}
                           className={`rounded-xl py-3 text-sm font-display transition-all ${
-                            full
+                            disabled
                               ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                               : timeSlot === slot
                               ? "bg-sky-blue-light text-ink shadow-sm"
@@ -331,7 +313,7 @@ function BookingPageInner() {
                         >
                           {slot}
                           <span className="block text-[0.65rem] font-body normal-case mt-0.5">
-                            {full ? "Full" : `${rem} left`}
+                            {past ? "Past" : full ? "Full" : `${rem} left`}
                           </span>
                         </button>
                       );
