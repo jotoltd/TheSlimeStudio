@@ -64,12 +64,23 @@ function BookingPageInner() {
     setTimeSlot("");
   }, [date]);
 
+  function isSlotTooSoon(slot: string, forDate: string) {
+    const now = new Date();
+    const [h, m] = slot.split(":").map(Number);
+    const slotTime = new Date(forDate + "T00:00:00");
+    slotTime.setHours(h, m, 0, 0);
+    const diffMs = slotTime.getTime() - now.getTime();
+    return diffMs < 30 * 60 * 1000;
+  }
+
   async function loadAvailability(forDate: string) {
     setLoadingSlots(true);
-    const { data } = await supabase.from("bookings").select("time_slot, people").eq("date", forDate);
+    const { data } = await supabase.from("bookings").select("time_slot, people, payment_status").eq("date", forDate);
     const used: Record<string, number> = {};
-    (data || []).forEach((b: { time_slot: string; people: number }) => {
-      used[b.time_slot] = (used[b.time_slot] || 0) + b.people;
+    (data || []).forEach((b: { time_slot: string; people: number; payment_status: string }) => {
+      if (b.payment_status === "paid" || b.payment_status === "pending") {
+        used[b.time_slot] = (used[b.time_slot] || 0) + b.people;
+      }
     });
     const rem: Record<string, number> = {};
     timeSlots.forEach((slot) => {
@@ -179,12 +190,16 @@ function BookingPageInner() {
           return;
         } else {
           console.error("Payment intent error:", data.error);
+          // Delete the unpaid booking so it doesn't block slots
+          await supabase.from("bookings").delete().eq("id", bId);
           setStatus("error");
           setErrorMsg(data.error || "Payment setup failed. Please try again.");
           return;
         }
       } catch (err) {
         console.error("Payment intent fetch failed:", err);
+        // Delete the unpaid booking so it doesn't block slots
+        await supabase.from("bookings").delete().eq("id", bId);
         setStatus("error");
         setErrorMsg("Payment setup failed. Please try again.");
         return;
@@ -266,7 +281,15 @@ function BookingPageInner() {
                     setStatus("paid");
                   }}
                   onCancel={() => {
-                    setStatus("idle");
+                    // Delete the unpaid booking so it doesn't block slots
+                    if (bookingId) {
+                      fetch("/api/delete-booking", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ bookingId }),
+                      }).catch(() => {});
+                    }
+                    setStatus("cancelled");
                     setClientSecret("");
                   }}
                 />
@@ -282,7 +305,7 @@ function BookingPageInner() {
               </div>
 
               <div className="mb-6">
-                <label className="block text-sm font-medium mb-3">Time Slot (1 hour)</label>
+                <label className="block text-sm font-medium mb-3">Time Slot (1 hour) <span className="text-ink-soft text-[0.75rem] font-normal">· 30 mins notice required</span></label>
                 {loadingSlots ? (
                   <div className="text-sm text-ink-soft py-4 text-center">Checking availability...</div>
                 ) : (
@@ -290,14 +313,16 @@ function BookingPageInner() {
                     {timeSlots.map((slot) => {
                       const rem = remaining[slot] ?? slotCapacity;
                       const full = rem === 0;
+                      const tooSoon = isSlotTooSoon(slot, date);
+                      const disabled = full || tooSoon;
                       return (
                         <button
                           type="button"
                           key={slot}
-                          disabled={full}
+                          disabled={disabled}
                           onClick={() => selectSlot(slot)}
                           className={`rounded-xl py-3 text-sm font-display transition-all ${
-                            full
+                            disabled
                               ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                               : timeSlot === slot
                               ? "bg-sky-blue-light text-ink shadow-sm"
@@ -306,7 +331,7 @@ function BookingPageInner() {
                         >
                           {slot}
                           <span className="block text-[0.65rem] font-body normal-case mt-0.5">
-                            {full ? "Full" : `${rem} left`}
+                            {tooSoon ? "Too soon" : full ? "Full" : `${rem} left`}
                           </span>
                         </button>
                       );
