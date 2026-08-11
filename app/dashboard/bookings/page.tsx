@@ -248,7 +248,8 @@ export default function BookingsAdminPage() {
       {loading ? (
         <div className="bg-white rounded-[20px] p-8 shadow-sm text-center text-ink-soft text-[0.9rem]">Loading bookings...</div>
       ) : viewMode === "calendar" ? (
-        <div className="grid lg:grid-cols-[1fr_400px] gap-6">
+        <div className="space-y-6">
+          {/* Calendar */}
           <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm">
             <div className="flex items-center justify-between mb-6">
               <button onClick={() => setCalMonth(new Date(calYear, calMonthIdx - 1, 1))} className="w-10 h-10 rounded-full bg-ink/5 hover:bg-ink/10 transition-colors text-ink">←</button>
@@ -270,17 +271,24 @@ export default function BookingsAdminPage() {
                 const isSelected = selectedDate === dateStr;
                 const isToday = dateStr === new Date().toISOString().split("T")[0];
                 return (
-                  <button key={day} onClick={() => setSelectedDate(dateStr)}
-                    className={`aspect-square rounded-lg md:rounded-xl text-[0.75rem] md:text-[0.9rem] font-medium transition-all relative ${
-                      isSelected ? "bg-sky-blue-light text-ink shadow-sm" :
-                      hasBookings ? "bg-bright-lavender/15 text-ink hover:bg-bright-lavender/25" :
-                      "bg-ink/[0.03] text-ink-soft hover:bg-ink/[0.06]"
-                    } ${isToday ? "ring-2 ring-bright-lavender" : ""}`}>
-                    {day}
-                    {hasBookings && (
-                      <span className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5">
-                        {dayBookings.slice(0, 3).map((_, idx) => <span key={idx} className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-bright-lavender" />)}
-                      </span>
+                  <button key={day} onClick={() => setSelectedDate(isSelected ? null : dateStr)}
+                    className={`min-h-[70px] md:min-h-[100px] rounded-lg md:rounded-xl p-1 md:p-1.5 text-left transition-all relative flex flex-col ${
+                      isSelected ? "bg-sky-blue-light/40 ring-2 ring-sky-blue-light" :
+                      hasBookings ? "bg-bright-lavender/10 hover:bg-bright-lavender/20" :
+                      "bg-ink/[0.03] hover:bg-ink/[0.06]"
+                    } ${isToday && !isSelected ? "ring-2 ring-bright-lavender" : ""}`}>
+                    <span className={`text-[0.7rem] md:text-[0.85rem] font-medium ${hasBookings ? "text-ink" : "text-ink-soft"}`}>{day}</span>
+                    {dayBookings.length > 0 && (
+                      <div className="flex-1 mt-0.5 space-y-0.5 overflow-hidden">
+                        {dayBookings.slice(0, 3).map((b) => (
+                          <div key={b.id} className="text-[0.55rem] md:text-[0.65rem] leading-tight truncate px-1 py-0.5 rounded bg-bright-lavender/20 text-ink">
+                            {b.time_slot} {b.name}
+                          </div>
+                        ))}
+                        {dayBookings.length > 3 && (
+                          <div className="text-[0.55rem] md:text-[0.65rem] text-ink-soft px-1">+{dayBookings.length - 3} more</div>
+                        )}
+                      </div>
                     )}
                   </button>
                 );
@@ -288,17 +296,23 @@ export default function BookingsAdminPage() {
             </div>
           </div>
 
+          {/* Booking list below calendar */}
           <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm">
             {selectedDate ? (
               <>
-                <h2 className="font-display text-[1.1rem] mb-1">
-                  {new Date(selectedDate).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}
-                </h2>
-                <p className="text-[0.85rem] text-ink-soft mb-5">{selectedDateBookings.length} booking{selectedDateBookings.length !== 1 ? "s" : ""}</p>
+                <div className="flex items-center justify-between mb-5">
+                  <div>
+                    <h2 className="font-display text-[1.1rem]">
+                      {new Date(selectedDate).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}
+                    </h2>
+                    <p className="text-[0.85rem] text-ink-soft mt-0.5">{selectedDateBookings.length} booking{selectedDateBookings.length !== 1 ? "s" : ""}</p>
+                  </div>
+                  <button onClick={() => setSelectedDate(null)} className="text-[0.8rem] text-ink-soft hover:text-ink">Clear selection</button>
+                </div>
                 {selectedDateBookings.length === 0 ? (
                   <div className="text-center py-8 text-ink-soft text-[0.9rem]">No bookings on this date.</div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="grid sm:grid-cols-2 gap-3">
                     {selectedDateBookings.map((b) => (
                       <BookingCard key={b.id} b={b} onEdit={() => startEdit(b)} onCancel={() => cancelBooking(b.id, b.name)} cancelling={cancellingId === b.id} />
                     ))}
@@ -306,7 +320,19 @@ export default function BookingsAdminPage() {
                 )}
               </>
             ) : (
-              <div className="text-center py-12 text-ink-soft text-[0.9rem]"><div className="text-3xl mb-3">📅</div>Click a date to view bookings</div>
+              <>
+                <h2 className="font-display text-[1.1rem] mb-1">All Bookings ({filteredBookings.length})</h2>
+                <p className="text-[0.85rem] text-ink-soft mb-5">Click a date on the calendar to filter, or browse all bookings below.</p>
+                {filteredBookings.length === 0 ? (
+                  <div className="text-center py-8 text-ink-soft text-[0.9rem]">No bookings found.</div>
+                ) : (
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {filteredBookings.map((b) => (
+                      <BookingCard key={b.id} b={b} onEdit={() => startEdit(b)} onCancel={() => cancelBooking(b.id, b.name)} cancelling={cancellingId === b.id} />
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
