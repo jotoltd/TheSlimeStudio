@@ -1,21 +1,10 @@
 "use client";
 
-import { useEffect, useState, Suspense, lazy } from "react";
+import { useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Heart } from "@/components/Heart";
-import Calendar from "@/components/Calendar";
-import { supabase, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, MAX_DAILY_BOOKINGS as DEFAULT_MAX } from "@/lib/supabase";
-import type { BookingSettings } from "@/lib/supabase";
-
-const InlinePayment = lazy(() => import("@/components/InlinePayment"));
-
-function todayISO() {
-  const d = new Date();
-  if (d.getDay() === 0) d.setDate(d.getDate() + 1);
-  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-  return d.toISOString().split("T")[0];
-}
+import { supabase } from "@/lib/supabase";
 
 function priceForCount(count: number) {
   if (count <= 5) return 13.5;
@@ -43,78 +32,20 @@ const INCLUDED = [
 ];
 
 export default function PartiesPage() {
-  const [date, setDate] = useState(todayISO());
-  const [timeSlot, setTimeSlot] = useState("");
-  const [children, setChildren] = useState(5);
-  const [remaining, setRemaining] = useState<Record<string, number>>({});
-  const [loadingSlots, setLoadingSlots] = useState(true);
-  const [dateFull, setDateFull] = useState(false);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [slotCapacity, setSlotCapacity] = useState(DEFAULT_CAP);
-  const [maxDaily, setMaxDaily] = useState(DEFAULT_MAX);
-  const [timeSlots, setTimeSlots] = useState<string[]>(DEFAULT_SLOTS);
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error" | "paid" | "payment">("idle");
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
-  const [clientSecret, setClientSecret] = useState("");
-  const [publishableKey, setPublishableKey] = useState("");
-  const [blockedDates, setBlockedDates] = useState<string[]>([]);
 
-  useEffect(() => {
-    supabase.from("booking_settings").select("*").eq("id", 1).single().then(({ data }) => {
-      if (data) {
-        const s = data as BookingSettings;
-        if (s.time_slots && s.time_slots.length > 0) setTimeSlots(s.time_slots);
-        if (s.slot_capacity) setSlotCapacity(s.slot_capacity);
-        if (s.max_daily_bookings) setMaxDaily(s.max_daily_bookings);
-      }
-    });
-    fetch("/api/blocked-dates").then(r => r.json()).then(d => {
-      if (d.blockedDates) setBlockedDates(d.blockedDates.map((b: { date: string }) => b.date));
-    }).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    loadAvailability(date);
-    setTimeSlot("");
-  }, [date]);
-
-  async function loadAvailability(forDate: string) {
-    setLoadingSlots(true);
-    setDateFull(false);
-    const { data } = await supabase.from("bookings").select("time_slot, people").eq("date", forDate);
-    const used: Record<string, number> = {};
-    let totalBookings = 0;
-    (data || []).forEach((b: { time_slot: string; people: number }) => {
-      used[b.time_slot] = (used[b.time_slot] || 0) + b.people;
-      totalBookings++;
-    });
-    if (totalBookings >= maxDaily) {
-      setDateFull(true);
-    }
-    const rem: Record<string, number> = {};
-    timeSlots.forEach((slot) => {
-      rem[slot] = Math.max(0, slotCapacity - (used[slot] || 0));
-    });
-    setRemaining(rem);
-    setLoadingSlots(false);
-  }
-
-  const totalPrice = children * priceForCount(children);
-
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleEnquiry(e: React.FormEvent) {
     e.preventDefault();
-    setErrorMsg("");
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
+    const name = String(formData.get("name") || "");
+    const email = String(formData.get("email") || "");
+    const phone = String(formData.get("phone") || "");
+    const partyDate = String(formData.get("party_date") || "");
+    const childrenCount = String(formData.get("children") || "");
+    const message = String(formData.get("message") || "");
 
-    if (!timeSlot) {
-      setErrorMsg("Please select a time slot.");
-      return;
-    }
-    if (children < 5 || children > 15) {
-      setErrorMsg("Group size must be between 5 and 15 children.");
-      return;
-    }
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     if (!emailOk) {
       setErrorMsg("Please enter a valid email address.");
@@ -122,94 +53,20 @@ export default function PartiesPage() {
     }
 
     setStatus("sending");
+    setErrorMsg("");
 
-    // Check total bookings for this date (daily cap)
-    const { data: dailyBookings } = await supabase
-      .from("bookings")
-      .select("id")
-      .eq("date", date);
-    if ((dailyBookings || []).length >= maxDaily) {
-      setStatus("error");
-      setErrorMsg("Sorry, this date is fully booked. Please choose another date.");
-      loadAvailability(date);
-      return;
-    }
-
-    // Re-check slot capacity
-    const { data: existing } = await supabase
-      .from("bookings")
-      .select("people")
-      .eq("date", date)
-      .eq("time_slot", timeSlot);
-    const used = (existing || []).reduce((sum: number, b: { people: number }) => sum + b.people, 0);
-
-    if (used + children > slotCapacity) {
-      setStatus("error");
-      setErrorMsg(`Sorry, only ${Math.max(0, slotCapacity - used)} spot(s) left in that slot. Please choose another.`);
-      loadAvailability(date);
-      return;
-    }
-
-    const { data: inserted, error } = await supabase.from("bookings").insert({
-      date,
-      time_slot: timeSlot,
-      people: children,
-      total_price: totalPrice,
+    const { error } = await supabase.from("enquiries").insert({
       name,
       email,
-      phone: phone || null,
-      is_party: true,
-    }).select().single();
+      message: `Party Enquiry — Date: ${partyDate || "TBD"}, Children: ${childrenCount || "TBD"}, Phone: ${phone || "N/A"}\n\n${message}`,
+    });
 
-    if (error || !inserted) {
+    if (error) {
       setStatus("error");
       setErrorMsg("Something went wrong. Please try again.");
     } else {
-      const bId = (inserted as { id: string }).id;
-
-      // Try to create a payment intent for inline payment
-      try {
-        const res = await fetch("/api/create-payment-intent", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            bookingId: bId,
-            name,
-            email,
-            date,
-            timeSlot,
-            people: children,
-            totalPrice,
-            isParty: true,
-          }),
-        });
-        const data = await res.json();
-        if (data.clientSecret) {
-          setClientSecret(data.clientSecret);
-          const modeRes = await fetch("/api/stripe-mode");
-          const modeData = await modeRes.json();
-          setPublishableKey(modeData.publishableKey || "");
-          setStatus("payment");
-          return;
-        } else {
-          console.error("Payment intent error:", data.error);
-        }
-      } catch (err) {
-        console.error("Payment intent fetch failed:", err);
-      }
-      // Send confirmation email (fire-and-forget)
-      fetch("/api/booking-confirmation", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, date, timeSlot, people: children, totalPrice, isParty: true }),
-      }).catch(() => {});
+      form.reset();
       setStatus("sent");
-      setName("");
-      setEmail("");
-      setPhone("");
-      setChildren(5);
-      setTimeSlot("");
-      loadAvailability(date);
     }
   }
 
@@ -308,136 +165,38 @@ export default function PartiesPage() {
         </div>
       </section>
 
-      {/* Book a Party */}
+      {/* Enquiry Form */}
       <section className="py-14 md:py-16" style={{ backgroundColor: "#fdeef7" }}>
         <div className="container max-w-2xl">
           <div className="flex items-center justify-center gap-3 mb-8">
             <span className="text-ink/40">↝</span>
-            <h2 className="font-display text-[1.4rem] md:text-[1.7rem] text-ink">Book Your Party or Trip</h2>
+            <h2 className="font-display text-[1.4rem] md:text-[1.7rem] text-ink">Enquire About a Party</h2>
             <span className="text-ink/40">↜</span>
           </div>
 
-          {status === "sent" || status === "paid" ? (
+          {status === "sent" ? (
             <div className="bg-white rounded-3xl p-6 md:p-10 shadow-sm text-center">
               <div className="text-4xl md:text-5xl mb-4">🎉</div>
-              <h3 className="font-display text-lg md:text-2xl mb-3">
-                {status === "paid" ? "Payment Successful — Booking Confirmed!" : "Booking Confirmed!"}
-              </h3>
+              <h3 className="font-display text-lg md:text-2xl mb-3">Enquiry Sent!</h3>
               <p className="text-ink-soft mb-6">
-                {status === "paid"
-                  ? "Your payment has been received and your party booking is confirmed. We've sent a confirmation to your email — see you soon!"
-                  : "Thanks for booking your Slime Studio party or trip. We've sent a confirmation to your email — see you soon!"}
+                Thanks for your enquiry! We&apos;ll get back to you soon to arrange your Slime Studio party.
               </p>
               <button onClick={() => setStatus("idle")} className="btn-primary">
-                Book Another
+                Send Another Enquiry
               </button>
             </div>
-          ) : status === "payment" ? (
-            <div className="bg-white rounded-3xl p-5 md:p-8 shadow-sm">
-              <h3 className="font-display text-lg md:text-xl mb-2 text-center">Complete Your Payment</h3>
-              <p className="text-sm text-ink-soft text-center mb-5">
-                {children} children · {date} at {timeSlot} · £{totalPrice.toFixed(2)}
-              </p>
-              <Suspense fallback={<div className="py-8 text-center text-ink-soft text-sm">Loading payment form...</div>}>
-                <InlinePayment
-                  clientSecret={clientSecret}
-                  publishableKey={publishableKey}
-                  amount={totalPrice}
-                  onSuccess={() => {
-                    fetch("/api/booking-confirmation", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ name, email, date, timeSlot, people: children, totalPrice, isParty: true }),
-                    }).catch(() => {});
-                    setStatus("paid");
-                  }}
-                  onCancel={() => {
-                    setStatus("idle");
-                    setClientSecret("");
-                  }}
-                />
-              </Suspense>
-            </div>
-          ) : dateFull ? (
-            <div className="bg-white rounded-3xl p-6 md:p-10 shadow-sm text-center">
-              <div className="mb-4 flex justify-center"><Heart size={32} /></div>
-              <h3 className="font-display text-lg md:text-xl mb-3">Date Fully Booked</h3>
-              <p className="text-ink-soft mb-6">
-                Sorry, this date is fully booked. Please choose another date.
-              </p>
-              <div className="max-w-xs mx-auto">
-                <Calendar value={date} onChange={setDate} min={todayISO()} disableDays={[0]} blockedDates={blockedDates} />
-              </div>
-            </div>
           ) : (
-            <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-5 md:p-8 shadow-sm">
-              <div className="mb-6">
-                <label className="block text-sm font-medium mb-2">Date</label>
-                <Calendar value={date} onChange={setDate} min={todayISO()} disableDays={[0]} blockedDates={blockedDates} />
-              </div>
-
-              <div className="mb-6">
-                <label className="block text-sm font-medium mb-3">Time Slot (1.5 hours)</label>
-                {loadingSlots ? (
-                  <div className="text-sm text-ink-soft py-4 text-center">Checking availability...</div>
-                ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 md:gap-3">
-                    {timeSlots.map((slot) => {
-                      const rem = remaining[slot] ?? slotCapacity;
-                      const full = rem === 0;
-                      return (
-                        <button
-                          type="button"
-                          key={slot}
-                          disabled={full}
-                          onClick={() => setTimeSlot(slot)}
-                          className={`rounded-xl py-3 text-sm font-display transition-all ${
-                            full
-                              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                              : timeSlot === slot
-                              ? "bg-sky-blue-light text-ink shadow-sm"
-                              : "bg-ink/[0.04] text-ink hover:bg-sky-blue-light/30"
-                          }`}
-                        >
-                          {slot}
-                          <span className="block text-[0.65rem] font-body normal-case mt-0.5">
-                            {full ? "Full" : `${rem} left`}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              <div className="mb-6">
-                <label className="block text-sm font-medium mb-2">Number of Children (5–15)</label>
-                <div className="flex items-center gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setChildren((c) => Math.max(5, c - 1))}
-                    className="w-10 h-10 rounded-full bg-ink/10 text-ink text-lg hover:bg-ink/15 transition-colors"
-                  >
-                    −
-                  </button>
-                  <span className="font-display text-2xl w-10 text-center">{children}</span>
-                  <button
-                    type="button"
-                    onClick={() => setChildren((c) => Math.min(15, c + 1))}
-                    className="w-10 h-10 rounded-full bg-ink/10 text-ink text-lg hover:bg-ink/15 transition-colors"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
+            <form onSubmit={handleEnquiry} className="bg-white rounded-3xl p-5 md:p-8 shadow-sm">
+              <p className="text-sm text-ink-soft mb-6 text-center">
+                Interested in a party or trip? Send us your details and we&apos;ll be in touch to arrange everything.
+              </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">Your Name</label>
                   <input
                     type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    name="name"
                     required
                     placeholder="Jane Smith"
                     className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-[#ff2d78]"
@@ -447,8 +206,7 @@ export default function PartiesPage() {
                   <label className="block text-sm font-medium mb-2">Email Address</label>
                   <input
                     type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    name="email"
                     required
                     placeholder="jane@example.com"
                     className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-[#ff2d78]"
@@ -456,20 +214,46 @@ export default function PartiesPage() {
                 </div>
               </div>
 
-              <div className="mb-6">
-                <label className="block text-sm font-medium mb-2">Phone Number (optional)</label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Phone Number</label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    placeholder="07900 123456"
+                    className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-[#ff2d78]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Preferred Date</label>
+                  <input
+                    type="date"
+                    name="party_date"
+                    className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-[#ff2d78]"
+                  />
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">Number of Children</label>
                 <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="07900 123456"
+                  type="number"
+                  name="children"
+                  min={5}
+                  max={15}
+                  placeholder="e.g. 8"
                   className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-[#ff2d78]"
                 />
               </div>
 
-              <div className="flex items-center justify-between bg-sky-blue-light/20 rounded-xl p-4 md:p-5 mb-6">
-                <span className="text-xs md:text-sm text-ink-soft">Total ({children} × £{priceForCount(children).toFixed(2)})</span>
-                <span className="font-display text-xl md:text-2xl">£{totalPrice.toFixed(2)}</span>
+              <div className="mb-6">
+                <label className="block text-sm font-medium mb-2">Message (optional)</label>
+                <textarea
+                  name="message"
+                  rows={3}
+                  placeholder="Tell us about the occasion, any special requests, etc."
+                  className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-[#ff2d78] resize-none"
+                />
               </div>
 
               {errorMsg && (
@@ -480,7 +264,7 @@ export default function PartiesPage() {
 
               <div className="text-center">
                 <button type="submit" disabled={status === "sending"} className="btn-primary disabled:opacity-60 w-full justify-center">
-                  {status === "sending" ? "Booking..." : `Confirm Booking — £${totalPrice.toFixed(2)}`}
+                  {status === "sending" ? "Sending..." : "Send Enquiry"}
                 </button>
               </div>
             </form>
