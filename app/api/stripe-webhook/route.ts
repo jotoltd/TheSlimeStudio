@@ -86,6 +86,36 @@ export async function POST(req: NextRequest) {
         break;
       }
 
+      case "payment_intent.succeeded": {
+        const intent = event.data.object as {
+          id: string;
+          metadata?: { bookingId?: string; type?: string };
+        };
+
+        if (intent.metadata?.bookingId && intent.metadata?.type !== "subscription") {
+          await supabase
+            .from("bookings")
+            .update({ payment_status: "paid" })
+            .eq("id", intent.metadata.bookingId);
+        }
+        break;
+      }
+
+      case "payment_intent.payment_failed": {
+        const intent = event.data.object as {
+          id: string;
+          metadata?: { bookingId?: string; type?: string };
+        };
+
+        if (intent.metadata?.bookingId && intent.metadata?.type !== "subscription") {
+          await supabase
+            .from("bookings")
+            .update({ payment_status: "unpaid" })
+            .eq("id", intent.metadata.bookingId);
+        }
+        break;
+      }
+
       default:
         break;
     }

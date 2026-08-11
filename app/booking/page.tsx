@@ -250,6 +250,14 @@ function BookingPageInner() {
                   publishableKey={publishableKey}
                   amount={totalPrice}
                   onSuccess={() => {
+                    // Update booking to paid in database (fallback to webhook)
+                    if (bookingId) {
+                      fetch("/api/update-booking-status", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ bookingId, status: "paid" }),
+                      }).catch(() => {});
+                    }
                     fetch("/api/booking-confirmation", {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
