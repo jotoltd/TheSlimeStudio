@@ -27,17 +27,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
   }
 
-  // 30-min notice: don't allow booking a slot starting within 30 minutes
-  if (date && timeSlot) {
-    const [h, m] = timeSlot.split(":").map(Number);
-    const slotTime = new Date(date + "T00:00:00");
-    slotTime.setHours(h, m, 0, 0);
-    const diffMs = slotTime.getTime() - Date.now();
-    if (diffMs < 30 * 60 * 1000) {
-      return NextResponse.json({ error: "Bookings require at least 30 minutes notice. Please choose a later time slot." }, { status: 400 });
-    }
-  }
-
   const stripe = await getStripeAsync();
   if (!stripe) {
     return NextResponse.json({ error: "Stripe is not configured" }, { status: 500 });
