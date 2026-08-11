@@ -64,6 +64,17 @@ function BookingPageInner() {
     setTimeSlot("");
   }, [date]);
 
+  // Delete booking if user navigates away or closes tab during payment
+  useEffect(() => {
+    if (status !== "payment" || !bookingId) return;
+    const handler = () => {
+      const blob = new Blob([JSON.stringify({ bookingId })], { type: "application/json" });
+      navigator.sendBeacon("/api/delete-booking", blob);
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [status, bookingId]);
+
   function isSlotTooSoon(slot: string, forDate: string) {
     const now = new Date();
     const [h, m] = slot.split(":").map(Number);
@@ -78,7 +89,7 @@ function BookingPageInner() {
     const { data } = await supabase.from("bookings").select("time_slot, people, payment_status").eq("date", forDate);
     const used: Record<string, number> = {};
     (data || []).forEach((b: { time_slot: string; people: number; payment_status: string }) => {
-      if (b.payment_status === "paid" || b.payment_status === "pending") {
+      if (b.payment_status === "paid") {
         used[b.time_slot] = (used[b.time_slot] || 0) + b.people;
       }
     });
@@ -247,7 +258,7 @@ function BookingPageInner() {
               <div className="text-4xl md:text-5xl mb-4">😕</div>
               <h2 className="font-display text-xl md:text-2xl mb-3">Payment Cancelled</h2>
               <p className="text-ink-soft mb-6">
-                Your booking was created but payment wasn't completed. Don't worry — you can try again below.
+                Payment wasn't completed, so no booking has been made. You can try again below.
               </p>
               <button onClick={() => setStatus("idle")} className="btn-primary">
                 Try Again
