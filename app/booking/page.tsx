@@ -179,23 +179,16 @@ function BookingPageInner() {
           return;
         } else {
           console.error("Payment intent error:", data.error);
+          setStatus("error");
+          setErrorMsg(data.error || "Payment setup failed. Please try again.");
+          return;
         }
       } catch (err) {
         console.error("Payment intent fetch failed:", err);
+        setStatus("error");
+        setErrorMsg("Payment setup failed. Please try again.");
+        return;
       }
-      // Send confirmation email (fire-and-forget)
-      fetch("/api/booking-confirmation", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, date, timeSlot, people, totalPrice, isParty: false }),
-      }).catch(() => {});
-      setStatus("sent");
-      setName("");
-      setEmail("");
-      setPhone("");
-      setPeople(1);
-      setTimeSlot("");
-      loadAvailability(date);
     }
   }
 
@@ -386,7 +379,7 @@ function BookingPageInner() {
 
               <div className="text-center">
                 <button type="submit" disabled={status === "sending"} className="btn-primary disabled:opacity-60 w-full justify-center">
-                  {status === "sending" ? "Booking..." : `Confirm Booking — £${totalPrice.toFixed(2)}`}
+                  {status === "sending" ? "Processing..." : `Continue to Payment — £${totalPrice.toFixed(2)}`}
                 </button>
               </div>
             </form>
