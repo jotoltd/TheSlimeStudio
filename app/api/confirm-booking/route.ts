@@ -28,6 +28,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Payment amount mismatch" }, { status: 400 });
   }
 
+  // Idempotency: check if booking already exists for this payment intent
+  const { data: existing } = await supabaseAdmin
+    .from("bookings")
+    .select("id")
+    .eq("stripe_session_id", paymentIntentId)
+    .single();
+
+  if (existing) {
+    return NextResponse.json({ success: true, bookingId: existing.id });
+  }
+
   // Now insert the booking as paid
   const { data, error } = await supabaseAdmin.from("bookings").insert({
     date,

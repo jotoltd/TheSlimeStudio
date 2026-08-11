@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripeAsync, getStripeModeAsync, getStripeKeysForMode } from "@/lib/stripe";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 
@@ -89,14 +89,55 @@ export async function POST(req: NextRequest) {
       case "payment_intent.succeeded": {
         const intent = event.data.object as {
           id: string;
-          metadata?: { bookingId?: string; type?: string };
+          amount: number;
+          metadata?: {
+            bookingId?: string;
+            type?: string;
+            name?: string;
+            email?: string;
+            date?: string;
+            timeSlot?: string;
+            people?: string;
+            totalPrice?: string;
+            phone?: string;
+          };
         };
 
-        if (intent.metadata?.bookingId && intent.metadata?.type !== "subscription") {
+        if (intent.metadata?.type === "subscription") break;
+
+        // If bookingId exists, update it (old checkout session flow)
+        if (intent.metadata?.bookingId) {
           await supabase
             .from("bookings")
             .update({ payment_status: "paid" })
             .eq("id", intent.metadata.bookingId);
+          break;
+        }
+
+        // New flow: create booking from metadata if it doesn't exist yet
+        const md = intent.metadata;
+        if (md?.email && md?.date && md?.timeSlot) {
+          // Check if booking already exists for this payment intent
+          const { data: existing } = await supabaseAdmin
+            .from("bookings")
+            .select("id")
+            .eq("stripe_session_id", intent.id)
+            .single();
+
+          if (!existing) {
+            await supabaseAdmin.from("bookings").insert({
+              date: md.date,
+              time_slot: md.timeSlot,
+              people: parseInt(md.people || "1", 10),
+              total_price: parseFloat(md.totalPrice || "0"),
+              name: md.name || "",
+              email: md.email,
+              phone: md.phone || null,
+              is_party: md.type === "party",
+              payment_status: "paid",
+              stripe_session_id: intent.id,
+            });
+          }
         }
         break;
       }
