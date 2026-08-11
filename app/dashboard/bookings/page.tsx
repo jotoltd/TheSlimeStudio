@@ -26,6 +26,8 @@ export default function BookingsAdminPage() {
   const [slotsText, setSlotsText] = useState(DEFAULT_SLOTS.join("\n"));
   const [savingSlots, setSavingSlots] = useState(false);
   const [slotsMsg, setSlotsMsg] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [payFilter, setPayFilter] = useState<"all" | "paid" | "unpaid" | "refunded" | "pending">("all");
 
   useEffect(() => { loadBookings(); }, [filter]);
 
@@ -115,11 +117,21 @@ export default function BookingsAdminPage() {
   const daysInMonth = lastDay.getDate();
   const monthName = calMonth.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
 
+  const filteredBookings = bookings.filter((b) => {
+    const q = searchQuery.toLowerCase().trim();
+    if (q && !b.name.toLowerCase().includes(q) && !b.email.toLowerCase().includes(q) && !b.date.includes(q) && !(b.phone || "").toLowerCase().includes(q)) return false;
+    if (payFilter !== "all") {
+      if (payFilter === "unpaid" && b.payment_status && b.payment_status !== "unpaid") return false;
+      if (payFilter !== "unpaid" && (b.payment_status || "unpaid") !== payFilter) return false;
+    }
+    return true;
+  });
+
   const bookingsByDate: Record<string, Booking[]> = {};
-  bookings.forEach((b) => { const d = b.date; if (!bookingsByDate[d]) bookingsByDate[d] = []; bookingsByDate[d].push(b); });
+  filteredBookings.forEach((b) => { const d = b.date; if (!bookingsByDate[d]) bookingsByDate[d] = []; bookingsByDate[d].push(b); });
   const selectedDateBookings = selectedDate ? (bookingsByDate[selectedDate] || []) : [];
-  const totalPeople = bookings.reduce((sum, b) => sum + b.people, 0);
-  const totalRevenue = bookings.reduce((sum, b) => sum + Number(b.total_price), 0);
+  const totalPeople = filteredBookings.reduce((sum, b) => sum + b.people, 0);
+  const totalRevenue = filteredBookings.reduce((sum, b) => sum + Number(b.total_price), 0);
 
   return (
     <div className="py-8 md:py-10 px-5 md:px-10">
@@ -140,6 +152,28 @@ export default function BookingsAdminPage() {
             <button onClick={() => setViewMode("table")} className={`px-4 py-2 text-[0.85rem] font-medium ${viewMode === "table" ? "bg-ink text-white" : "bg-white text-ink"}`}>Table</button>
           </div>
         </div>
+      </div>
+
+      {/* Search & Payment Filter */}
+      <div className="flex flex-wrap gap-3 mb-6">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search by name, email, date, or phone..."
+          className="flex-1 min-w-[200px] px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
+        />
+        <select
+          value={payFilter}
+          onChange={(e) => setPayFilter(e.target.value as typeof payFilter)}
+          className="px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light bg-white"
+        >
+          <option value="all">All Payments</option>
+          <option value="paid">Paid</option>
+          <option value="pending">Pending</option>
+          <option value="unpaid">Unpaid</option>
+          <option value="refunded">Refunded</option>
+        </select>
       </div>
 
       <div className="bg-white rounded-[20px] p-7 shadow-sm mb-8">
@@ -199,7 +233,7 @@ export default function BookingsAdminPage() {
       <div className="grid grid-cols-3 gap-3 md:gap-5 mb-6 md:mb-8">
         <div className="bg-white rounded-[16px] md:rounded-[20px] p-4 md:p-6 shadow-sm">
           <div className="text-[0.65rem] md:text-[0.75rem] text-ink-soft uppercase tracking-wider mb-1 md:mb-2">Bookings</div>
-          <div className="font-display text-[1.2rem] md:text-[1.8rem]">{loading ? "--" : bookings.length}</div>
+          <div className="font-display text-[1.2rem] md:text-[1.8rem]">{loading ? "--" : filteredBookings.length}</div>
         </div>
         <div className="bg-white rounded-[16px] md:rounded-[20px] p-4 md:p-6 shadow-sm">
           <div className="text-[0.65rem] md:text-[0.75rem] text-ink-soft uppercase tracking-wider mb-1 md:mb-2">Total People</div>
@@ -278,8 +312,8 @@ export default function BookingsAdminPage() {
         </div>
       ) : (
         <div className="bg-white rounded-[16px] md:rounded-[20px] p-4 md:p-8 shadow-sm">
-          {bookings.length === 0 ? (
-            <div className="text-center py-10 text-ink-soft text-[0.9rem]">No {filter !== "all" ? filter : ""} bookings found.</div>
+          {filteredBookings.length === 0 ? (
+            <div className="text-center py-10 text-ink-soft text-[0.9rem]">No bookings found{searchQuery || payFilter !== "all" ? " matching your filters" : ""}.</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full border-collapse">
@@ -291,7 +325,7 @@ export default function BookingsAdminPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {bookings.map((b) => (
+                  {filteredBookings.map((b) => (
                     <tr key={b.id} className="border-t border-ink/[0.08]">
                       <td className="py-3 pr-4 text-[0.9rem]">{new Date(b.date).toLocaleDateString("en-GB")}</td>
                       <td className="py-3 pr-4 text-[0.9rem]">{b.time_slot}</td>
