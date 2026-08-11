@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -17,15 +17,24 @@ const navLinks = [
 export default function Navbar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   return (
-    <nav className="sticky top-0 z-[1000] backdrop-blur-md overflow-visible shadow-sm" style={{ backgroundColor: "#abf7dc" }}>
-      <div className="container flex items-center justify-between py-4 gap-6">
+    <nav className="sticky top-0 z-[1000] backdrop-blur-md overflow-visible shadow-sm transition-all" style={{ backgroundColor: "#abf7dc" }}>
+      <div className={`container flex items-center justify-between gap-6 transition-all ${scrolled ? "py-1.5" : "py-4"}`}>
         <Link href="/" className="flex items-center gap-2.5 flex-shrink-0">
           <img
             src="/images/header_logo.png"
             alt="The Slime Studio"
-            className="h-[76px] w-auto object-contain flex-shrink-0"
+            className="w-auto object-contain flex-shrink-0 transition-all duration-300"
+            style={{ height: scrolled ? 48 : 76 }}
           />
         </Link>
 
