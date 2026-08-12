@@ -31,6 +31,7 @@ export type Enquiry = {
   enquiry_type: string | null;
   preferred_date: string | null;
   message: string | null;
+  status?: string;
   created_at: string;
 };
 
@@ -46,6 +47,7 @@ export type Booking = {
   is_party: boolean;
   payment_status?: string;
   stripe_session_id?: string;
+  notes?: string;
   created_at: string;
 };
 

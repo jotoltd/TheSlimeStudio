@@ -18,6 +18,10 @@ export default function DashboardPage() {
   const [stripeConfigured, setStripeConfigured] = useState(false);
   const [switchingMode, setSwitchingMode] = useState(false);
   const [stripeMsg, setStripeMsg] = useState("");
+  const [todayBookings, setTodayBookings] = useState<Booking[]>([]);
+  const [revenueToday, setRevenueToday] = useState(0);
+  const [revenueWeek, setRevenueWeek] = useState(0);
+  const [revenueMonth, setRevenueMonth] = useState(0);
 
   useEffect(() => {
     loadData();
@@ -38,11 +42,30 @@ export default function DashboardPage() {
     setBookingCount(bCount || 0);
 
     const todayStr = new Date().toISOString().split("T")[0];
+    const weekStart = new Date();
+    weekStart.setDate(weekStart.getDate() - 7);
+    const weekStartStr = weekStart.toISOString().split("T")[0];
+    const monthStart = new Date();
+    monthStart.setDate(monthStart.getDate() - 30);
+    const monthStartStr = monthStart.toISOString().split("T")[0];
+
     const { data: bks } = await supabase
       .from("bookings")
       .select("*")
       .order("date", { ascending: true });
-    if (bks) setBookings(bks as Booking[]);
+    if (bks) {
+      const allBookings = bks as Booking[];
+      setBookings(allBookings);
+
+      // Today's bookings (paid only)
+      const today = allBookings.filter((b) => b.date === todayStr && b.payment_status === "paid");
+      setTodayBookings(today.sort((a, b) => a.time_slot.localeCompare(b.time_slot)));
+
+      // Revenue from paid bookings only
+      setRevenueToday(today.reduce((sum, b) => sum + Number(b.total_price), 0));
+      setRevenueWeek(allBookings.filter((b) => b.date >= weekStartStr && b.payment_status === "paid").reduce((sum, b) => sum + Number(b.total_price), 0));
+      setRevenueMonth(allBookings.filter((b) => b.date >= monthStartStr && b.payment_status === "paid").reduce((sum, b) => sum + Number(b.total_price), 0));
+    }
 
     const { data: ss } = await supabase.from("site_settings").select("*").eq("id", 1).single();
     if (ss) {
@@ -234,6 +257,22 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Revenue Stats */}
+      <div className="grid grid-cols-3 gap-3 md:gap-5 mb-8">
+        <div className="bg-white rounded-[16px] md:rounded-[20px] p-4 md:p-6 shadow-sm">
+          <div className="text-[0.65rem] md:text-[0.75rem] text-ink-soft uppercase tracking-wider mb-1 md:mb-2">Today's Revenue</div>
+          <div className="font-display text-[1.2rem] md:text-[1.8rem]">{loadingData ? "--" : `£${revenueToday.toFixed(2)}`}</div>
+        </div>
+        <div className="bg-white rounded-[16px] md:rounded-[20px] p-4 md:p-6 shadow-sm">
+          <div className="text-[0.65rem] md:text-[0.75rem] text-ink-soft uppercase tracking-wider mb-1 md:mb-2">This Week</div>
+          <div className="font-display text-[1.2rem] md:text-[1.8rem]">{loadingData ? "--" : `£${revenueWeek.toFixed(2)}`}</div>
+        </div>
+        <div className="bg-white rounded-[16px] md:rounded-[20px] p-4 md:p-6 shadow-sm">
+          <div className="text-[0.65rem] md:text-[0.75rem] text-ink-soft uppercase tracking-wider mb-1 md:mb-2">This Month</div>
+          <div className="font-display text-[1.2rem] md:text-[1.8rem]">{loadingData ? "--" : `£${revenueMonth.toFixed(2)}`}</div>
+        </div>
+      </div>
+
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-5 mb-8">
         <Link href="/dashboard/bookings" className="bg-white rounded-[20px] p-6 shadow-sm hover:-translate-y-1 hover:shadow-md transition-all">
@@ -306,6 +345,40 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
+        {/* Today's bookings */}
+        <div className="bg-white rounded-[20px] p-7 shadow-sm">
+          <div className="flex justify-between items-center mb-5">
+            <h2 className="font-display text-[1.1rem]">Today's Sessions</h2>
+            <span className="text-[0.8rem] text-ink-soft">{todayBookings.length} booked</span>
+          </div>
+          {loadingData ? (
+            <div className="text-center py-8 text-ink-soft text-[0.9rem]">Loading...</div>
+          ) : todayBookings.length === 0 ? (
+            <div className="text-center py-8 text-ink-soft text-[0.9rem]">No sessions booked today.</div>
+          ) : (
+            <ul className="space-y-3">
+              {todayBookings.map((b) => (
+                <li key={b.id} className="flex items-center justify-between border-b border-ink/[0.06] pb-3 last:border-0 last:pb-0">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-sky-blue-light/20 grid place-items-center font-display text-[0.9rem]">
+                      {b.time_slot}
+                    </div>
+                    <div>
+                      <div className="text-[0.9rem] font-medium">{b.name}</div>
+                      <div className="text-[0.8rem] text-ink-soft">{b.people} {b.people === 1 ? "person" : "people"} · £{Number(b.total_price).toFixed(2)}</div>
+                    </div>
+                  </div>
+                  {b.notes && (
+                    <span className="text-[0.7rem] text-ink-soft bg-ink/[0.04] rounded-lg px-2 py-1 max-w-[120px] truncate" title={b.notes}>
+                        📝 {b.notes}
+                      </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
         {/* Upcoming bookings preview */}
         <div className="bg-white rounded-[20px] p-7 shadow-sm">
           <div className="flex justify-between items-center mb-5">
@@ -316,11 +389,11 @@ export default function DashboardPage() {
           </div>
           {loadingData ? (
             <div className="text-center py-8 text-ink-soft text-[0.9rem]">Loading...</div>
-          ) : bookings.filter((b) => b.date >= new Date().toISOString().split("T")[0]).length === 0 ? (
+          ) : bookings.filter((b) => b.date > new Date().toISOString().split("T")[0] && b.payment_status === "paid").length === 0 ? (
             <div className="text-center py-8 text-ink-soft text-[0.9rem]">No upcoming bookings yet.</div>
           ) : (
             <ul className="space-y-3">
-              {bookings.filter((b) => b.date >= new Date().toISOString().split("T")[0]).slice(0, 5).map((b) => (
+              {bookings.filter((b) => b.date > new Date().toISOString().split("T")[0] && b.payment_status === "paid").slice(0, 5).map((b) => (
                 <li key={b.id} className="flex items-center justify-between border-b border-ink/[0.06] pb-3 last:border-0 last:pb-0">
                   <div>
                     <div className="text-[0.9rem] font-medium">{b.name}</div>

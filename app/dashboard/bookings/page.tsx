@@ -15,7 +15,7 @@ export default function BookingsAdminPage() {
   const [priceMsg, setPriceMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
-  const [editForm, setEditForm] = useState({ date: "", time_slot: "", people: 1, name: "", email: "", phone: "" });
+  const [editForm, setEditForm] = useState({ date: "", time_slot: "", people: 1, name: "", email: "", phone: "", notes: "" });
   const [savingEdit, setSavingEdit] = useState(false);
   const [editMsg, setEditMsg] = useState("");
   const [calMonth, setCalMonth] = useState(new Date());
@@ -70,7 +70,7 @@ export default function BookingsAdminPage() {
 
   function startEdit(b: Booking) {
     setEditingBooking(b);
-    setEditForm({ date: b.date, time_slot: b.time_slot, people: b.people, name: b.name, email: b.email, phone: b.phone || "" });
+    setEditForm({ date: b.date, time_slot: b.time_slot, people: b.people, name: b.name, email: b.email, phone: b.phone || "", notes: b.notes || "" });
     setEditMsg("");
   }
 
@@ -80,6 +80,7 @@ export default function BookingsAdminPage() {
     const { error } = await supabase.from("bookings").update({
       date: editForm.date, time_slot: editForm.time_slot, people: editForm.people,
       name: editForm.name, email: editForm.email, phone: editForm.phone || null,
+      notes: editForm.notes || null,
     }).eq("id", editingBooking.id);
     setSavingEdit(false);
     if (error) { setEditMsg("Failed to save: " + error.message); }
@@ -414,6 +415,10 @@ export default function BookingsAdminPage() {
                 <label className="block text-sm font-medium mb-1.5">Phone</label>
                 <input value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
               </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium mb-1.5">Admin Notes</label>
+                <textarea value={editForm.notes} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} rows={3} placeholder="Internal notes about this booking..." className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light resize-none" />
+              </div>
             </div>
             {editMsg && <p className={`text-[0.85rem] mt-3 ${editMsg.includes("success") ? "text-green-600" : "text-red-600"}`}>{editMsg}</p>}
             <div className="flex gap-3 mt-6">
@@ -445,6 +450,7 @@ function BookingCard({ b, onEdit, onCancel, cancelling }: { b: Booking; onEdit: 
       <div className="text-[0.8rem] text-ink-soft">{b.email}</div>
       {b.phone && <div className="text-[0.8rem] text-ink-soft">{b.phone}</div>}
       <div className="text-[0.85rem] font-display mt-1">£{Number(b.total_price).toFixed(2)}</div>
+      {b.notes && <div className="text-[0.8rem] text-ink-soft bg-ink/[0.04] rounded-lg px-3 py-2 mt-2">📝 {b.notes}</div>}
       <div className="flex gap-2 mt-3">
         <button onClick={onEdit} className="px-3 py-1.5 rounded-lg bg-sky-blue-light/30 text-ink text-[0.8rem] hover:bg-sky-blue-light/50 transition-colors">Edit</button>
         <button onClick={onCancel} disabled={cancelling} className="px-3 py-1.5 rounded-lg bg-red-100 text-red-700 text-[0.8rem] hover:bg-red-200 transition-colors disabled:opacity-60">{cancelling ? "Cancelling..." : "Cancel"}</button>
