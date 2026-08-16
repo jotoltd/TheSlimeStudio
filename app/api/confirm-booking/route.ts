@@ -34,8 +34,8 @@ export async function POST(req: NextRequest) {
       email = email || md.email || "";
       date = date || md.date || "";
       timeSlot = timeSlot || md.timeSlot || "";
-      people = people || parseInt(md.people || "1", 10);
-      totalPrice = totalPrice || parseFloat(md.totalPrice || "0");
+      people = people ?? parseInt(md.people || "1", 10);
+      totalPrice = totalPrice ?? parseFloat(md.totalPrice || "0");
       phone = phone || md.phone || "";
       isParty = isParty || md.type === "party";
     }
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
     .eq("stripe_session_id", paymentIntentId);
 
   if (existing && existing.length > 0) {
-    return NextResponse.json({ success: true, bookingId: existing[0].id });
+    return NextResponse.json({ success: true, bookingId: existing[0].id, name, email, date, timeSlot, people, totalPrice });
   }
 
   // Insert the booking as paid
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
       .select("id")
       .eq("stripe_session_id", paymentIntentId);
     if (retry && retry.length > 0) {
-      return NextResponse.json({ success: true, bookingId: retry[0].id });
+      return NextResponse.json({ success: true, bookingId: retry[0].id, name, email, date, timeSlot, people, totalPrice });
     }
     return NextResponse.json({ error: "Failed to create booking" }, { status: 500 });
   }

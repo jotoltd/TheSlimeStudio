@@ -90,6 +90,13 @@ function BookingPageInner() {
           url.searchParams.delete("redirect_status");
           window.history.replaceState({}, "", url.toString());
         });
+      } else if (piId && redirectStatus === "failed") {
+        setStatus("cancelled");
+        const url = new URL(window.location.href);
+        url.searchParams.delete("payment_intent");
+        url.searchParams.delete("payment_intent_client_secret");
+        url.searchParams.delete("redirect_status");
+        window.history.replaceState({}, "", url.toString());
       }
     }
   }, []);
