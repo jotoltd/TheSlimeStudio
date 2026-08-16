@@ -95,9 +95,9 @@ export default function ShopPage() {
         <section className="py-[50px] md:py-[70px] text-center px-4" style={{ backgroundColor: "#ffc4fb" }}>
           <div className="container max-w-2xl">
             <div className="flex items-center justify-center gap-3 mb-4">
-              <span className="text-[#64d8ec]">↝</span>
-              <h2 className="font-display text-[1.3rem] tracking-wide text-[#64d8ec] uppercase">Shop</h2>
-              <span className="text-[#64d8ec]">↜</span>
+              <span className="text-ink/40">↝</span>
+              <h2 className="font-display text-[1.3rem] tracking-wide text-ink/50 uppercase">Shop</h2>
+              <span className="text-ink/40">↜</span>
             </div>
             <h1 className="font-display text-[1.6rem] md:text-[3.2rem] leading-[1.1] mb-2 text-ink">
               Something Slimy
@@ -121,9 +121,9 @@ export default function ShopPage() {
             </p>
 
             <div className="flex items-center justify-center gap-3 mb-6">
-              <span className="text-[#64d8ec]">↝</span>
-              <h3 className="font-display text-[1.1rem] tracking-wide text-[#64d8ec] uppercase">Coming Soon</h3>
-              <span className="text-[#64d8ec]">↜</span>
+              <span className="text-ink/40">↝</span>
+              <h3 className="font-display text-[1.1rem] tracking-wide text-ink/50 uppercase">Coming Soon</h3>
+              <span className="text-ink/40">↜</span>
             </div>
 
             <div className="grid grid-cols-4 gap-2 md:gap-5 mb-6 md:mb-8">

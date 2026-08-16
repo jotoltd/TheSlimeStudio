@@ -135,7 +135,7 @@ export default function PartiesPage() {
               <div key={g.title} className="bg-white/70 rounded-2xl p-6 flex items-center gap-4 border border-ink/5">
                 <Heart size={24} />
                 <div>
-                  <div className="font-display text-[0.95rem] text-[#8b5fbf] uppercase tracking-wide">{g.title}</div>
+                  <div className="font-display text-[0.95rem] text-ink uppercase tracking-wide">{g.title}</div>
                   <div className="text-[0.85rem] text-ink-soft">{g.desc}</div>
                 </div>
               </div>

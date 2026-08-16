@@ -105,9 +105,9 @@ export default function AboutPage() {
 
         <div className="container relative z-[1] text-center max-w-2xl px-4">
           <div className="flex items-center justify-center gap-3 mb-4">
-            <span className="text-[#64d8ec]">↝</span>
-            <h2 className="font-display text-[1rem] md:text-[1.1rem] tracking-wide text-[#64d8ec] uppercase">About</h2>
-            <span className="text-[#64d8ec]">↜</span>
+            <span className="text-ink/40">↝</span>
+            <h2 className="font-display text-[1rem] md:text-[1.1rem] tracking-wide text-ink/50 uppercase">About</h2>
+            <span className="text-ink/40">↜</span>
           </div>
           <h1 className="font-display text-[1.6rem] md:text-[2.8rem] leading-[1.15] mb-6 text-ink">
             The Slime Studio
@@ -134,7 +134,7 @@ export default function AboutPage() {
                 >
                   <img src={f.img} alt={f.title} className="w-full h-full object-cover" />
                 </div>
-                <h3 className="font-display text-[1.1rem] text-[#8b5fbf] uppercase tracking-wide mb-2">
+                <h3 className="font-display text-[1.1rem] text-ink uppercase tracking-wide mb-2">
                   {f.title}
                 </h3>
                 <p className="text-[0.9rem] text-ink/70 leading-relaxed max-w-[220px]">{f.desc}</p>
