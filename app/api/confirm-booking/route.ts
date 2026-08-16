@@ -32,14 +32,13 @@ export async function POST(req: NextRequest) {
   const { data: existing } = await supabaseAdmin
     .from("bookings")
     .select("id")
-    .eq("stripe_session_id", paymentIntentId)
-    .single();
+    .eq("stripe_session_id", paymentIntentId);
 
-  if (existing) {
-    return NextResponse.json({ success: true, bookingId: existing.id });
+  if (existing && existing.length > 0) {
+    return NextResponse.json({ success: true, bookingId: existing[0].id });
   }
 
-  // Now insert the booking as paid
+  // Insert the booking as paid
   const { data, error } = await supabaseAdmin.from("bookings").insert({
     date,
     time_slot: timeSlot,
@@ -54,6 +53,15 @@ export async function POST(req: NextRequest) {
   }).select().single();
 
   if (error || !data) {
+    // Race condition: webhook may have created it between our check and insert
+    // Try one more time to find it
+    const { data: retry } = await supabaseAdmin
+      .from("bookings")
+      .select("id")
+      .eq("stripe_session_id", paymentIntentId);
+    if (retry && retry.length > 0) {
+      return NextResponse.json({ success: true, bookingId: retry[0].id });
+    }
     return NextResponse.json({ error: "Failed to create booking" }, { status: 500 });
   }
 

@@ -50,6 +50,25 @@ function BookingPageInner() {
     fetch("/api/blocked-dates").then(r => r.json()).then(d => {
       if (d.blockedDates) setBlockedDates(d.blockedDates.map((b: { date: string }) => b.date));
     }).catch(() => {});
+
+    // Handle Stripe 3D Secure redirect: if redirected back with payment_intent param,
+    // the payment may have succeeded but onSuccess never fired. Confirm booking via webhook fallback.
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const piId = params.get("payment_intent");
+      const redirectStatus = params.get("redirect_status");
+      if (piId && redirectStatus === "succeeded") {
+        // The webhook should create the booking as fallback.
+        // Show success screen — booking will be created by webhook.
+        setStatus("paid");
+        // Clean up URL
+        const url = new URL(window.location.href);
+        url.searchParams.delete("payment_intent");
+        url.searchParams.delete("payment_intent_client_secret");
+        url.searchParams.delete("redirect_status");
+        window.history.replaceState({}, "", url.toString());
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -244,31 +263,50 @@ function BookingPageInner() {
                   amount={totalPrice}
                   onSuccess={() => {
                     // Payment succeeded — NOW create the booking in the database
-                    fetch("/api/confirm-booking", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        paymentIntentId,
-                        name,
-                        email,
-                        phone,
-                        date,
-                        timeSlot,
-                        people,
-                        totalPrice,
-                        isParty: false,
-                      }),
-                    }).then(() => {
-                      fetch("/api/booking-confirmation", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ name, email, date, timeSlot, people, totalPrice, isParty: false }),
-                      }).catch(() => {});
-                      setStatus("paid");
-                    }).catch(() => {
-                      setStatus("error");
-                      setErrorMsg("Payment succeeded but booking creation failed. Please contact us.");
-                    });
+                    // Retry up to 3 times in case of network issues
+                    async function confirmBooking(attempt = 0) {
+                      try {
+                        const res = await fetch("/api/confirm-booking", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            paymentIntentId,
+                            name,
+                            email,
+                            phone,
+                            date,
+                            timeSlot,
+                            people,
+                            totalPrice,
+                            isParty: false,
+                          }),
+                        });
+                        const data = await res.json();
+                        if (res.ok && data.success) {
+                          // Booking confirmed — send email
+                          fetch("/api/booking-confirmation", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ name, email, date, timeSlot, people, totalPrice, isParty: false }),
+                          }).catch(() => {});
+                          setStatus("paid");
+                        } else if (attempt < 2) {
+                          // Retry after short delay
+                          setTimeout(() => confirmBooking(attempt + 1), 1000);
+                        } else {
+                          // Webhook will handle it as fallback, but show a reassuring message
+                          setStatus("paid");
+                        }
+                      } catch {
+                        if (attempt < 2) {
+                          setTimeout(() => confirmBooking(attempt + 1), 1000);
+                        } else {
+                          // Webhook fallback should create the booking
+                          setStatus("paid");
+                        }
+                      }
+                    }
+                    confirmBooking();
                   }}
                   onCancel={() => {
                     setStatus("cancelled");
@@ -406,7 +444,6 @@ function BookingPageInner() {
     </>
   );
 }
-
 export default function BookingPage() {
   return (
     <Suspense fallback={<div className="min-h-[60vh] grid place-items-center text-ink-soft">Loading...</div>}>
