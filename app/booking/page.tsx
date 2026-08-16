@@ -52,21 +52,44 @@ function BookingPageInner() {
     }).catch(() => {});
 
     // Handle Stripe 3D Secure redirect: if redirected back with payment_intent param,
-    // the payment may have succeeded but onSuccess never fired. Confirm booking via webhook fallback.
+    // the payment may have succeeded but onSuccess never fired. Confirm booking directly.
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const piId = params.get("payment_intent");
       const redirectStatus = params.get("redirect_status");
       if (piId && redirectStatus === "succeeded") {
-        // The webhook should create the booking as fallback.
-        // Show success screen — booking will be created by webhook.
-        setStatus("paid");
-        // Clean up URL
-        const url = new URL(window.location.href);
-        url.searchParams.delete("payment_intent");
-        url.searchParams.delete("payment_intent_client_secret");
-        url.searchParams.delete("redirect_status");
-        window.history.replaceState({}, "", url.toString());
+        // Call confirm-booking with just the paymentIntentId — the API can read
+        // booking details from Stripe metadata
+        fetch("/api/confirm-booking", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ paymentIntentId: piId, fromRedirect: true }),
+        }).then((res) => res.json()).then((data) => {
+          if (data.success) {
+            // Send confirmation email
+            fetch("/api/booking-confirmation", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                name: data.name || "",
+                email: data.email || "",
+                date: data.date || "",
+                timeSlot: data.timeSlot || "",
+                people: data.people || 1,
+                totalPrice: data.totalPrice || 0,
+                isParty: false,
+              }),
+            }).catch(() => {});
+          }
+        }).catch(() => {}).finally(() => {
+          setStatus("paid");
+          // Clean up URL
+          const url = new URL(window.location.href);
+          url.searchParams.delete("payment_intent");
+          url.searchParams.delete("payment_intent_client_secret");
+          url.searchParams.delete("redirect_status");
+          window.history.replaceState({}, "", url.toString());
+        });
       }
     }
   }, []);

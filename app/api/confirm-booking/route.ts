@@ -6,10 +6,12 @@ import { getResend, EMAIL_FROM, CONTACT_EMAIL, logEmail } from "@/lib/email";
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
-  const { paymentIntentId, name, email, date, timeSlot, people, totalPrice, phone, isParty } = await req.json();
+  const body = await req.json();
+  const { paymentIntentId, fromRedirect } = body;
+  let { name, email, date, timeSlot, people, totalPrice, phone, isParty } = body;
 
-  if (!paymentIntentId || !email || !date || !timeSlot) {
-    return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+  if (!paymentIntentId) {
+    return NextResponse.json({ error: "Missing payment intent ID" }, { status: 400 });
   }
 
   const stripe = await getStripeAsync();
@@ -22,6 +24,25 @@ export async function POST(req: NextRequest) {
 
   if (intent.status !== "succeeded") {
     return NextResponse.json({ error: "Payment has not been completed" }, { status: 400 });
+  }
+
+  // If called from 3DS redirect with no booking details, read from Stripe metadata
+  if (fromRedirect || !email || !date || !timeSlot) {
+    const md = intent.metadata;
+    if (md) {
+      name = name || md.name || "";
+      email = email || md.email || "";
+      date = date || md.date || "";
+      timeSlot = timeSlot || md.timeSlot || "";
+      people = people || parseInt(md.people || "1", 10);
+      totalPrice = totalPrice || parseFloat(md.totalPrice || "0");
+      phone = phone || md.phone || "";
+      isParty = isParty || md.type === "party";
+    }
+  }
+
+  if (!email || !date || !timeSlot) {
+    return NextResponse.json({ error: "Missing required fields and no metadata available" }, { status: 400 });
   }
 
   // Double-check the amount matches
@@ -92,5 +113,5 @@ export async function POST(req: NextRequest) {
     console.error("Failed to send admin notification:", e);
   }
 
-  return NextResponse.json({ success: true, bookingId: data.id });
+  return NextResponse.json({ success: true, bookingId: data.id, name, email, date, timeSlot, people, totalPrice });
 }
