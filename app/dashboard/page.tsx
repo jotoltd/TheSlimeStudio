@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { supabase, type Product, type Enquiry, type Booking, type SiteSettings } from "@/lib/supabase";
+import { supabase, type Product, type Enquiry, type Booking } from "@/lib/supabase";
 
 export default function DashboardPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -11,13 +11,6 @@ export default function DashboardPage() {
   const [bookingCount, setBookingCount] = useState(0);
   const [latestEnquiry, setLatestEnquiry] = useState<Enquiry | null>(null);
   const [loadingData, setLoadingData] = useState(true);
-  const [siteSettings, setSiteSettings] = useState<SiteSettings | null>(null);
-  const [maintDate, setMaintDate] = useState("");
-  const [savingMaint, setSavingMaint] = useState(false);
-  const [stripeMode, setStripeMode] = useState<"live" | "test">("test");
-  const [stripeConfigured, setStripeConfigured] = useState(false);
-  const [switchingMode, setSwitchingMode] = useState(false);
-  const [stripeMsg, setStripeMsg] = useState("");
   const [todayBookings, setTodayBookings] = useState<Booking[]>([]);
   const [revenueToday, setRevenueToday] = useState(0);
   const [revenueWeek, setRevenueWeek] = useState(0);
@@ -67,55 +60,7 @@ export default function DashboardPage() {
       setRevenueMonth(allBookings.filter((b) => b.date >= monthStartStr && b.payment_status === "paid").reduce((sum, b) => sum + Number(b.total_price), 0));
     }
 
-    const { data: ss } = await supabase.from("site_settings").select("*").eq("id", 1).single();
-    if (ss) {
-      const s = ss as SiteSettings;
-      setSiteSettings(s);
-      setMaintDate(new Date(s.launch_date).toISOString().slice(0, 16));
-    }
-
     setLoadingData(false);
-
-    // Load Stripe mode
-    try {
-      const res = await fetch("/api/stripe-mode");
-      const data = await res.json();
-      if (data.mode) setStripeMode(data.mode);
-      setStripeConfigured(data.configured);
-    } catch {}
-  }
-
-  async function switchStripeMode(newMode: "live" | "test") {
-    setSwitchingMode(true);
-    setStripeMsg("");
-    try {
-      const res = await fetch("/api/stripe-mode", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode: newMode }),
-      });
-      const data = await res.json();
-      if (data.note) {
-        setStripeMsg(data.note);
-      }
-    } catch {}
-    setSwitchingMode(false);
-  }
-
-  async function toggleMaintenance() {
-    if (!siteSettings) return;
-    const newVal = !siteSettings.maintenance_mode;
-    setSiteSettings({ ...siteSettings, maintenance_mode: newVal });
-    await supabase.from("site_settings").update({ maintenance_mode: newVal }).eq("id", 1);
-  }
-
-  async function saveMaintDate() {
-    if (!maintDate) return;
-    setSavingMaint(true);
-    const isoDate = new Date(maintDate).toISOString();
-    await supabase.from("site_settings").update({ launch_date: isoDate }).eq("id", 1);
-    setSavingMaint(false);
-    loadData();
   }
 
   const lowStock = products.filter((p) => (p.stock || 0) <= 5);
@@ -160,101 +105,6 @@ export default function DashboardPage() {
           Here&apos;s what&apos;s happening at The Slime Studio today. Bookings,
           shop stock and enquiries all in one place.
         </p>
-      </div>
-
-      {/* Maintenance Mode */}
-      <div className="bg-white rounded-[20px] p-7 shadow-sm mb-8">
-        <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
-          <div>
-            <h2 className="font-display text-[1.1rem] mb-1">Site Maintenance Mode</h2>
-            <p className="text-[0.85rem] text-ink-soft">
-              {siteSettings?.maintenance_mode
-                ? "ON — entire website is offline, showing countdown page"
-                : "OFF — website is live and accessible to everyone"}
-            </p>
-          </div>
-          <button
-            onClick={toggleMaintenance}
-            className={`relative w-16 h-9 rounded-full transition-colors ${siteSettings?.maintenance_mode ? "bg-red-400" : "bg-ink/15"}`}
-          >
-            <span
-              className={`absolute top-1 left-1 w-7 h-7 rounded-full bg-white shadow-sm transition-transform ${
-                siteSettings?.maintenance_mode ? "translate-x-7" : ""
-              }`}
-            />
-          </button>
-        </div>
-        <div className="border-t border-ink/[0.08] pt-6">
-          <label className="block text-sm font-medium mb-2">Countdown Launch Date</label>
-          <div className="flex gap-3 flex-wrap items-center">
-            <input
-              type="datetime-local"
-              value={maintDate}
-              onChange={(e) => setMaintDate(e.target.value)}
-              className="px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
-            />
-            <button
-              onClick={saveMaintDate}
-              disabled={savingMaint}
-              className="px-5 py-2.5 rounded-full bg-sky-blue-light text-ink text-[0.9rem] font-medium disabled:opacity-60 hover:-translate-y-0.5 hover:shadow-sm transition-all"
-            >
-              {savingMaint ? "Saving..." : "Update Date"}
-            </button>
-          </div>
-          <p className="text-[0.8rem] text-ink-soft mt-2">
-            This date powers the countdown timer on the maintenance page.
-          </p>
-        </div>
-      </div>
-
-      {/* Stripe Mode */}
-      <div className="bg-white rounded-[20px] p-7 shadow-sm mb-8">
-        <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
-          <div>
-            <h2 className="font-display text-[1.1rem] mb-1">Stripe Payment Mode</h2>
-            <p className="text-[0.85rem] text-ink-soft">
-              {stripeConfigured
-                ? stripeMode === "live"
-                  ? "LIVE — real payments are being processed"
-                  : "TEST — sandbox mode, no real charges are made"
-                : "Not configured — add Stripe API keys to .env.local to enable payments"}
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => switchStripeMode("test")}
-              disabled={switchingMode}
-              className={`px-5 py-2.5 rounded-full text-[0.85rem] font-medium transition-all ${
-                stripeMode === "test"
-                  ? "bg-canary-yellow text-ink shadow-sm"
-                  : "bg-ink/5 text-ink-soft hover:bg-ink/10"
-              }`}
-            >
-              Test (Sandbox)
-            </button>
-            <button
-              onClick={() => switchStripeMode("live")}
-              disabled={switchingMode}
-              className={`px-5 py-2.5 rounded-full text-[0.85rem] font-medium transition-all ${
-                stripeMode === "live"
-                  ? "bg-green-500 text-white shadow-sm"
-                  : "bg-ink/5 text-ink-soft hover:bg-ink/10"
-              }`}
-            >
-              Live
-            </button>
-          </div>
-        </div>
-        {stripeMsg && (
-          <div className="bg-sky-blue-light/20 rounded-xl p-4 text-[0.85rem] text-ink-soft">
-            {stripeMsg}
-          </div>
-        )}
-        <div className="border-t border-ink/[0.08] pt-4 mt-4">
-          <p className="text-[0.8rem] text-ink-soft">
-            Both booking and subscription payments use the active mode. Switching takes effect immediately.
-          </p>
-        </div>
       </div>
 
       {/* Revenue Stats */}

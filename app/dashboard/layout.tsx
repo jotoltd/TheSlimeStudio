@@ -20,24 +20,20 @@ const navSections = [
     ],
   },
   {
-    label: "Shop",
+    label: "Shop & Customers",
     items: [
-      { href: "/dashboard/shop", label: "Shop", icon: "�️" },
+      { href: "/dashboard/shop", label: "Shop", icon: "🛍️" },
       { href: "/dashboard/subscribers", label: "Subscribers", icon: "📦" },
-    ],
-  },
-  {
-    label: "Communication",
-    items: [
       { href: "/dashboard/enquiries", label: "Enquiries", icon: "✉️" },
-      { href: "/dashboard/email-logs", label: "Email Logs", icon: "📧" },
     ],
   },
   {
     label: "Settings",
     items: [
-      { href: "/dashboard/content", label: "Content", icon: "📝" },
-      { href: "/dashboard/export", label: "Export", icon: "📤" },
+      { href: "/dashboard/settings", label: "Settings", icon: "⚙️" },
+      { href: "/dashboard/content", label: "Content", icon: "�" },
+      { href: "/dashboard/email-logs", label: "Email Logs", icon: "�" },
+      { href: "/dashboard/export", label: "Export Data", icon: "📤" },
     ],
   },
 ];
