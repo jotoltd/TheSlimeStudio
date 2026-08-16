@@ -88,6 +88,8 @@ export default function BookingsAdminPage() {
   }
 
   async function saveSlotConfig() {
+    if (slotCapacity < 1) { setSlotsMsg("Max people per slot must be at least 1"); return; }
+    if (maxDaily < 1) { setSlotsMsg("Max daily bookings must be at least 1"); return; }
     setSavingSlots(true); setSlotsMsg("");
     const parsedSlots = slotsText.split("\n").map((s) => s.trim()).filter(Boolean);
     const { error } = await supabase.from("booking_settings").update({
@@ -210,7 +212,10 @@ export default function BookingsAdminPage() {
             <label className="block text-sm font-medium mb-2">Max People Per Slot</label>
             <input
               type="number" min="1" value={slotCapacity}
-              onChange={(e) => setSlotCapacity(parseInt(e.target.value) || 1)}
+              onChange={(e) => {
+                const v = e.target.value;
+                setSlotCapacity(v === "" ? 0 : parseInt(v) || 0);
+              }}
               className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
             />
           </div>
@@ -218,7 +223,10 @@ export default function BookingsAdminPage() {
             <label className="block text-sm font-medium mb-2">Max Daily Bookings</label>
             <input
               type="number" min="1" value={maxDaily}
-              onChange={(e) => setMaxDaily(parseInt(e.target.value) || 1)}
+              onChange={(e) => {
+                const v = e.target.value;
+                setMaxDaily(v === "" ? 0 : parseInt(v) || 0);
+              }}
               className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
             />
           </div>
