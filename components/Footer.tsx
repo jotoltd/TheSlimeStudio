@@ -1,4 +1,5 @@
 import Link from "next/link";
+import SocialLinks from "@/components/SocialLinks";
 
 export default function Footer() {
   return (
@@ -53,11 +54,7 @@ export default function Footer() {
           <p>© 2026 The Slime Studio. All rights reserved.</p>
           <div className="flex gap-4 items-center">
             <Link href="/admin" className="text-[0.8rem] text-ink-soft/60 hover:text-ink transition-colors">Admin</Link>
-            <div className="flex gap-3">
-              <a href="https://instagram.com/theslimestudioexperience" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="w-[38px] h-[38px] rounded-full bg-ink/8 grid place-items-center text-lg hover:bg-ink/15 transition-colors">📷</a>
-              <a href="#" aria-label="TikTok" className="w-[38px] h-[38px] rounded-full bg-ink/8 grid place-items-center text-lg hover:bg-ink/15 transition-colors">🎵</a>
-              <a href="#" aria-label="Facebook" className="w-[38px] h-[38px] rounded-full bg-ink/8 grid place-items-center text-lg hover:bg-ink/15 transition-colors">👍</a>
-            </div>
+            <SocialLinks size={18} />
           </div>
         </div>
       </div>

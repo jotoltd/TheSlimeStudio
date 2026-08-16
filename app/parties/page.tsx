@@ -4,6 +4,7 @@ import { useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Heart } from "@/components/Heart";
+import { InstagramIcon } from "@/components/SocialLinks";
 import { supabase } from "@/lib/supabase";
 
 function priceForCount(count: number) {
@@ -281,8 +282,8 @@ export default function PartiesPage() {
               Got questions? Contact us and we&apos;ll help arrange your Slime Studio party.
             </p>
             <div className="flex flex-col items-center gap-3 mb-8">
-              <a href="https://instagram.com/theslimestudioexperience" target="_blank" rel="noopener noreferrer" className="text-[0.95rem] text-ink hover:text-[#ff2d78] transition-colors">
-                <Heart size={14} /> Instagram: @theslimestudioexperience
+              <a href="https://instagram.com/theslimestudioexperience" target="_blank" rel="noopener noreferrer" className="text-[0.95rem] text-ink hover:text-[#ff2d78] transition-colors inline-flex items-center gap-1.5">
+                <InstagramIcon size={16} /> Instagram: @theslimestudioexperience
               </a>
               <a href="mailto:studio@theslimestudio.co.uk" className="text-[0.95rem] text-ink hover:text-[#ff2d78] transition-colors">
                 <Heart size={14} /> Email: studio@theslimestudio.co.uk
