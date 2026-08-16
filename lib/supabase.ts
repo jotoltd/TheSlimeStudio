@@ -48,6 +48,7 @@ export type Booking = {
   payment_status?: string;
   stripe_session_id?: string;
   notes?: string;
+  attendance_status?: string;
   created_at: string;
 };
 

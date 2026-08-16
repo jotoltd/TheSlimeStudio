@@ -40,12 +40,30 @@ export default function BookingsAdminPage() {
   const [slotsMsg, setSlotsMsg] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [payFilter, setPayFilter] = useState<"all" | "paid" | "unpaid" | "refunded" | "pending">("all");
+  const [partyFilter, setPartyFilter] = useState<"all" | "party" | "regular">("all");
+  const [selectedBookings, setSelectedBookings] = useState<Set<string>>(new Set());
+  const [bulkMode, setBulkMode] = useState(false);
+  const [showCustomerLookup, setShowCustomerLookup] = useState(false);
+  const [customerQuery, setCustomerQuery] = useState("");
+  const [customerResults, setCustomerResults] = useState<Booking[]>([]);
+  const [duplicates, setDuplicates] = useState<{ key: string; bookings: Booking[] }[]>([]);
 
   useEffect(() => { loadBookings(); }, [filter]);
 
   useEffect(() => {
     if (showAddBooking) loadAddAvailability(addForm.date);
   }, [showAddBooking, addForm.date]);
+
+  useEffect(() => {
+    // Detect duplicates: same name + date + time_slot
+    const seen: Record<string, Booking[]> = {};
+    bookings.forEach((b) => {
+      const key = `${b.name.toLowerCase()}|${b.date}|${b.time_slot}`;
+      if (!seen[key]) seen[key] = [];
+      seen[key].push(b);
+    });
+    setDuplicates(Object.entries(seen).filter(([, bs]) => bs.length > 1).map(([key, bs]) => ({ key, bookings: bs })));
+  }, [bookings]);
 
   useEffect(() => {
     supabase.from("booking_settings").select("*").eq("id", 1).single().then(({ data }) => {
@@ -115,6 +133,54 @@ export default function BookingsAdminPage() {
     setAddDailyUsed(dailyTotal);
   }
 
+  async function updateAttendance(bookingId: string, status: string) {
+    await fetch("/api/update-attendance", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bookingId, attendance_status: status }),
+    });
+    setBookings((prev) => prev.map((b) => b.id === bookingId ? { ...b, attendance_status: status } : b));
+  }
+
+  async function bulkDelete() {
+    if (!confirm(`Delete ${selectedBookings.size} booking(s)? This cannot be undone.`)) return;
+    const res = await fetch("/api/bulk-booking", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bookingIds: Array.from(selectedBookings), action: "delete" }),
+    });
+    if (res.ok) {
+      setSelectedBookings(new Set());
+      setBulkMode(false);
+      loadBookings();
+    }
+  }
+
+  function toggleSelection(id: string) {
+    setSelectedBookings((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function selectAllVisible() {
+    setSelectedBookings(new Set(filteredBookings.map((b) => b.id)));
+  }
+
+  async function searchCustomers() {
+    const q = customerQuery.toLowerCase().trim();
+    if (!q) { setCustomerResults([]); return; }
+    const { data } = await supabase
+      .from("bookings")
+      .select("*")
+      .neq("payment_status", "refunded")
+      .or(`name.ilike.%${q}%,email.ilike.%${q}%,phone.ilike.%${q}%`)
+      .order("date", { ascending: false })
+      .limit(50);
+    if (data) setCustomerResults(data as Booking[]);
+  }
+
   async function saveAddBooking() {
     if (!addForm.date || !addForm.time_slot || !addForm.name) {
       setAddMsg("Please fill in date, time slot and name.");
@@ -182,8 +248,13 @@ export default function BookingsAdminPage() {
       if (payFilter === "unpaid" && b.payment_status && b.payment_status !== "unpaid") return false;
       if (payFilter !== "unpaid" && (b.payment_status || "unpaid") !== payFilter) return false;
     }
+    if (partyFilter === "party" && !b.is_party) return false;
+    if (partyFilter === "regular" && b.is_party) return false;
     return true;
   });
+
+  const todayStr = new Date().toISOString().split("T")[0];
+  const todaysBookings = bookings.filter((b) => b.date === todayStr && b.payment_status !== "refunded").sort((a, b) => a.time_slot.localeCompare(b.time_slot));
 
   const bookingsByDate: Record<string, Booking[]> = {};
   filteredBookings.forEach((b) => { const d = b.date; if (!bookingsByDate[d]) bookingsByDate[d] = []; bookingsByDate[d].push(b); });
@@ -200,6 +271,9 @@ export default function BookingsAdminPage() {
         </div>
         <div className="flex gap-2 flex-wrap">
           <button onClick={() => setShowAddBooking(true)} className="px-4 py-2 rounded-full text-[0.85rem] font-medium bg-bright-lavender text-white hover:opacity-90 transition-all">+ Add Booking</button>
+          <button onClick={() => setShowCustomerLookup(true)} className="px-4 py-2 rounded-full text-[0.85rem] font-medium bg-white text-ink hover:bg-sky-blue-light/20 transition-all">🔍 Customer</button>
+          <a href="/api/export-ical" className="px-4 py-2 rounded-full text-[0.85rem] font-medium bg-white text-ink hover:bg-sky-blue-light/20 transition-all">📅 iCal</a>
+          <button onClick={() => { setBulkMode(!bulkMode); setSelectedBookings(new Set()); }} className={`px-4 py-2 rounded-full text-[0.85rem] font-medium transition-all ${bulkMode ? "bg-ink text-white" : "bg-white text-ink hover:bg-sky-blue-light/20"}`}>☑ Bulk</button>
           {(["upcoming", "past", "all"] as const).map((f) => (
             <button key={f} onClick={() => setFilter(f)}
               className={`px-4 py-2 rounded-full text-[0.85rem] font-medium capitalize transition-all ${filter === f ? "bg-sky-blue-light text-ink shadow-sm" : "bg-white text-ink hover:bg-sky-blue-light/20"}`}>
@@ -232,6 +306,15 @@ export default function BookingsAdminPage() {
           <option value="pending">Pending</option>
           <option value="unpaid">Unpaid</option>
           <option value="refunded">Refunded</option>
+        </select>
+        <select
+          value={partyFilter}
+          onChange={(e) => setPartyFilter(e.target.value as typeof partyFilter)}
+          className="px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light bg-white"
+        >
+          <option value="all">All Types</option>
+          <option value="regular">Sessions</option>
+          <option value="party">Parties</option>
         </select>
       </div>
 
@@ -294,6 +377,65 @@ export default function BookingsAdminPage() {
           {slotsMsg && <p className={`text-[0.85rem] ${slotsMsg.includes("saved") ? "text-green-600" : "text-red-600"}`}>{slotsMsg}</p>}
         </div>
       </div>
+
+      {duplicates.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
+          <h3 className="font-display text-[0.95rem] text-amber-800 mb-2">⚠️ Duplicate Bookings Detected ({duplicates.length})</h3>
+          <div className="space-y-1">
+            {duplicates.slice(0, 5).map(({ key, bookings: bs }) => {
+              const [name, date, time] = key.split("|");
+              return (
+                <div key={key} className="text-[0.85rem] text-amber-700">
+                  <span className="font-medium">{name}</span> on {date} at {time} — {bs.length} bookings
+                  <button onClick={() => { setSearchQuery(name); }} className="ml-2 text-amber-800 underline hover:text-amber-900">View</button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {todaysBookings.length > 0 && (
+        <div className="bg-white rounded-[20px] p-5 md:p-6 shadow-sm mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-display text-[1.1rem]">📅 Today's Bookings ({todaysBookings.length})</h2>
+            <span className="text-[0.85rem] text-ink-soft">{todaysBookings.reduce((s, b) => s + b.people, 0)} people total</span>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {todaysBookings.map((b) => (
+              <div key={b.id} className={`flex items-center justify-between rounded-lg px-3 py-2 text-[0.85rem] ${b.is_party ? "bg-bright-lavender/10 border border-bright-lavender/20" : "bg-ink/[0.03]"}`}>
+                <div>
+                  <span className="font-display">{b.time_slot}</span>
+                  <span className="ml-2 font-medium">{b.name}</span>
+                  <span className="text-ink-soft ml-1">({b.people})</span>
+                  {b.is_party && <span className="ml-1 text-[0.7rem] bg-bright-lavender/20 px-1.5 py-0.5 rounded-full">Party</span>}
+                </div>
+                <div className="flex items-center gap-1">
+                  {b.attendance_status === "attended" && <span className="text-green-600 text-[0.75rem]">✓ Attended</span>}
+                  {b.attendance_status === "no_show" && <span className="text-red-600 text-[0.75rem]">✗ No-show</span>}
+                  {(!b.attendance_status || b.attendance_status === "pending") && (
+                    <>
+                      <button onClick={() => updateAttendance(b.id, "attended")} className="text-green-600 hover:bg-green-100 rounded px-1.5 py-0.5 text-[0.75rem]">✓</button>
+                      <button onClick={() => updateAttendance(b.id, "no_show")} className="text-red-600 hover:bg-red-100 rounded px-1.5 py-0.5 text-[0.75rem]">✗</button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {bulkMode && (
+        <div className="bg-ink text-white rounded-xl p-4 mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-[0.9rem]">{selectedBookings.size} selected</span>
+            <button onClick={selectAllVisible} className="text-[0.8rem] underline hover:text-sky-blue-light">Select all visible</button>
+            <button onClick={() => setSelectedBookings(new Set())} className="text-[0.8rem] underline hover:text-sky-blue-light">Clear</button>
+          </div>
+          <button onClick={bulkDelete} disabled={selectedBookings.size === 0} className="px-4 py-2 rounded-full bg-red-500 text-white text-[0.85rem] font-medium disabled:opacity-40 hover:bg-red-600 transition-colors">Delete Selected</button>
+        </div>
+      )}
 
       <div className="grid grid-cols-3 gap-3 md:gap-5 mb-6 md:mb-8">
         <div className="bg-white rounded-[16px] md:rounded-[20px] p-4 md:p-6 shadow-sm">
@@ -404,20 +546,26 @@ export default function BookingsAdminPage() {
       ) : (
         <div className="bg-white rounded-[16px] md:rounded-[20px] p-4 md:p-8 shadow-sm">
           {filteredBookings.length === 0 ? (
-            <div className="text-center py-10 text-ink-soft text-[0.9rem]">No bookings found{searchQuery || payFilter !== "all" ? " matching your filters" : ""}.</div>
+            <div className="text-center py-10 text-ink-soft text-[0.9rem]">No bookings found{searchQuery || payFilter !== "all" || partyFilter !== "all" ? " matching your filters" : ""}.</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="text-left text-[0.75rem] text-ink-soft uppercase tracking-wider">
+                    {bulkMode && <th className="pb-3 pr-2"></th>}
                     <th className="pb-3 pr-4">Date</th><th className="pb-3 pr-4">Time</th><th className="pb-3 pr-4">People</th>
                     <th className="pb-3 pr-4">Price</th><th className="pb-3 pr-4">Payment</th><th className="pb-3 pr-4">Name</th>
-                    <th className="pb-3 pr-4">Contact</th><th className="pb-3">Actions</th>
+                    <th className="pb-3 pr-4">Contact</th><th className="pb-3 pr-4">Attendance</th><th className="pb-3">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredBookings.map((b) => (
-                    <tr key={b.id} className="border-t border-ink/[0.08]">
+                    <tr key={b.id} className={`border-t border-ink/[0.08] ${bulkMode && selectedBookings.has(b.id) ? "bg-sky-blue-light/20" : ""}`}>
+                      {bulkMode && (
+                        <td className="py-3 pr-2">
+                          <input type="checkbox" checked={selectedBookings.has(b.id)} onChange={() => toggleSelection(b.id)} className="w-4 h-4" />
+                        </td>
+                      )}
                       <td className="py-3 pr-4 text-[0.9rem]">{new Date(b.date).toLocaleDateString("en-GB")}</td>
                       <td className="py-3 pr-4 text-[0.9rem]">{b.time_slot}</td>
                       <td className="py-3 pr-4 text-[0.9rem]">{b.people}</td>
@@ -429,8 +577,26 @@ export default function BookingsAdminPage() {
                           b.payment_status === "expired" ? "bg-red-100 text-red-700" : "bg-ink/5 text-ink-soft"
                         }`}>{b.payment_status || "unpaid"}</span>
                       </td>
-                      <td className="py-3 pr-4 text-[0.9rem]">{b.name}</td>
+                      <td className="py-3 pr-4 text-[0.9rem]">
+                        {b.name}
+                        {b.is_party && <span className="ml-1 text-[0.65rem] bg-bright-lavender/20 px-1.5 py-0.5 rounded-full align-middle">Party</span>}
+                      </td>
                       <td className="py-3 pr-4 text-[0.9rem]"><div>{b.email}</div>{b.phone && <div className="text-ink-soft text-[0.8rem]">{b.phone}</div>}</td>
+                      <td className="py-3 pr-4">
+                        <select
+                          value={b.attendance_status || "pending"}
+                          onChange={(e) => updateAttendance(b.id, e.target.value)}
+                          className={`text-[0.75rem] px-2 py-1 rounded-lg border-0 ${
+                            b.attendance_status === "attended" ? "bg-green-100 text-green-700" :
+                            b.attendance_status === "no_show" ? "bg-red-100 text-red-700" :
+                            "bg-ink/5 text-ink-soft"
+                          }`}
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="attended">Attended</option>
+                          <option value="no_show">No-show</option>
+                        </select>
+                      </td>
                       <td className="py-3">
                         <div className="flex gap-2">
                           <button onClick={() => startEdit(b)} className="px-3 py-1.5 rounded-lg bg-sky-blue-light/30 text-ink text-[0.8rem] hover:bg-sky-blue-light/50 transition-colors">Edit</button>
@@ -571,23 +737,69 @@ export default function BookingsAdminPage() {
           </div>
         </div>
       )}
+
+      {showCustomerLookup && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={() => setShowCustomerLookup(false)}>
+          <div className="bg-white rounded-2xl p-6 md:p-8 max-w-2xl w-full max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <h2 className="font-display text-lg mb-4">🔍 Customer Lookup</h2>
+            <p className="text-[0.85rem] text-ink-soft mb-4">Search by name, email, or phone to see all bookings for a customer.</p>
+            <div className="flex gap-2 mb-4">
+              <input
+                type="text"
+                value={customerQuery}
+                onChange={(e) => setCustomerQuery(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && searchCustomers()}
+                placeholder="Enter name, email, or phone..."
+                className="flex-1 px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
+              />
+              <button onClick={searchCustomers} className="px-5 py-2.5 rounded-full bg-sky-blue-light text-ink text-[0.9rem] font-medium">Search</button>
+            </div>
+            {customerResults.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-[0.85rem] text-ink-soft">{customerResults.length} booking(s) found</p>
+                {customerResults.map((b) => (
+                  <div key={b.id} className={`flex items-center justify-between rounded-lg px-4 py-3 ${b.is_party ? "bg-bright-lavender/10" : "bg-ink/[0.03]"}`}>
+                    <div>
+                      <div className="text-[0.9rem] font-medium">{b.name} {b.is_party && <span className="text-[0.65rem] bg-bright-lavender/20 px-1.5 py-0.5 rounded-full ml-1">Party</span>}</div>
+                      <div className="text-[0.8rem] text-ink-soft">{new Date(b.date).toLocaleDateString("en-GB")} at {b.time_slot} · {b.people} people · £{Number(b.total_price).toFixed(2)}</div>
+                      <div className="text-[0.75rem] text-ink-soft">{b.email} {b.phone && `· ${b.phone}`}</div>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded-full text-[0.7rem] font-medium ${
+                      b.payment_status === "paid" ? "bg-green-100 text-green-700" :
+                      b.payment_status === "refunded" ? "bg-orange-100 text-orange-700" : "bg-ink/5 text-ink-soft"
+                    }`}>{b.payment_status || "unpaid"}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex justify-end mt-4">
+              <button onClick={() => setShowCustomerLookup(false)} className="px-5 py-2.5 rounded-full bg-ink/5 text-ink text-[0.9rem] font-medium hover:bg-ink/10">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 function BookingCard({ b, onEdit, onCancel, cancelling }: { b: Booking; onEdit: () => void; onCancel: () => void; cancelling: boolean }) {
   return (
-    <div className="border border-ink/[0.08] rounded-xl p-4 hover:border-ink/15 transition-colors">
+    <div className={`border rounded-xl p-4 hover:border-ink/15 transition-colors ${b.is_party ? "border-bright-lavender/30 bg-bright-lavender/[0.03]" : "border-ink/[0.08]"}`}>
       <div className="flex justify-between items-start mb-2">
         <div>
           <span className="font-display text-[1rem]">{b.time_slot}</span>
           <span className="text-[0.8rem] text-ink-soft ml-2">{b.people} {b.people === 1 ? "person" : "people"}</span>
+          {b.is_party && <span className="ml-1 text-[0.65rem] bg-bright-lavender/20 px-1.5 py-0.5 rounded-full align-middle">Party</span>}
         </div>
-        <span className={`px-2 py-0.5 rounded-full text-[0.7rem] font-medium ${
-          b.payment_status === "paid" ? "bg-green-100 text-green-700" :
-          b.payment_status === "refunded" ? "bg-orange-100 text-orange-700" :
-          b.payment_status === "expired" ? "bg-red-100 text-red-700" : "bg-ink/5 text-ink-soft"
-        }`}>{b.payment_status || "unpaid"}</span>
+        <div className="flex items-center gap-1.5">
+          {b.attendance_status === "attended" && <span className="text-[0.65rem] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">Attended</span>}
+          {b.attendance_status === "no_show" && <span className="text-[0.65rem] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full">No-show</span>}
+          <span className={`px-2 py-0.5 rounded-full text-[0.7rem] font-medium ${
+            b.payment_status === "paid" ? "bg-green-100 text-green-700" :
+            b.payment_status === "refunded" ? "bg-orange-100 text-orange-700" :
+            b.payment_status === "expired" ? "bg-red-100 text-red-700" : "bg-ink/5 text-ink-soft"
+          }`}>{b.payment_status || "unpaid"}</span>
+        </div>
       </div>
       <div className="text-[0.9rem] font-medium">{b.name}</div>
       <div className="text-[0.8rem] text-ink-soft">{b.email}</div>
