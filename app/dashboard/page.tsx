@@ -108,7 +108,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Revenue Stats */}
-      <div className="grid grid-cols-3 gap-3 md:gap-5 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-5 mb-8">
         <div className="bg-white rounded-[16px] md:rounded-[20px] p-4 md:p-6 shadow-sm border-l-4 border-green-400">
           <div className="text-[0.65rem] md:text-[0.75rem] text-ink-soft uppercase tracking-wider mb-1 md:mb-2">Today's Revenue</div>
           <div className="font-display text-[1.2rem] md:text-[1.8rem]">{loadingData ? "--" : `£${revenueToday.toFixed(2)}`}</div>
@@ -124,7 +124,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5 mb-8">
         <Link href="/dashboard/bookings" className="bg-white rounded-[20px] p-5 md:p-6 shadow-sm hover:-translate-y-1 hover:shadow-md transition-all group">
           <div className="flex items-center justify-between mb-3">
             <div className="w-10 h-10 rounded-xl bg-sky-blue-light/20 grid place-items-center text-lg">📅</div>
@@ -160,7 +160,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Charts */}
-      <div className="grid md:grid-cols-2 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-8">
         {/* Weekly bookings chart */}
         <div className="bg-white rounded-[20px] p-7 shadow-sm">
           <h2 className="font-display text-[1.1rem] mb-5">Bookings — Last 8 Weeks</h2>
@@ -210,7 +210,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         {/* Today's bookings */}
         <div className="bg-white rounded-[20px] p-7 shadow-sm">
           <div className="flex justify-between items-center mb-5">

@@ -201,7 +201,7 @@ export default function SettingsPage() {
           <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm">
             <h2 className="font-display text-[1.1rem] mb-1">Time Slots &amp; Capacity</h2>
             <p className="text-[0.85rem] text-ink-soft mb-4">Configure available time slots, max people per slot, and daily booking limit.</p>
-            <div className="grid md:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <div className="md:col-span-1">
                 <label className="block text-sm font-medium mb-2">Time Slots (one per line, 24h format)</label>
                 <textarea
@@ -259,7 +259,7 @@ export default function SettingsPage() {
                   : "Not configured — add Stripe API keys to .env.local to enable payments"}
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <button
                 onClick={() => switchStripeMode("test")}
                 disabled={switchingMode}

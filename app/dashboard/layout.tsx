@@ -73,7 +73,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen bg-cream md:flex">
       {/* Mobile top bar */}
-      <div className="md:hidden bg-ink flex items-center justify-between px-5 py-4">
+      <div className="md:hidden bg-ink flex items-center justify-between px-5 py-4 sticky top-0 z-50">
         <Link href="/dashboard" className="font-display text-[1.1rem] text-white">
           The Slime Studio
         </Link>
@@ -88,8 +88,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Sidebar */}
       <aside
-        className={`bg-ink md:w-64 md:flex-shrink-0 md:min-h-screen md:flex md:flex-col md:sticky md:top-0 ${
-          mobileOpen ? "block" : "hidden"
+        className={`bg-ink md:w-64 md:flex-shrink-0 md:min-h-screen md:flex md:flex-col md:sticky md:top-0 fixed inset-x-0 top-[57px] bottom-0 z-40 overflow-y-auto md:static md:top-0 ${
+          mobileOpen ? "block" : "hidden md:flex"
         }`}
       >
         <div className="hidden md:block px-7 py-8">
@@ -97,7 +97,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <p className="text-[0.8rem] text-white/70 mt-1">Admin Panel</p>
         </div>
 
-        <nav className="px-4 md:px-4 py-4 md:py-0 flex-1 overflow-y-auto">
+        <nav className="px-4 py-4 md:py-0 flex-1 overflow-y-auto">
           {navSections.map((section, si) => (
             <div key={section.label} className={si > 0 ? "mt-5" : ""}>
               <div className="px-4 mb-1.5 text-[0.65rem] uppercase tracking-wider text-white/40 font-medium">{section.label}</div>

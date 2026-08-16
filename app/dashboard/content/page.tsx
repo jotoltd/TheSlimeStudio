@@ -117,7 +117,7 @@ export default function ContentPage() {
           <div className="space-y-5">
             <Field label="Hero Title" value={parties.hero_title} onChange={(v) => setParties({ ...parties, hero_title: v })} />
             <Field label="Hero Text" value={parties.hero_text} onChange={(v) => setParties({ ...parties, hero_text: v })} textarea />
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <Field label="Price (5 children) £" value={parties.price_5} onChange={(v) => setParties({ ...parties, price_5: v })} />
               <Field label="Price (6–10) £" value={parties.price_6_10} onChange={(v) => setParties({ ...parties, price_6_10: v })} />
               <Field label="Price (11–15) £" value={parties.price_11_15} onChange={(v) => setParties({ ...parties, price_11_15: v })} />

@@ -238,53 +238,57 @@ export default function BookingsAdminPage() {
           <p className="text-ink-soft text-[0.9rem] mt-1">Manage all slime-making session bookings.</p>
         </div>
         <div className="flex gap-2 flex-wrap items-center">
-          <button onClick={() => setShowAddBooking(true)} className="px-4 py-2 rounded-full text-[0.85rem] font-medium bg-bright-lavender text-white hover:opacity-90 transition-all">+ Add Booking</button>
-          <button onClick={() => setShowCustomerLookup(true)} className="px-4 py-2 rounded-full text-[0.85rem] font-medium bg-white text-ink hover:bg-sky-blue-light/20 transition-all">🔍 Customer</button>
-          <a href="/api/export-ical" className="px-4 py-2 rounded-full text-[0.85rem] font-medium bg-white text-ink hover:bg-sky-blue-light/20 transition-all">📅 iCal</a>
-          <button onClick={() => { setBulkMode(!bulkMode); setSelectedBookings(new Set()); }} className={`px-4 py-2 rounded-full text-[0.85rem] font-medium transition-all ${bulkMode ? "bg-ink text-white" : "bg-white text-ink hover:bg-sky-blue-light/20"}`}>☑ Bulk</button>
+          <button onClick={() => setShowAddBooking(true)} className="px-3 md:px-4 py-2 rounded-full text-[0.8rem] md:text-[0.85rem] font-medium bg-bright-lavender text-white hover:opacity-90 transition-all">+ Add Booking</button>
+          <button onClick={() => setShowCustomerLookup(true)} className="px-3 md:px-4 py-2 rounded-full text-[0.8rem] md:text-[0.85rem] font-medium bg-white text-ink hover:bg-sky-blue-light/20 transition-all">🔍 Customer</button>
+          <a href="/api/export-ical" className="px-3 md:px-4 py-2 rounded-full text-[0.8rem] md:text-[0.85rem] font-medium bg-white text-ink hover:bg-sky-blue-light/20 transition-all">📅 iCal</a>
+          <button onClick={() => { setBulkMode(!bulkMode); setSelectedBookings(new Set()); }} className={`px-3 md:px-4 py-2 rounded-full text-[0.8rem] md:text-[0.85rem] font-medium transition-all ${bulkMode ? "bg-ink text-white" : "bg-white text-ink hover:bg-sky-blue-light/20"}`}>☑ Bulk</button>
         </div>
       </div>
 
       {/* Filter bar */}
-      <div className="bg-white rounded-[16px] p-3 md:p-4 shadow-sm mb-6 flex flex-wrap items-center gap-2 md:gap-3">
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search name, email, date, phone..."
-          className="flex-1 min-w-[180px] px-4 py-2 border-2 border-ink/10 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
-        />
-        <div className="flex gap-1.5">
-          {(["upcoming", "past", "all"] as const).map((f) => (
-            <button key={f} onClick={() => setFilter(f)}
-              className={`px-3 py-2 rounded-lg text-[0.8rem] font-medium capitalize transition-all ${filter === f ? "bg-sky-blue-light text-ink shadow-sm" : "bg-ink/5 text-ink-soft hover:bg-ink/10"}`}>
-              {f}
-            </button>
-          ))}
+      <div className="bg-white rounded-[16px] p-3 md:p-4 shadow-sm mb-6 flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-2 md:gap-3">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search name, email, date, phone..."
+            className="flex-1 min-w-[150px] md:min-w-[180px] px-4 py-2 border-2 border-ink/10 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
+          />
+          <div className="flex gap-1.5">
+            {(["upcoming", "past", "all"] as const).map((f) => (
+              <button key={f} onClick={() => setFilter(f)}
+                className={`px-3 py-2 rounded-lg text-[0.8rem] font-medium capitalize transition-all ${filter === f ? "bg-sky-blue-light text-ink shadow-sm" : "bg-ink/5 text-ink-soft hover:bg-ink/10"}`}>
+                {f}
+              </button>
+            ))}
+          </div>
         </div>
-        <select
-          value={payFilter}
-          onChange={(e) => setPayFilter(e.target.value as typeof payFilter)}
-          className="px-3 py-2 border-2 border-ink/10 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light bg-white"
-        >
-          <option value="all">All Payments</option>
-          <option value="paid">Paid</option>
-          <option value="pending">Pending</option>
-          <option value="unpaid">Unpaid</option>
-          <option value="refunded">Refunded</option>
-        </select>
-        <select
-          value={partyFilter}
-          onChange={(e) => setPartyFilter(e.target.value as typeof partyFilter)}
-          className="px-3 py-2 border-2 border-ink/10 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light bg-white"
-        >
-          <option value="all">All Types</option>
-          <option value="regular">Sessions</option>
-          <option value="party">Parties</option>
-        </select>
-        <div className="flex rounded-lg overflow-hidden border border-ink/10">
-          <button onClick={() => setViewMode("calendar")} className={`px-3 py-2 text-[0.8rem] font-medium ${viewMode === "calendar" ? "bg-ink text-white" : "bg-white text-ink"}`}>📅 Calendar</button>
-          <button onClick={() => setViewMode("table")} className={`px-3 py-2 text-[0.8rem] font-medium ${viewMode === "table" ? "bg-ink text-white" : "bg-white text-ink"}`}>📋 Table</button>
+        <div className="flex flex-wrap items-center gap-2 md:gap-3">
+          <select
+            value={payFilter}
+            onChange={(e) => setPayFilter(e.target.value as typeof payFilter)}
+            className="px-3 py-2 border-2 border-ink/10 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light bg-white"
+          >
+            <option value="all">All Payments</option>
+            <option value="paid">Paid</option>
+            <option value="pending">Pending</option>
+            <option value="unpaid">Unpaid</option>
+            <option value="refunded">Refunded</option>
+          </select>
+          <select
+            value={partyFilter}
+            onChange={(e) => setPartyFilter(e.target.value as typeof partyFilter)}
+            className="px-3 py-2 border-2 border-ink/10 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light bg-white"
+          >
+            <option value="all">All Types</option>
+            <option value="regular">Sessions</option>
+            <option value="party">Parties</option>
+          </select>
+          <div className="flex rounded-lg overflow-hidden border border-ink/10 ml-auto">
+            <button onClick={() => setViewMode("calendar")} className={`px-3 py-2 text-[0.8rem] font-medium ${viewMode === "calendar" ? "bg-ink text-white" : "bg-white text-ink"}`}>📅 Calendar</button>
+            <button onClick={() => setViewMode("table")} className={`px-3 py-2 text-[0.8rem] font-medium ${viewMode === "table" ? "bg-ink text-white" : "bg-white text-ink"}`}>📋 Table</button>
+          </div>
         </div>
       </div>
 
@@ -337,7 +341,7 @@ export default function BookingsAdminPage() {
       )}
 
       {bulkMode && (
-        <div className="bg-ink text-white rounded-xl p-4 mb-6 flex items-center justify-between">
+        <div className="bg-ink text-white rounded-xl p-4 mb-6 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <span className="text-[0.9rem]">{selectedBookings.size} selected</span>
             <button onClick={selectAllVisible} className="text-[0.8rem] underline hover:text-sky-blue-light">Select all visible</button>
@@ -347,7 +351,7 @@ export default function BookingsAdminPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-3 md:gap-5 mb-6 md:mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-5 mb-6 md:mb-8">
         <div className="bg-white rounded-[16px] md:rounded-[20px] p-4 md:p-6 shadow-sm border-l-4 border-sky-blue-light">
           <div className="text-[0.65rem] md:text-[0.75rem] text-ink-soft uppercase tracking-wider mb-1 md:mb-2">Bookings</div>
           <div className="font-display text-[1.2rem] md:text-[1.8rem]">{loading ? "--" : filteredBookings.length}</div>
