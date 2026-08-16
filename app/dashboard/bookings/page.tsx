@@ -25,9 +25,11 @@ export default function BookingsAdminPage() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [editMsg, setEditMsg] = useState("");
   const [showAddBooking, setShowAddBooking] = useState(false);
-  const [addForm, setAddForm] = useState({ date: todayISO(), time_slot: "", people: 1, name: "", email: "", phone: "", notes: "", is_party: false });
+  const [addForm, setAddForm] = useState({ date: todayISO(), time_slot: "", people: 1, name: "", email: "", phone: "", notes: "", is_party: false, total_price: 0 });
   const [savingAdd, setSavingAdd] = useState(false);
   const [addMsg, setAddMsg] = useState("");
+  const [addSlotAvailability, setAddSlotAvailability] = useState<Record<string, number>>({});
+  const [addDailyUsed, setAddDailyUsed] = useState(0);
   const [calMonth, setCalMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [timeSlots, setTimeSlots] = useState<string[]>(DEFAULT_SLOTS);
@@ -40,6 +42,10 @@ export default function BookingsAdminPage() {
   const [payFilter, setPayFilter] = useState<"all" | "paid" | "unpaid" | "refunded" | "pending">("all");
 
   useEffect(() => { loadBookings(); }, [filter]);
+
+  useEffect(() => {
+    if (showAddBooking) loadAddAvailability(addForm.date);
+  }, [showAddBooking, addForm.date]);
 
   useEffect(() => {
     supabase.from("booking_settings").select("*").eq("id", 1).single().then(({ data }) => {
@@ -97,33 +103,43 @@ export default function BookingsAdminPage() {
     else { setEditMsg("Booking updated successfully!"); setEditingBooking(null); loadBookings(); }
   }
 
+  async function loadAddAvailability(forDate: string) {
+    const { data } = await supabase.from("bookings").select("time_slot, people").eq("date", forDate).neq("payment_status", "refunded");
+    const used: Record<string, number> = {};
+    let dailyTotal = 0;
+    (data || []).forEach((b: { time_slot: string; people: number }) => {
+      used[b.time_slot] = (used[b.time_slot] || 0) + b.people;
+      dailyTotal += b.people;
+    });
+    setAddSlotAvailability(used);
+    setAddDailyUsed(dailyTotal);
+  }
+
   async function saveAddBooking() {
     if (!addForm.date || !addForm.time_slot || !addForm.name) {
       setAddMsg("Please fill in date, time slot and name.");
       return;
     }
     setSavingAdd(true); setAddMsg("");
-    const { error } = await supabase.from("bookings").insert({
-      date: addForm.date,
-      time_slot: addForm.time_slot,
-      people: addForm.people,
-      total_price: 0,
-      name: addForm.name,
-      email: addForm.email || null,
-      phone: addForm.phone || null,
-      is_party: addForm.is_party,
-      payment_status: "paid",
-      notes: addForm.notes || null,
-      stripe_session_id: `manual_${Date.now()}`,
-    });
-    setSavingAdd(false);
-    if (error) { setAddMsg("Failed to add booking: " + error.message); }
-    else {
-      setAddMsg("Booking added successfully!");
-      setShowAddBooking(false);
-      setAddForm({ date: todayISO(), time_slot: "", people: 1, name: "", email: "", phone: "", notes: "", is_party: false });
-      loadBookings();
+    try {
+      const res = await fetch("/api/add-booking", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(addForm),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setAddMsg(data.error || "Failed to add booking");
+      } else {
+        setAddMsg("");
+        setShowAddBooking(false);
+        setAddForm({ date: todayISO(), time_slot: "", people: 1, name: "", email: "", phone: "", notes: "", is_party: false, total_price: 0 });
+        loadBookings();
+      }
+    } catch {
+      setAddMsg("Network error — please try again");
     }
+    setSavingAdd(false);
   }
 
   async function saveSlotConfig() {
@@ -491,7 +507,15 @@ export default function BookingsAdminPage() {
                 <label className="block text-sm font-medium mb-1.5">Time Slot</label>
                 <select value={addForm.time_slot} onChange={(e) => setAddForm({ ...addForm, time_slot: e.target.value })} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light">
                   <option value="">Select time...</option>
-                  {timeSlots.map((s) => <option key={s} value={s}>{s}</option>)}
+                  {timeSlots.map((s) => {
+                    const used = addSlotAvailability[s] || 0;
+                    const remaining = slotCapacity - used;
+                    return (
+                      <option key={s} value={s} disabled={remaining <= 0}>
+                        {s} — {remaining > 0 ? `${remaining} left` : "FULL"}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
               <div>
@@ -501,6 +525,13 @@ export default function BookingsAdminPage() {
               <div>
                 <label className="block text-sm font-medium mb-1.5">People</label>
                 <input type="number" min="1" max={slotCapacity} value={addForm.people} onChange={(e) => setAddForm({ ...addForm, people: parseInt(e.target.value) || 1 })} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
+                {addForm.time_slot && (() => {
+                  const remaining = slotCapacity - (addSlotAvailability[addForm.time_slot] || 0);
+                  if (addForm.people > remaining) {
+                    return <p className="text-[0.8rem] text-red-600 mt-1">Only {remaining} spot{remaining === 1 ? "" : "s"} left at this time</p>;
+                  }
+                  return <p className="text-[0.8rem] text-green-600 mt-1">{remaining} spot{remaining === 1 ? "" : "s"} left at this time</p>;
+                })()}
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1.5">Email (optional)</label>
@@ -509,6 +540,10 @@ export default function BookingsAdminPage() {
               <div>
                 <label className="block text-sm font-medium mb-1.5">Phone (optional)</label>
                 <input value={addForm.phone} onChange={(e) => setAddForm({ ...addForm, phone: e.target.value })} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium mb-1.5">Total Price (£) <span className="text-ink-soft font-normal">(0 for walk-ins/parties paid separately)</span></label>
+                <input type="number" min="0" step="0.01" value={addForm.total_price} onChange={(e) => setAddForm({ ...addForm, total_price: parseFloat(e.target.value) || 0 })} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium mb-1.5">Notes (optional)</label>
@@ -520,6 +555,13 @@ export default function BookingsAdminPage() {
                   This is a party booking
                 </label>
               </div>
+            </div>
+            <div className="mt-4 bg-ink/[0.03] rounded-xl p-3 text-[0.8rem] text-ink-soft">
+              <span className="font-medium">Daily usage:</span> {addDailyUsed} / {maxDaily} people booked for {addForm.date}
+              {addForm.time_slot && (() => {
+                const used = addSlotAvailability[addForm.time_slot] || 0;
+                return <> · <span className="font-medium">{addForm.time_slot}:</span> {used} / {slotCapacity} people</>;
+              })()}
             </div>
             {addMsg && <p className={`text-[0.85rem] mt-3 ${addMsg.includes("success") ? "text-green-600" : "text-red-600"}`}>{addMsg}</p>}
             <div className="flex gap-3 mt-6">
