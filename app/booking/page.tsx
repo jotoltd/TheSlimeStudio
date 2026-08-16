@@ -318,9 +318,6 @@ function BookingPageInner() {
                   }}
                 />
               </Suspense>
-              <div className="text-center mt-4">
-                <button onClick={() => setStatus("idle")} className="text-sm text-ink-soft hover:text-ink transition-colors underline">← Back</button>
-              </div>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-5 md:p-8 shadow-sm">
