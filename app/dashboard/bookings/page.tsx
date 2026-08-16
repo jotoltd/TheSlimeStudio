@@ -5,6 +5,12 @@ import { supabase, type Booking, type BookingSettings, TIME_SLOTS as DEFAULT_SLO
 
 type ViewMode = "calendar" | "table";
 
+function todayISO() {
+  const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().split("T")[0];
+}
+
 export default function BookingsAdminPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -18,6 +24,10 @@ export default function BookingsAdminPage() {
   const [editForm, setEditForm] = useState({ date: "", time_slot: "", people: 1, name: "", email: "", phone: "", notes: "" });
   const [savingEdit, setSavingEdit] = useState(false);
   const [editMsg, setEditMsg] = useState("");
+  const [showAddBooking, setShowAddBooking] = useState(false);
+  const [addForm, setAddForm] = useState({ date: todayISO(), time_slot: "", people: 1, name: "", email: "", phone: "", notes: "", is_party: false });
+  const [savingAdd, setSavingAdd] = useState(false);
+  const [addMsg, setAddMsg] = useState("");
   const [calMonth, setCalMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [timeSlots, setTimeSlots] = useState<string[]>(DEFAULT_SLOTS);
@@ -46,7 +56,7 @@ export default function BookingsAdminPage() {
   async function loadBookings() {
     setLoading(true);
     const todayStr = new Date().toISOString().split("T")[0];
-    let query = supabase.from("bookings").select("*");
+    let query = supabase.from("bookings").select("*").neq("payment_status", "refunded");
     if (filter === "upcoming") query = query.gte("date", todayStr);
     if (filter === "past") query = query.lt("date", todayStr);
     const { data } = await query.order("date", { ascending: filter !== "past" }).order("time_slot", { ascending: true });
@@ -85,6 +95,35 @@ export default function BookingsAdminPage() {
     setSavingEdit(false);
     if (error) { setEditMsg("Failed to save: " + error.message); }
     else { setEditMsg("Booking updated successfully!"); setEditingBooking(null); loadBookings(); }
+  }
+
+  async function saveAddBooking() {
+    if (!addForm.date || !addForm.time_slot || !addForm.name) {
+      setAddMsg("Please fill in date, time slot and name.");
+      return;
+    }
+    setSavingAdd(true); setAddMsg("");
+    const { error } = await supabase.from("bookings").insert({
+      date: addForm.date,
+      time_slot: addForm.time_slot,
+      people: addForm.people,
+      total_price: 0,
+      name: addForm.name,
+      email: addForm.email || null,
+      phone: addForm.phone || null,
+      is_party: addForm.is_party,
+      payment_status: "paid",
+      notes: addForm.notes || null,
+      stripe_session_id: `manual_${Date.now()}`,
+    });
+    setSavingAdd(false);
+    if (error) { setAddMsg("Failed to add booking: " + error.message); }
+    else {
+      setAddMsg("Booking added successfully!");
+      setShowAddBooking(false);
+      setAddForm({ date: todayISO(), time_slot: "", people: 1, name: "", email: "", phone: "", notes: "", is_party: false });
+      loadBookings();
+    }
   }
 
   async function saveSlotConfig() {
@@ -144,6 +183,7 @@ export default function BookingsAdminPage() {
           <p className="text-ink-soft text-[0.9rem] mt-1">Manage all slime-making session bookings.</p>
         </div>
         <div className="flex gap-2 flex-wrap">
+          <button onClick={() => setShowAddBooking(true)} className="px-4 py-2 rounded-full text-[0.85rem] font-medium bg-bright-lavender text-white hover:opacity-90 transition-all">+ Add Booking</button>
           {(["upcoming", "past", "all"] as const).map((f) => (
             <button key={f} onClick={() => setFilter(f)}
               className={`px-4 py-2 rounded-full text-[0.85rem] font-medium capitalize transition-all ${filter === f ? "bg-sky-blue-light text-ink shadow-sm" : "bg-white text-ink hover:bg-sky-blue-light/20"}`}>
@@ -220,7 +260,7 @@ export default function BookingsAdminPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">Max Daily Bookings</label>
+            <label className="block text-sm font-medium mb-2">Max Daily Bookings <span className="text-ink-soft font-normal">(total people per day, e.g. 60 = 6 slots × 10)</span></label>
             <input
               type="number" min="1" value={maxDaily}
               onChange={(e) => {
@@ -432,6 +472,59 @@ export default function BookingsAdminPage() {
             <div className="flex gap-3 mt-6">
               <button onClick={saveEdit} disabled={savingEdit} className="flex-1 px-5 py-2.5 rounded-full bg-sky-blue-light text-ink text-[0.9rem] font-medium disabled:opacity-60">{savingEdit ? "Saving..." : "Save Changes"}</button>
               <button onClick={() => setEditingBooking(null)} className="px-5 py-2.5 rounded-full bg-ink/5 text-ink text-[0.9rem] font-medium hover:bg-ink/10">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAddBooking && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={() => setShowAddBooking(false)}>
+          <div className="bg-white rounded-2xl p-6 md:p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <h2 className="font-display text-lg mb-4">Add Manual Booking</h2>
+            <p className="text-[0.85rem] text-ink-soft mb-4">For bookings made via email, phone or messages (e.g. parties).</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Date</label>
+                <input type="date" value={addForm.date} onChange={(e) => setAddForm({ ...addForm, date: e.target.value })} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Time Slot</label>
+                <select value={addForm.time_slot} onChange={(e) => setAddForm({ ...addForm, time_slot: e.target.value })} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light">
+                  <option value="">Select time...</option>
+                  {timeSlots.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Name</label>
+                <input value={addForm.name} onChange={(e) => setAddForm({ ...addForm, name: e.target.value })} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">People</label>
+                <input type="number" min="1" max={slotCapacity} value={addForm.people} onChange={(e) => setAddForm({ ...addForm, people: parseInt(e.target.value) || 1 })} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Email (optional)</label>
+                <input type="email" value={addForm.email} onChange={(e) => setAddForm({ ...addForm, email: e.target.value })} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Phone (optional)</label>
+                <input value={addForm.phone} onChange={(e) => setAddForm({ ...addForm, phone: e.target.value })} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium mb-1.5">Notes (optional)</label>
+                <textarea value={addForm.notes} onChange={(e) => setAddForm({ ...addForm, notes: e.target.value })} rows={2} placeholder="e.g. Party booking via Instagram" className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light resize-none" />
+              </div>
+              <div className="md:col-span-2">
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={addForm.is_party} onChange={(e) => setAddForm({ ...addForm, is_party: e.target.checked })} />
+                  This is a party booking
+                </label>
+              </div>
+            </div>
+            {addMsg && <p className={`text-[0.85rem] mt-3 ${addMsg.includes("success") ? "text-green-600" : "text-red-600"}`}>{addMsg}</p>}
+            <div className="flex gap-3 mt-6">
+              <button onClick={saveAddBooking} disabled={savingAdd} className="flex-1 px-5 py-2.5 rounded-full bg-sky-blue-light text-ink text-[0.9rem] font-medium disabled:opacity-60">{savingAdd ? "Adding..." : "Add Booking"}</button>
+              <button onClick={() => setShowAddBooking(false)} className="px-5 py-2.5 rounded-full bg-ink/5 text-ink text-[0.9rem] font-medium hover:bg-ink/10">Cancel</button>
             </div>
           </div>
         </div>

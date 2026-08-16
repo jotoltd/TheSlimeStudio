@@ -118,8 +118,7 @@ export default function HomePage() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
             {[
-              { icon: "👨‍👩‍👧", title: "Family-Friendly", desc: "Fun for all ages, from toddlers to teens" },
-              { icon: "🌿", title: "Skin-Safe Ingredients", desc: "Non-toxic, premium materials, every time" },
+              { icon: "👨‍👩‍👧", title: "Family-Friendly", desc: "Fun for all ages, from toddlers to grandparents" },
               { icon: "🎓", title: "Expert Guidance", desc: "Our team helps every step of the way" },
               { icon: "✨", title: "All Included", desc: "Everything you need is provided on arrival" },
             ].map((item) => (

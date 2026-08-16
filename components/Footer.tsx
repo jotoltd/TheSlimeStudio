@@ -25,7 +25,7 @@ export default function Footer() {
             <ul className="space-y-2.5">
               <li><Link href="/" className="text-[0.9rem] hover:text-ink transition-colors">Home</Link></li>
               <li><Link href="/about" className="text-[0.9rem] hover:text-ink transition-colors">About</Link></li>
-              <li><Link href="/parties" className="text-[0.9rem] hover:text-ink transition-colors">Parties & Trips</Link></li>
+              <li><Link href="/parties" className="text-[0.9rem] hover:text-ink transition-colors">Parties</Link></li>
               <li><Link href="/shop" className="text-[0.9rem] hover:text-ink transition-colors">Shop</Link></li>
               <li><Link href="/faqs" className="text-[0.9rem] hover:text-ink transition-colors">FAQs</Link></li>
             </ul>
@@ -54,7 +54,7 @@ export default function Footer() {
           <div className="flex gap-4 items-center">
             <Link href="/admin" className="text-[0.8rem] text-ink-soft/60 hover:text-ink transition-colors">Admin</Link>
             <div className="flex gap-3">
-              <a href="#" aria-label="Instagram" className="w-[38px] h-[38px] rounded-full bg-ink/8 grid place-items-center text-lg hover:bg-ink/15 transition-colors">📷</a>
+              <a href="https://instagram.com/theslimestudioexperience" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="w-[38px] h-[38px] rounded-full bg-ink/8 grid place-items-center text-lg hover:bg-ink/15 transition-colors">📷</a>
               <a href="#" aria-label="TikTok" className="w-[38px] h-[38px] rounded-full bg-ink/8 grid place-items-center text-lg hover:bg-ink/15 transition-colors">🎵</a>
               <a href="#" aria-label="Facebook" className="w-[38px] h-[38px] rounded-full bg-ink/8 grid place-items-center text-lg hover:bg-ink/15 transition-colors">👍</a>
             </div>

@@ -11,7 +11,7 @@ const faqs = [
   { q: "What do I get to make?", a: "You'll create your own slime, choosing your colours and extras to make it completely your own. Your finished slime is yours to take home." },
   { q: "Can adults make slime too?", a: "Absolutely. The experience isn't just for children — adults are very welcome to book as slime makers too." },
   { q: "Can I bring more than one person?", a: "Yes. When booking, simply select the number of slime makers attending." },
-  { q: "Do you offer birthday parties?", a: "Yes! We offer private Slime Studio parties for up to 15 slime makers, depending on age. Visit our Parties & Trips page for full details and prices." },
+  { q: "Do you offer birthday parties?", a: "Yes! We offer private Slime Studio parties for up to 15 slime makers, depending on age. Visit our Parties page for full details and prices." },
   { q: "Where are you?", a: "The Slime Studio, Unit A, Feathers Yard, Holt, NR25 6BF." },
   { q: "What are your opening hours?", a: "Monday–Saturday: 10am–4pm. Sunday: Closed." },
 ];

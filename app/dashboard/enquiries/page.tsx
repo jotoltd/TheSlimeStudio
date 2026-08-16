@@ -20,14 +20,26 @@ export default function EnquiriesAdminPage() {
   }
 
   async function updateStatus(id: string, status: string) {
-    await supabase.from("enquiries").update({ status }).eq("id", id);
-    setEnquiries((prev) => prev.map((e) => (e.id === id ? { ...e, status } : e)));
+    const res = await fetch("/api/update-enquiry", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, status }),
+    });
+    if (res.ok) {
+      setEnquiries((prev) => prev.map((e) => (e.id === id ? { ...e, status } : e)));
+    }
   }
 
   async function deleteEnquiry(id: string, name: string | null) {
     if (!confirm(`Delete enquiry from "${name || "this contact"}"? This cannot be undone.`)) return;
-    await supabase.from("enquiries").delete().eq("id", id);
-    setEnquiries((prev) => prev.filter((e) => e.id !== id));
+    const res = await fetch("/api/delete-enquiry", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    if (res.ok) {
+      setEnquiries((prev) => prev.filter((e) => e.id !== id));
+    }
   }
 
   const filtered = enquiries.filter((e) => {

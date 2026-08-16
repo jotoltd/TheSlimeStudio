@@ -78,7 +78,7 @@ export default function PartiesPage() {
       <div className="relative w-full aspect-[16/7] md:aspect-[16/5] overflow-hidden bg-ink">
         <img
           src="/images/pink_slime_stretch.jpg.jpeg"
-          alt="Parties & Trips at The Slime Studio"
+          alt="Parties at The Slime Studio"
           className="absolute inset-0 w-full h-full object-cover"
         />
       </div>
@@ -91,7 +91,7 @@ export default function PartiesPage() {
           </h1>
           <p className="text-[0.9rem] md:text-[1rem] text-ink/80 leading-relaxed mb-4">
             Celebrate at The Slime Studio with your own private slime-making
-            experience. Our parties and trips include 1.5 hours of private studio time,
+            experience. Our parties include 1.5 hours of private studio time,
             where every guest gets to choose their type of slime, add their
             own colour and scent, decorate it with charms and create
             something completely their own to take home.
@@ -278,7 +278,7 @@ export default function PartiesPage() {
           <div className="bg-white rounded-[28px] p-8 md:p-10 shadow-sm text-center">
             <h2 className="font-display text-[1.3rem] mb-2 text-ink">Get In Touch</h2>
             <p className="text-ink-soft text-[0.95rem] mb-6">
-              Got questions? Contact us and we&apos;ll help arrange your Slime Studio party or trip.
+              Got questions? Contact us and we&apos;ll help arrange your Slime Studio party.
             </p>
             <div className="flex flex-col items-center gap-3 mb-8">
               <a href="https://instagram.com/theslimestudioexperience" target="_blank" rel="noopener noreferrer" className="text-[0.95rem] text-ink hover:text-[#ff2d78] transition-colors">

@@ -87,7 +87,7 @@ function BookingPageInner() {
 
   async function loadAvailability(forDate: string) {
     setLoadingSlots(true);
-    const { data } = await supabase.from("bookings").select("time_slot, people, payment_status").eq("date", forDate);
+    const { data } = await supabase.from("bookings").select("time_slot, people, payment_status").eq("date", forDate).neq("payment_status", "refunded");
     const used: Record<string, number> = {};
     (data || []).forEach((b: { time_slot: string; people: number; payment_status: string }) => {
       if (b.payment_status === "paid") {
@@ -220,6 +220,10 @@ function BookingPageInner() {
           <div className="mt-4 inline-flex items-center gap-2 bg-white/50 rounded-full px-4 py-2 text-[0.85rem] text-ink">
             <span>📍</span>
             <span className="font-medium">Unit A, Feathers Yard, Holt, NR25 6BF</span>
+          </div>
+          <div className="mt-2 inline-flex items-center gap-2 bg-white/50 rounded-full px-4 py-2 text-[0.85rem] text-ink">
+            <span>🚶</span>
+            <span className="font-medium">Walk-ins also welcome, subject to space</span>
           </div>
         </div>
       </section>

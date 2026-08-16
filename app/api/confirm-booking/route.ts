@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripeAsync } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase";
+import { getResend, EMAIL_FROM, CONTACT_EMAIL, logEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
 
@@ -63,6 +64,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, bookingId: retry[0].id });
     }
     return NextResponse.json({ error: "Failed to create booking" }, { status: 500 });
+  }
+
+  // Send admin notification email
+  try {
+    const r = getResend();
+    if (r) {
+      await r.emails.send({
+        from: EMAIL_FROM,
+        to: CONTACT_EMAIL,
+        subject: `New Booking — ${name} on ${date} at ${timeSlot}`,
+        html: `
+          <h2>New Booking Received</h2>
+          <p><strong>Name:</strong> ${name}</p>
+          <p><strong>Email:</strong> ${email}</p>
+          <p><strong>Phone:</strong> ${phone || "Not provided"}</p>
+          <p><strong>Date:</strong> ${date}</p>
+          <p><strong>Time:</strong> ${timeSlot}</p>
+          <p><strong>People:</strong> ${people}</p>
+          <p><strong>Total:</strong> £${Number(totalPrice).toFixed(2)}</p>
+          <p><strong>Payment:</strong> Paid</p>
+        `,
+      });
+      await logEmail(CONTACT_EMAIL, `New Booking — ${name}`, "admin_notification", "sent");
+    }
+  } catch (e) {
+    console.error("Failed to send admin notification:", e);
   }
 
   return NextResponse.json({ success: true, bookingId: data.id });

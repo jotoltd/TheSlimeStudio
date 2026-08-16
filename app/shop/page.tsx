@@ -113,7 +113,7 @@ export default function ShopPage() {
             </p>
             <p className="text-[0.9rem] md:text-[1.05rem] text-ink/80 mb-6">
               Soon you&apos;ll be able to bring the Slime Studio experience home
-              with our range of <span className="font-semibold" style={{ color: "#E91E8C" }}>DIY slime kits, ready-made slimes, accessories, charms, add-ins and more.</span>
+              with our range of <span className="font-semibold" style={{ color: "#E91E8C" }}>DIY slime kits, accessories, charms, add-ins and more.</span>
             </p>
             <p className="text-[0.9rem] md:text-[1.05rem] text-ink/80 mb-8 md:mb-10">
               Perfect for slime lovers, gifts, rainy days or simply when you

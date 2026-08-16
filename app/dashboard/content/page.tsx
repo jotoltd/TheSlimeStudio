@@ -21,11 +21,11 @@ export default function ContentPage() {
   // Parties content
   const [parties, setParties] = useState({
     hero_title: "Make Their Celebration Extra Slimy!",
-    hero_text: "Celebrate at The Slime Studio with your own private slime-making experience. Our parties and trips include 1.5 hours of private studio time, where every guest gets to choose their type of slime, add their own colour and scent, decorate it with charms and create something completely their own to take home.",
+    hero_text: "Celebrate at The Slime Studio with your own private slime-making experience. Our parties include 1.5 hours of private studio time, where every guest gets to choose their type of slime, add their own colour and scent, decorate it with charms and create something completely their own to take home.",
     price_5: "13.5",
     price_6_10: "12.5",
     price_11_15: "11.5",
-    contact_text: "Got questions? Contact us and we'll help arrange your Slime Studio party or trip.",
+    contact_text: "Got questions? Contact us and we'll help arrange your Slime Studio party.",
   });
 
   // About content
