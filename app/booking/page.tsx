@@ -258,7 +258,7 @@ function BookingPageInner() {
             <div className="bg-white rounded-3xl p-5 md:p-8 shadow-sm">
               <h2 className="font-display text-lg md:text-xl mb-2 text-center">Complete Your Payment</h2>
               <p className="text-sm text-ink-soft text-center mb-5">
-                {people} {people === 1 ? "person" : "people"} · {new Date(date + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} at {timeSlot} · £{totalPrice.toFixed(2)}
+                <strong className="text-ink">{people} {people === 1 ? "person" : "people"}</strong> · {new Date(date + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} at <strong className="text-ink">{timeSlot}</strong> · <strong className="text-ink">£{totalPrice.toFixed(2)}</strong>
               </p>
               <Suspense fallback={<div className="py-8 text-center text-ink-soft text-sm">Loading payment form...</div>}>
                 <InlinePayment
@@ -318,6 +318,9 @@ function BookingPageInner() {
                   }}
                 />
               </Suspense>
+              <div className="text-center mt-4">
+                <button onClick={() => setStatus("idle")} className="text-sm text-ink-soft hover:text-ink transition-colors underline">← Back</button>
+              </div>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-5 md:p-8 shadow-sm">

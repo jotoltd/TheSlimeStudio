@@ -116,7 +116,7 @@ export default function HomePage() {
               Families love making memories at The Slime Studio
             </h2>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-6 max-w-3xl mx-auto">
             {[
               { icon: "👨‍👩‍👧", title: "Family-Friendly", desc: "Fun for all ages, from toddlers to grandparents" },
               { icon: "🎓", title: "Expert Guidance", desc: "Our team helps every step of the way" },
