@@ -73,74 +73,59 @@ export default function EnquiriesAdminPage() {
         ))}
       </div>
 
-      <div className="bg-white rounded-[20px] p-8 shadow-sm">
+      <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm">
         {loading ? (
           <div className="text-center py-10 text-ink-soft text-[0.9rem]">Loading enquiries...</div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-10 text-ink-soft text-[0.9rem]">No enquiries found.</div>
+          <div className="text-center py-10 text-ink-soft text-[0.9rem]">
+            <div className="text-3xl mb-2">✉️</div>
+            No enquiries found.
+          </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="text-left text-[0.75rem] text-ink-soft uppercase tracking-wider">
-                  <th className="pb-3 pr-4">Name</th>
-                  <th className="pb-3 pr-4">Email</th>
-                  <th className="pb-3 pr-4">Phone</th>
-                  <th className="pb-3 pr-4">Type</th>
-                  <th className="pb-3 pr-4">Preferred Date</th>
-                  <th className="pb-3 pr-4">Message</th>
-                  <th className="pb-3 pr-4">Status</th>
-                  <th className="pb-3 pr-4">Date</th>
-                  <th className="pb-3">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((e) => {
-                  const status = e.status || "new";
-                  return (
-                    <tr key={e.id} className={`border-t border-ink/[0.08] ${status === "new" ? "bg-bright-lavender/[0.03]" : ""}`}>
-                      <td className="py-3 pr-4 text-[0.9rem] font-medium">{e.name || "--"}</td>
-                      <td className="py-3 pr-4 text-[0.9rem]">
-                        {e.email ? <a href={`mailto:${e.email}`} className="hover:text-bright-lavender">{e.email}</a> : "--"}
-                      </td>
-                      <td className="py-3 pr-4 text-[0.9rem]">{e.phone || "--"}</td>
-                      <td className="py-3 pr-4 text-[0.9rem]">{e.enquiry_type || "--"}</td>
-                      <td className="py-3 pr-4 text-[0.9rem]">
-                        {e.preferred_date ? new Date(e.preferred_date).toLocaleDateString("en-GB") : "--"}
-                      </td>
-                      <td className="py-3 pr-4 text-[0.9rem] max-w-[240px]">{e.message || "--"}</td>
-                      <td className="py-3 pr-4">
-                        <select
-                          value={status}
-                          onChange={(ev) => updateStatus(e.id, ev.target.value)}
-                          className={`px-2 py-1 rounded-full text-[0.75rem] font-medium border-0 cursor-pointer ${
-                            status === "new" ? "bg-bright-lavender/20 text-bright-lavender" :
-                            status === "read" ? "bg-sky-blue-light/20 text-ink" :
-                            status === "responded" ? "bg-green-100 text-green-700" :
-                            "bg-ink/5 text-ink-soft"
-                          }`}
-                        >
-                          <option value="new">New</option>
-                          <option value="read">Read</option>
-                          <option value="responded">Responded</option>
-                        </select>
-                      </td>
-                      <td className="py-3 pr-4 text-[0.9rem]">
-                        {e.created_at ? new Date(e.created_at).toLocaleDateString("en-GB") : "--"}
-                      </td>
-                      <td className="py-3">
-                        <button
-                          onClick={() => deleteEnquiry(e.id, e.name)}
-                          className="px-3 py-1.5 rounded-lg bg-red-100 text-red-700 text-[0.8rem] hover:bg-red-200 transition-colors"
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="grid md:grid-cols-2 gap-4">
+            {filtered.map((e) => {
+              const status = e.status || "new";
+              return (
+                <div key={e.id} className={`rounded-xl p-5 border transition-colors ${status === "new" ? "border-bright-lavender/30 bg-bright-lavender/[0.03]" : "border-ink/[0.08] hover:border-ink/15"}`}>
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <div className="text-[0.95rem] font-medium">{e.name || "--"}</div>
+                      <div className="text-[0.8rem] text-ink-soft mt-0.5">
+                        {e.enquiry_type || "General"} · {e.created_at ? new Date(e.created_at).toLocaleDateString("en-GB") : "--"}
+                      </div>
+                    </div>
+                    <select
+                      value={status}
+                      onChange={(ev) => updateStatus(e.id, ev.target.value)}
+                      className={`px-2.5 py-1 rounded-full text-[0.75rem] font-medium border-0 cursor-pointer ${
+                        status === "new" ? "bg-bright-lavender/20 text-bright-lavender" :
+                        status === "read" ? "bg-sky-blue-light/20 text-ink" :
+                        status === "responded" ? "bg-green-100 text-green-700" :
+                        "bg-ink/5 text-ink-soft"
+                      }`}
+                    >
+                      <option value="new">New</option>
+                      <option value="read">Read</option>
+                      <option value="responded">Responded</option>
+                    </select>
+                  </div>
+                  <div className="flex flex-wrap gap-3 text-[0.8rem] text-ink-soft mb-3">
+                    {e.email && <a href={`mailto:${e.email}`} className="hover:text-bright-lavender transition-colors">📧 {e.email}</a>}
+                    {e.phone && <span>📞 {e.phone}</span>}
+                    {e.preferred_date && <span>🗓️ {new Date(e.preferred_date).toLocaleDateString("en-GB")}</span>}
+                  </div>
+                  {e.message && (
+                    <p className="text-[0.85rem] text-ink bg-ink/[0.03] rounded-lg px-3 py-2.5 mb-3">{e.message}</p>
+                  )}
+                  <button
+                    onClick={() => deleteEnquiry(e.id, e.name)}
+                    className="px-3 py-1.5 rounded-lg bg-red-100 text-red-700 text-[0.8rem] font-medium hover:bg-red-200 transition-colors"
+                  >
+                    Delete
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

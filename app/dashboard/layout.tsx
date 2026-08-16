@@ -4,17 +4,42 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 
-const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: "🏠" },
-  { href: "/dashboard/bookings", label: "Bookings", icon: "📅" },
-  { href: "/dashboard/blocked-dates", label: "Blocked Dates", icon: "🚫" },
-  { href: "/dashboard/revenue", label: "Revenue", icon: "💰" },
-  { href: "/dashboard/subscribers", label: "Subscribers", icon: "📦" },
-  { href: "/dashboard/shop", label: "Shop", icon: "🛍️" },
-  { href: "/dashboard/enquiries", label: "Enquiries", icon: "✉️" },
-  { href: "/dashboard/email-logs", label: "Email Logs", icon: "📧" },
-  { href: "/dashboard/content", label: "Content", icon: "📝" },
-  { href: "/dashboard/export", label: "Export", icon: "📤" },
+const navSections = [
+  {
+    label: "Overview",
+    items: [
+      { href: "/dashboard", label: "Dashboard", icon: "🏠" },
+      { href: "/dashboard/revenue", label: "Revenue", icon: "💰" },
+    ],
+  },
+  {
+    label: "Bookings",
+    items: [
+      { href: "/dashboard/bookings", label: "Bookings", icon: "📅" },
+      { href: "/dashboard/blocked-dates", label: "Blocked Dates", icon: "🚫" },
+    ],
+  },
+  {
+    label: "Shop",
+    items: [
+      { href: "/dashboard/shop", label: "Shop", icon: "�️" },
+      { href: "/dashboard/subscribers", label: "Subscribers", icon: "📦" },
+    ],
+  },
+  {
+    label: "Communication",
+    items: [
+      { href: "/dashboard/enquiries", label: "Enquiries", icon: "✉️" },
+      { href: "/dashboard/email-logs", label: "Email Logs", icon: "📧" },
+    ],
+  },
+  {
+    label: "Settings",
+    items: [
+      { href: "/dashboard/content", label: "Content", icon: "📝" },
+      { href: "/dashboard/export", label: "Export", icon: "📤" },
+    ],
+  },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -76,26 +101,31 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <p className="text-[0.8rem] text-white/70 mt-1">Admin Panel</p>
         </div>
 
-        <nav className="px-4 md:px-4 py-4 md:py-0 flex-1">
-          <ul className="space-y-1.5">
-            {navItems.map((item) => {
-              const active = pathname === item.href;
-              return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    onClick={() => setMobileOpen(false)}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-[0.9rem] font-medium transition-all ${
-                      active ? "bg-white text-ink shadow-sm" : "text-white/85 hover:bg-white/15"
-                    }`}
-                  >
-                    <span className="text-lg">{item.icon}</span>
-                    {item.label}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+        <nav className="px-4 md:px-4 py-4 md:py-0 flex-1 overflow-y-auto">
+          {navSections.map((section, si) => (
+            <div key={section.label} className={si > 0 ? "mt-5" : ""}>
+              <div className="px-4 mb-1.5 text-[0.65rem] uppercase tracking-wider text-white/40 font-medium">{section.label}</div>
+              <ul className="space-y-1">
+                {section.items.map((item) => {
+                  const active = pathname === item.href;
+                  return (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        onClick={() => setMobileOpen(false)}
+                        className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-[0.9rem] font-medium transition-all ${
+                          active ? "bg-white text-ink shadow-sm" : "text-white/75 hover:bg-white/10 hover:text-white"
+                        }`}
+                      >
+                        <span className="text-base">{item.icon}</span>
+                        {item.label}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
         </nav>
 
         <div className="px-4 md:px-4 pb-6 md:pb-8">

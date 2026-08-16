@@ -259,37 +259,53 @@ export default function DashboardPage() {
 
       {/* Revenue Stats */}
       <div className="grid grid-cols-3 gap-3 md:gap-5 mb-8">
-        <div className="bg-white rounded-[16px] md:rounded-[20px] p-4 md:p-6 shadow-sm">
+        <div className="bg-white rounded-[16px] md:rounded-[20px] p-4 md:p-6 shadow-sm border-l-4 border-green-400">
           <div className="text-[0.65rem] md:text-[0.75rem] text-ink-soft uppercase tracking-wider mb-1 md:mb-2">Today's Revenue</div>
           <div className="font-display text-[1.2rem] md:text-[1.8rem]">{loadingData ? "--" : `£${revenueToday.toFixed(2)}`}</div>
         </div>
-        <div className="bg-white rounded-[16px] md:rounded-[20px] p-4 md:p-6 shadow-sm">
+        <div className="bg-white rounded-[16px] md:rounded-[20px] p-4 md:p-6 shadow-sm border-l-4 border-sky-blue-light">
           <div className="text-[0.65rem] md:text-[0.75rem] text-ink-soft uppercase tracking-wider mb-1 md:mb-2">This Week</div>
           <div className="font-display text-[1.2rem] md:text-[1.8rem]">{loadingData ? "--" : `£${revenueWeek.toFixed(2)}`}</div>
         </div>
-        <div className="bg-white rounded-[16px] md:rounded-[20px] p-4 md:p-6 shadow-sm">
+        <div className="bg-white rounded-[16px] md:rounded-[20px] p-4 md:p-6 shadow-sm border-l-4 border-bright-lavender">
           <div className="text-[0.65rem] md:text-[0.75rem] text-ink-soft uppercase tracking-wider mb-1 md:mb-2">This Month</div>
           <div className="font-display text-[1.2rem] md:text-[1.8rem]">{loadingData ? "--" : `£${revenueMonth.toFixed(2)}`}</div>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-5 mb-8">
-        <Link href="/dashboard/bookings" className="bg-white rounded-[20px] p-6 shadow-sm hover:-translate-y-1 hover:shadow-md transition-all">
-          <div className="text-[0.75rem] text-ink-soft uppercase tracking-wider mb-2">Total Bookings</div>
-          <div className="font-display text-[1.8rem]">{loadingData ? "--" : bookingCount}</div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5 mb-8">
+        <Link href="/dashboard/bookings" className="bg-white rounded-[20px] p-5 md:p-6 shadow-sm hover:-translate-y-1 hover:shadow-md transition-all group">
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-10 h-10 rounded-xl bg-sky-blue-light/20 grid place-items-center text-lg">📅</div>
+            <span className="text-[0.7rem] text-ink-soft uppercase tracking-wider">Total</span>
+          </div>
+          <div className="font-display text-[1.6rem] md:text-[1.8rem]">{loadingData ? "--" : bookingCount}</div>
+          <div className="text-[0.8rem] text-ink-soft mt-0.5">Bookings</div>
         </Link>
-        <Link href="/dashboard/shop" className="bg-white rounded-[20px] p-6 shadow-sm hover:-translate-y-1 hover:shadow-md transition-all">
-          <div className="text-[0.75rem] text-ink-soft uppercase tracking-wider mb-2">Total Products</div>
-          <div className="font-display text-[1.8rem]">{loadingData ? "--" : products.length}</div>
+        <Link href="/dashboard/shop" className="bg-white rounded-[20px] p-5 md:p-6 shadow-sm hover:-translate-y-1 hover:shadow-md transition-all group">
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-10 h-10 rounded-xl bg-bright-lavender/15 grid place-items-center text-lg">🛍️</div>
+            <span className="text-[0.7rem] text-ink-soft uppercase tracking-wider">Total</span>
+          </div>
+          <div className="font-display text-[1.6rem] md:text-[1.8rem]">{loadingData ? "--" : products.length}</div>
+          <div className="text-[0.8rem] text-ink-soft mt-0.5">Products</div>
         </Link>
-        <Link href="/dashboard/enquiries" className="bg-white rounded-[20px] p-6 shadow-sm hover:-translate-y-1 hover:shadow-md transition-all">
-          <div className="text-[0.75rem] text-ink-soft uppercase tracking-wider mb-2">Enquiries</div>
-          <div className="font-display text-[1.8rem]">{loadingData ? "--" : enquiryCount}</div>
+        <Link href="/dashboard/enquiries" className="bg-white rounded-[20px] p-5 md:p-6 shadow-sm hover:-translate-y-1 hover:shadow-md transition-all group">
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-10 h-10 rounded-xl bg-canary-yellow/20 grid place-items-center text-lg">✉️</div>
+            <span className="text-[0.7rem] text-ink-soft uppercase tracking-wider">Total</span>
+          </div>
+          <div className="font-display text-[1.6rem] md:text-[1.8rem]">{loadingData ? "--" : enquiryCount}</div>
+          <div className="text-[0.8rem] text-ink-soft mt-0.5">Enquiries</div>
         </Link>
-        <Link href="/dashboard/shop" className="bg-white rounded-[20px] p-6 shadow-sm hover:-translate-y-1 hover:shadow-md transition-all">
-          <div className="text-[0.75rem] text-ink-soft uppercase tracking-wider mb-2">Low Stock</div>
-          <div className="font-display text-[1.8rem]">{loadingData ? "--" : lowStock.length}</div>
+        <Link href="/dashboard/shop" className="bg-white rounded-[20px] p-5 md:p-6 shadow-sm hover:-translate-y-1 hover:shadow-md transition-all group">
+          <div className="flex items-center justify-between mb-3">
+            <div className={`w-10 h-10 rounded-xl grid place-items-center text-lg ${lowStock.length > 0 ? "bg-red-100" : "bg-green-100"}`}>📦</div>
+            <span className="text-[0.7rem] text-ink-soft uppercase tracking-wider">Alert</span>
+          </div>
+          <div className="font-display text-[1.6rem] md:text-[1.8rem]">{loadingData ? "--" : lowStock.length}</div>
+          <div className="text-[0.8rem] text-ink-soft mt-0.5">Low Stock</div>
         </Link>
       </div>
 

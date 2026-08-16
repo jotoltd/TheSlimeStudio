@@ -93,10 +93,11 @@ export default function ContentPage() {
       </div>
 
       <div className="flex gap-2 mb-6 flex-wrap">
-        {(["homepage", "parties", "about"] as const).map((t) => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`px-5 py-2.5 rounded-full text-[0.9rem] font-medium capitalize transition-all ${tab === t ? "bg-sky-blue-light text-ink shadow-sm" : "bg-white text-ink hover:bg-sky-blue-light/20"}`}>
-            {t}
+        {([{"key": "homepage", "icon": "🏠", "label": "Homepage"}, {"key": "parties", "icon": "🎉", "label": "Parties"}, {"key": "about", "icon": "ℹ️", "label": "About"}] as const).map((t) => (
+          <button key={t.key} onClick={() => setTab(t.key)}
+            className={`px-5 py-2.5 rounded-full text-[0.9rem] font-medium transition-all flex items-center gap-2 ${tab === t.key ? "bg-sky-blue-light text-ink shadow-sm" : "bg-white text-ink hover:bg-sky-blue-light/20"}`}>
+            <span>{t.icon}</span>
+            {t.label}
           </button>
         ))}
       </div>

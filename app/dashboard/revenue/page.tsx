@@ -65,19 +65,19 @@ export default function RevenuePage() {
         <>
           {/* Top stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5 mb-8">
-            <div className="bg-white rounded-[20px] p-6 shadow-sm">
+            <div className="bg-white rounded-[20px] p-6 shadow-sm border-l-4 border-bright-lavender">
               <div className="text-[0.75rem] text-ink-soft uppercase tracking-wider mb-2">Total Revenue</div>
               <div className="font-display text-[1.8rem]">£{totalRevenue.toFixed(2)}</div>
             </div>
-            <div className="bg-white rounded-[20px] p-6 shadow-sm">
+            <div className="bg-white rounded-[20px] p-6 shadow-sm border-l-4 border-green-400">
               <div className="text-[0.75rem] text-ink-soft uppercase tracking-wider mb-2">Paid Revenue</div>
               <div className="font-display text-[1.8rem] text-green-600">£{paidRevenue.toFixed(2)}</div>
             </div>
-            <div className="bg-white rounded-[20px] p-6 shadow-sm">
+            <div className="bg-white rounded-[20px] p-6 shadow-sm border-l-4 border-orange-400">
               <div className="text-[0.75rem] text-ink-soft uppercase tracking-wider mb-2">Unpaid</div>
               <div className="font-display text-[1.8rem] text-orange-500">£{unpaidRevenue.toFixed(2)}</div>
             </div>
-            <div className="bg-white rounded-[20px] p-6 shadow-sm">
+            <div className="bg-white rounded-[20px] p-6 shadow-sm border-l-4 border-sky-blue-light">
               <div className="text-[0.75rem] text-ink-soft uppercase tracking-wider mb-2">This Month</div>
               <div className="font-display text-[1.8rem]">£{thisMonthRevenue.toFixed(2)}</div>
             </div>
