@@ -60,6 +60,42 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, bookingId: existing[0].id, name, email, date, timeSlot, people, totalPrice });
   }
 
+  // Server-side capacity check (final guard against over-booking)
+  const { data: settings } = await supabaseAdmin
+    .from("booking_settings")
+    .select("slot_capacity, max_daily_bookings")
+    .eq("id", 1)
+    .single();
+  const slotCap = settings?.slot_capacity || 5;
+  const maxDaily = settings?.max_daily_bookings || 5;
+
+  const { data: slotBookings } = await supabaseAdmin
+    .from("bookings")
+    .select("people")
+    .eq("date", date)
+    .eq("time_slot", timeSlot)
+    .eq("payment_status", "paid");
+  const slotUsed = (slotBookings || []).reduce((sum: number, b: { people: number }) => sum + b.people, 0);
+  if (slotUsed + people > slotCap) {
+    return NextResponse.json({
+      error: `Slot is at capacity (${slotCap}). Your payment was taken but the slot is full — please contact us for a refund or alternative date.`,
+      overCapacity: true,
+    }, { status: 409 });
+  }
+
+  const { data: dailyBookings } = await supabaseAdmin
+    .from("bookings")
+    .select("people")
+    .eq("date", date)
+    .eq("payment_status", "paid");
+  const dailyUsed = (dailyBookings || []).reduce((sum: number, b: { people: number }) => sum + b.people, 0);
+  if (dailyUsed + people > maxDaily) {
+    return NextResponse.json({
+      error: `Daily capacity reached. Your payment was taken but the day is full — please contact us for a refund or alternative date.`,
+      overCapacity: true,
+    }, { status: 409 });
+  }
+
   // Insert the booking as paid
   const { data, error } = await supabaseAdmin.from("bookings").insert({
     date,

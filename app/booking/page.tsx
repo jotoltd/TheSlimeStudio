@@ -60,6 +60,7 @@ function BookingPageInner() {
       if (piId && redirectStatus === "succeeded") {
         // Call confirm-booking with just the paymentIntentId — the API can read
         // booking details from Stripe metadata
+        let redirectError = false;
         fetch("/api/confirm-booking", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -80,8 +81,13 @@ function BookingPageInner() {
                 isParty: false,
               }),
             }).catch(() => {});
+          } else if (data.overCapacity) {
+            redirectError = true;
+            setErrorMsg(data.error || "This slot is fully booked. Please contact us for a refund.");
+            setStatus("error");
           }
         }).catch(() => {}).finally(() => {
+          if (redirectError) return; // Don't show success if error was set
           setStatus("paid");
           // Clean up URL
           const url = new URL(window.location.href);
@@ -324,6 +330,10 @@ function BookingPageInner() {
                             body: JSON.stringify({ name, email, date, timeSlot, people, totalPrice, isParty: false }),
                           }).catch(() => {});
                           setStatus("paid");
+                        } else if (data.overCapacity) {
+                          // Slot is over capacity — don't retry, show error
+                          setStatus("error");
+                          setErrorMsg(data.error || "This slot is fully booked. Please contact us for a refund.");
                         } else if (attempt < 2) {
                           // Retry after short delay
                           setTimeout(() => confirmBooking(attempt + 1), 1000);
