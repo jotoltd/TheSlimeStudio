@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripeAsync, getStripeModeAsync, getStripeKeysForMode } from "@/lib/stripe";
-import { supabase, supabaseAdmin } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 
@@ -114,34 +114,9 @@ export async function POST(req: NextRequest) {
           break;
         }
 
-        // New flow: create booking from metadata as fallback if confirm-booking API hasn't already
-        const md = intent.metadata;
-        if (md?.email && md?.date && md?.timeSlot) {
-          // Check if booking already exists for this payment intent
-          const { data: existing } = await supabaseAdmin
-            .from("bookings")
-            .select("id")
-            .eq("stripe_session_id", intent.id);
-
-          if (existing && existing.length > 0) {
-            break;
-          }
-
-          // Booking doesn't exist yet — create it as fallback
-          // (confirm-booking API may have failed, or customer was redirected by 3DS)
-          await supabaseAdmin.from("bookings").insert({
-            date: md.date,
-            time_slot: md.timeSlot,
-            people: parseInt(md.people || "1", 10),
-            total_price: parseFloat(md.totalPrice || "0"),
-            name: md.name || "",
-            email: md.email,
-            phone: md.phone || null,
-            is_party: md.type === "party",
-            payment_status: "paid",
-            stripe_session_id: intent.id,
-          });
-        }
+        // New flow: booking creation is handled by /api/confirm-booking
+        // (called from client onSuccess or 3DS redirect handler)
+        // Do NOT create booking here — that causes race condition duplicates
         break;
       }
 
