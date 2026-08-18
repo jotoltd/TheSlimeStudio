@@ -110,7 +110,7 @@ function BookingPageInner() {
   useEffect(() => {
     loadAvailability(date);
     setTimeSlot("");
-  }, [date]);
+  }, [date, slotCapacity, timeSlots]);
 
 
   function isSlotInPast(slot: string, forDate: string) {
@@ -123,12 +123,10 @@ function BookingPageInner() {
 
   async function loadAvailability(forDate: string) {
     setLoadingSlots(true);
-    const { data } = await supabase.from("bookings").select("time_slot, people, payment_status").eq("date", forDate).neq("payment_status", "refunded");
+    const { data } = await supabase.from("bookings").select("time_slot, people, payment_status").eq("date", forDate).eq("payment_status", "paid");
     const used: Record<string, number> = {};
     (data || []).forEach((b: { time_slot: string; people: number; payment_status: string }) => {
-      if (b.payment_status === "paid") {
-        used[b.time_slot] = (used[b.time_slot] || 0) + b.people;
-      }
+      used[b.time_slot] = (used[b.time_slot] || 0) + b.people;
     });
     const rem: Record<string, number> = {};
     timeSlots.forEach((slot) => {
@@ -176,10 +174,11 @@ function BookingPageInner() {
     // Check total bookings for this date (daily cap) — only paid bookings count
     const { data: dailyBookings } = await supabase
       .from("bookings")
-      .select("id, payment_status")
-      .eq("date", date);
-    const paidDaily = (dailyBookings || []).filter((b: { payment_status: string }) => b.payment_status === "paid");
-    if (paidDaily.length >= maxDaily) {
+      .select("people")
+      .eq("date", date)
+      .eq("payment_status", "paid");
+    const dailyUsed = (dailyBookings || []).reduce((sum: number, b: { people: number }) => sum + b.people, 0);
+    if (dailyUsed + people > maxDaily) {
       setStatus("error");
       setErrorMsg(`Sorry, this date is fully booked. Please choose another date.`);
       loadAvailability(date);
@@ -189,11 +188,11 @@ function BookingPageInner() {
     // Re-check slot capacity — only paid bookings count
     const { data: existing } = await supabase
       .from("bookings")
-      .select("people, payment_status")
+      .select("people")
       .eq("date", date)
-      .eq("time_slot", timeSlot);
+      .eq("time_slot", timeSlot)
+      .eq("payment_status", "paid");
     const used = (existing || [])
-      .filter((b: { payment_status: string }) => b.payment_status === "paid")
       .reduce((sum: number, b: { people: number }) => sum + b.people, 0);
 
     if (used + people > slotCapacity) {

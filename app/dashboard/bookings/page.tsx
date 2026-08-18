@@ -115,7 +115,7 @@ export default function BookingsAdminPage() {
   }
 
   async function loadAddAvailability(forDate: string) {
-    const { data } = await supabase.from("bookings").select("time_slot, people").eq("date", forDate).neq("payment_status", "refunded");
+    const { data } = await supabase.from("bookings").select("time_slot, people").eq("date", forDate).eq("payment_status", "paid");
     const used: Record<string, number> = {};
     let dailyTotal = 0;
     (data || []).forEach((b: { time_slot: string; people: number }) => {
