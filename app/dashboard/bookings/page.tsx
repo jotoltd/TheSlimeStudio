@@ -18,11 +18,11 @@ export default function BookingsAdminPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("calendar");
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
-  const [editForm, setEditForm] = useState({ date: "", time_slot: "", people: 1, name: "", email: "", phone: "", notes: "" });
+  const [editForm, setEditForm] = useState({ date: "", time_slot: "", people: "1", name: "", email: "", phone: "", notes: "" });
   const [savingEdit, setSavingEdit] = useState(false);
   const [editMsg, setEditMsg] = useState("");
   const [showAddBooking, setShowAddBooking] = useState(false);
-  const [addForm, setAddForm] = useState({ date: todayISO(), time_slot: "", people: 1, name: "", email: "", phone: "", notes: "", is_party: false, total_price: 0 });
+  const [addForm, setAddForm] = useState({ date: todayISO(), time_slot: "", people: "1", name: "", email: "", phone: "", notes: "", is_party: false, total_price: "0" });
   const [savingAdd, setSavingAdd] = useState(false);
   const [addMsg, setAddMsg] = useState("");
   const [addSlotAvailability, setAddSlotAvailability] = useState<Record<string, number>>({});
@@ -97,7 +97,7 @@ export default function BookingsAdminPage() {
 
   function startEdit(b: Booking) {
     setEditingBooking(b);
-    setEditForm({ date: b.date, time_slot: b.time_slot, people: b.people, name: b.name, email: b.email, phone: b.phone || "", notes: b.notes || "" });
+    setEditForm({ date: b.date, time_slot: b.time_slot, people: String(b.people), name: b.name, email: b.email, phone: b.phone || "", notes: b.notes || "" });
     setEditMsg("");
   }
 
@@ -105,7 +105,7 @@ export default function BookingsAdminPage() {
     if (!editingBooking) return;
     setSavingEdit(true); setEditMsg("");
     const { error } = await supabase.from("bookings").update({
-      date: editForm.date, time_slot: editForm.time_slot, people: editForm.people,
+      date: editForm.date, time_slot: editForm.time_slot, people: parseInt(editForm.people) || 1,
       name: editForm.name, email: editForm.email, phone: editForm.phone || null,
       notes: editForm.notes || null,
     }).eq("id", editingBooking.id);
@@ -184,7 +184,7 @@ export default function BookingsAdminPage() {
       const res = await fetch("/api/add-booking", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(addForm),
+        body: JSON.stringify({ ...addForm, people: parseInt(addForm.people) || 1, total_price: parseFloat(addForm.total_price) || 0 }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -192,7 +192,7 @@ export default function BookingsAdminPage() {
       } else {
         setAddMsg("");
         setShowAddBooking(false);
-        setAddForm({ date: todayISO(), time_slot: "", people: 1, name: "", email: "", phone: "", notes: "", is_party: false, total_price: 0 });
+        setAddForm({ date: todayISO(), time_slot: "", people: "1", name: "", email: "", phone: "", notes: "", is_party: false, total_price: "0" });
         loadBookings();
       }
     } catch {
@@ -545,7 +545,7 @@ export default function BookingsAdminPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1.5">People</label>
-                <input type="number" min="1" value={editForm.people} onChange={(e) => { const v = e.target.value; setEditForm({ ...editForm, people: v === "" ? 1 : parseInt(v) || 1 }); }} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
+                <input type="number" min="1" value={editForm.people} onChange={(e) => setEditForm({ ...editForm, people: e.target.value })} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1.5">Name</label>
@@ -604,10 +604,10 @@ export default function BookingsAdminPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1.5">People</label>
-                <input type="number" min="1" value={addForm.people} onChange={(e) => { const v = e.target.value; setAddForm({ ...addForm, people: v === "" ? 1 : parseInt(v) || 1 }); }} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
+                <input type="number" min="1" value={addForm.people} onChange={(e) => setAddForm({ ...addForm, people: e.target.value })} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
                 {addForm.time_slot && (() => {
                   const remaining = slotCapacity - (addSlotAvailability[addForm.time_slot] || 0);
-                  if (addForm.people > remaining) {
+                  if (parseInt(addForm.people) > remaining) {
                     return <p className="text-[0.8rem] text-red-600 mt-1">Only {remaining} spot{remaining === 1 ? "" : "s"} left at this time</p>;
                   }
                   return <p className="text-[0.8rem] text-green-600 mt-1">{remaining} spot{remaining === 1 ? "" : "s"} left at this time</p>;
@@ -623,7 +623,7 @@ export default function BookingsAdminPage() {
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium mb-1.5">Total Price (£) <span className="text-ink-soft font-normal">(0 for walk-ins/parties paid separately)</span></label>
-                <input type="number" min="0" step="0.01" value={addForm.total_price} onChange={(e) => { const v = e.target.value; setAddForm({ ...addForm, total_price: v === "" ? 0 : parseFloat(v) || 0 }); }} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
+                <input type="number" min="0" step="0.01" value={addForm.total_price} onChange={(e) => setAddForm({ ...addForm, total_price: e.target.value })} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium mb-1.5">Notes (optional)</label>
