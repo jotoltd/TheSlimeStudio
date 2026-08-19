@@ -32,34 +32,34 @@ export async function POST(req: NextRequest) {
   const slotCap = settings?.slot_capacity || 10;
   const maxDaily = settings?.max_daily_bookings || 60;
 
-  // Check slot capacity (exclude refunded bookings)
+  // Check slot capacity (only paid bookings count) — but allow override for party bookings
   const { data: slotBookings } = await supabaseAdmin
     .from("bookings")
     .select("people")
     .eq("date", date)
     .eq("time_slot", time_slot)
-    .neq("payment_status", "refunded");
+    .eq("payment_status", "paid");
 
   const slotUsed = (slotBookings || []).reduce((sum: number, b: { people: number }) => sum + b.people, 0);
   const slotRemaining = slotCap - slotUsed;
 
-  if (numPeople > slotRemaining) {
+  if (!is_party && numPeople > slotRemaining) {
     return NextResponse.json({
       error: `Only ${slotRemaining} spot${slotRemaining === 1 ? "" : "s"} left at ${time_slot} on ${date}. Cannot add ${numPeople} people.`,
     }, { status: 409 });
   }
 
-  // Check daily cap (exclude refunded)
+  // Check daily cap (only paid bookings count) — but allow override for party bookings
   const { data: dailyBookings } = await supabaseAdmin
     .from("bookings")
     .select("people")
     .eq("date", date)
-    .neq("payment_status", "refunded");
+    .eq("payment_status", "paid");
 
   const dailyUsed = (dailyBookings || []).reduce((sum: number, b: { people: number }) => sum + b.people, 0);
   const dailyRemaining = maxDaily - dailyUsed;
 
-  if (numPeople > dailyRemaining) {
+  if (!is_party && numPeople > dailyRemaining) {
     return NextResponse.json({
       error: `Daily capacity reached. Only ${dailyRemaining} spot${dailyRemaining === 1 ? "" : "s"} left for ${date}.`,
     }, { status: 409 });
