@@ -545,7 +545,7 @@ export default function BookingsAdminPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1.5">People</label>
-                <input type="number" min="1" value={editForm.people} onChange={(e) => setEditForm({ ...editForm, people: e.target.value })} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
+                <input type="text" inputMode="numeric" value={editForm.people} onChange={(e) => setEditForm({ ...editForm, people: e.target.value.replace(/[^0-9]/g, "") })} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1.5">Name</label>
@@ -604,7 +604,7 @@ export default function BookingsAdminPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1.5">People</label>
-                <input type="number" min="1" value={addForm.people} onChange={(e) => setAddForm({ ...addForm, people: e.target.value })} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
+                <input type="text" inputMode="numeric" value={addForm.people} onChange={(e) => setAddForm({ ...addForm, people: e.target.value.replace(/[^0-9]/g, "") })} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
                 {addForm.time_slot && (() => {
                   const remaining = slotCapacity - (addSlotAvailability[addForm.time_slot] || 0);
                   if (parseInt(addForm.people) > remaining) {
@@ -623,7 +623,7 @@ export default function BookingsAdminPage() {
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium mb-1.5">Total Price (£) <span className="text-ink-soft font-normal">(0 for walk-ins/parties paid separately)</span></label>
-                <input type="number" min="0" step="0.01" value={addForm.total_price} onChange={(e) => setAddForm({ ...addForm, total_price: e.target.value })} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
+                <input type="text" inputMode="decimal" value={addForm.total_price} onChange={(e) => setAddForm({ ...addForm, total_price: e.target.value.replace(/[^0-9.]/g, "") })} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium mb-1.5">Notes (optional)</label>
