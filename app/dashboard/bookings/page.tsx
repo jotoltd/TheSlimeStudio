@@ -637,7 +637,7 @@ export default function BookingsAdminPage() {
               </div>
             </div>
             <div className="mt-4 bg-ink/[0.03] rounded-xl p-3 text-[0.8rem] text-ink-soft">
-              <span className="font-medium">Daily usage:</span> {addDailyUsed} / {maxDaily} people booked for {addForm.date}
+              <span className="font-medium">Daily usage:</span> {addDailyUsed} / {maxDaily} people booked for {new Date(addForm.date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "long", year: "numeric" })}
               {addForm.time_slot && (() => {
                 const used = addSlotAvailability[addForm.time_slot] || 0;
                 return <> · <span className="font-medium">{addForm.time_slot}:</span> {used} / {slotCapacity} people</>;
