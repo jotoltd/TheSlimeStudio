@@ -17,7 +17,6 @@ const navSections = [
     items: [
       { href: "/dashboard/bookings", label: "Bookings", icon: "📅" },
       { href: "/dashboard/opening-hours", label: "Opening Hours", icon: "🕐" },
-      { href: "/dashboard/blocked-dates", label: "Blocked Dates", icon: "🚫" },
     ],
   },
   {
