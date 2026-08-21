@@ -94,3 +94,91 @@ export function cancellationHtml(opts: {
     </p>
   `);
 }
+
+export function orderConfirmationHtml(opts: {
+  orderNumber: string;
+  name: string;
+  items: { name: string; price: number; quantity: number; image_url: string | null }[];
+  subtotal: number;
+  shippingCost: number;
+  total: number;
+  shippingMethod: string;
+}): string {
+  const itemsHtml = opts.items.map((item) => `
+    <tr>
+      <td style="padding: 8px 0; color: #333; font-size: 0.9rem;">${item.name} × ${item.quantity}</td>
+      <td style="padding: 8px 0; color: #333; font-size: 0.9rem; text-align: right;">&pound;${(item.price * item.quantity).toFixed(2)}</td>
+    </tr>
+  `).join("");
+
+  return emailWrapper(`
+    <h1 style="color: #ff2d78; font-size: 1.5rem; margin-bottom: 16px;">Order Confirmed!</h1>
+    <p style="color: #333; font-size: 1rem; line-height: 1.6;">
+      Hi ${opts.name},
+    </p>
+    <p style="color: #333; font-size: 1rem; line-height: 1.6;">
+      Thank you for your order from The Slime Studio!
+    </p>
+    <div style="background: #fdeef7; border-radius: 12px; padding: 16px; margin: 16px 0;">
+      <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Order:</strong> ${opts.orderNumber}</p>
+      <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Delivery:</strong> ${opts.shippingMethod === "collection" ? "Collection from studio" : "Delivery"}</p>
+    </div>
+    <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+      <thead>
+        <tr style="border-bottom: 1px solid #eee;">
+          <th style="padding: 8px 0; text-align: left; color: #666; font-size: 0.8rem; text-transform: uppercase;">Item</th>
+          <th style="padding: 8px 0; text-align: right; color: #666; font-size: 0.8rem; text-transform: uppercase;">Price</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${itemsHtml}
+      </tbody>
+    </table>
+    <div style="border-top: 1px solid #eee; padding-top: 12px;">
+      <p style="margin: 4px 0; color: #333; font-size: 0.9rem; text-align: right;"><strong>Subtotal:</strong> &pound;${opts.subtotal.toFixed(2)}</p>
+      <p style="margin: 4px 0; color: #333; font-size: 0.9rem; text-align: right;"><strong>Shipping:</strong> &pound;${opts.shippingCost.toFixed(2)}</p>
+      <p style="margin: 4px 0; color: #333; font-size: 1.1rem; text-align: right;"><strong>Total:</strong> &pound;${opts.total.toFixed(2)}</p>
+    </div>
+    <p style="color: #333; font-size: 1rem; line-height: 1.6; margin-top: 16px;">
+      ${opts.shippingMethod === "collection"
+        ? "We'll let you know when your order is ready to collect from our studio at Unit A, Feathers Yard, Holt, NR25 6BF."
+        : "We'll dispatch your order as soon as possible and send you tracking information."}
+    </p>
+    <p style="color: #333; font-size: 1rem; line-height: 1.6;">
+      Questions? Contact us at <a href="mailto:${CONTACT_EMAIL}" style="color: #ff2d78;">${CONTACT_EMAIL}</a>.
+    </p>
+  `);
+}
+
+export async function sendOrderConfirmationEmail(opts: {
+  orderNumber: string;
+  name: string;
+  email: string;
+  items: { name: string; price: number; quantity: number; image_url: string | null }[];
+  subtotal: number;
+  shippingCost: number;
+  total: number;
+  shippingMethod: string;
+}) {
+  const resend = getResend();
+  if (!resend) {
+    console.log("Resend not configured, skipping order email for", opts.email);
+    return;
+  }
+
+  const html = orderConfirmationHtml(opts);
+  const subject = `Order Confirmed — ${opts.orderNumber} — The Slime Studio`;
+
+  try {
+    await resend.emails.send({
+      from: EMAIL_FROM,
+      to: opts.email,
+      subject,
+      html,
+    });
+    await logEmail(opts.email, subject, "order_confirmation", "sent");
+  } catch (e) {
+    console.error("Failed to send order email:", e);
+    await logEmail(opts.email, subject, "order_confirmation", "failed");
+  }
+}

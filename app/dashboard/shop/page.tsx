@@ -12,8 +12,9 @@ export default function ShopAdminPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    name: "", description: "", price: "", category: "handmade", stock: ""
+    name: "", description: "", price: "", category: "handmade", stock: "", image_url: ""
   });
+  const [uploading, setUploading] = useState(false);
   const [stockEdits, setStockEdits] = useState<Record<string, number>>({});
   const [categoryFilter, setCategoryFilter] = useState("all");
 
@@ -81,6 +82,7 @@ export default function ShopAdminPage() {
       price: parseFloat(formData.price) || 0,
       category: formData.category,
       stock: parseInt(formData.stock) || 0,
+      image_url: formData.image_url || null,
     };
     if (editingId) {
       const { error } = await supabase.from("products").update(payload).eq("id", editingId);
@@ -95,7 +97,7 @@ export default function ShopAdminPage() {
 
   function openAddModal() {
     setEditingId(null);
-    setFormData({ name: "", description: "", price: "", category: "handmade", stock: "" });
+    setFormData({ name: "", description: "", price: "", category: "handmade", stock: "", image_url: "" });
     setShowModal(true);
   }
 
@@ -107,6 +109,7 @@ export default function ShopAdminPage() {
       price: String(product.price),
       category: product.category,
       stock: String(product.stock || 0),
+      image_url: product.image_url || "",
     });
     setShowModal(true);
   }
@@ -114,7 +117,7 @@ export default function ShopAdminPage() {
   function closeModal() {
     setShowModal(false);
     setEditingId(null);
-    setFormData({ name: "", description: "", price: "", category: "handmade", stock: "" });
+    setFormData({ name: "", description: "", price: "", category: "handmade", stock: "", image_url: "" });
   }
 
   const filtered = categoryFilter === "all" ? products : products.filter((p) => p.category === categoryFilter);
@@ -323,6 +326,42 @@ export default function ShopAdminPage() {
                   placeholder="8.50"
                   className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Product Image</label>
+                {formData.image_url ? (
+                  <div className="relative mb-2">
+                    <img src={formData.image_url} alt="Preview" className="w-full h-40 rounded-xl object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, image_url: "" })}
+                      className="absolute top-2 right-2 w-7 h-7 rounded-full bg-ink/60 text-white grid place-items-center text-sm"
+                    >✕</button>
+                  </div>
+                ) : (
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={uploading}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setUploading(true);
+                      const ext = file.name.split('.').pop();
+                      const fileName = `products/${Date.now()}.${ext}`;
+                      const { error } = await supabase.storage.from('product-images').upload(fileName, file);
+                      if (!error) {
+                        const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(fileName);
+                        setFormData({ ...formData, image_url: urlData.publicUrl });
+                      } else {
+                        alert("Upload failed: " + error.message);
+                      }
+                      setUploading(false);
+                    }}
+                    className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
+                  />
+                )}
+                {uploading && <p className="text-[0.8rem] text-ink-soft mt-1">Uploading...</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Category</label>

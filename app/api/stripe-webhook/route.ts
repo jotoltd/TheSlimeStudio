@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripeAsync, getStripeModeAsync, getStripeKeysForMode } from "@/lib/stripe";
 import { supabase } from "@/lib/supabase";
+import { sendOrderConfirmationEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
 
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
       case "checkout.session.completed": {
         const session = event.data.object as {
           id: string;
-          metadata?: { bookingId?: string; subscriberId?: string; type?: string };
+          metadata?: { bookingId?: string; subscriberId?: string; type?: string; order_number?: string };
           payment_status: string;
         };
 
@@ -55,12 +56,56 @@ export async function POST(req: NextRequest) {
             .update({ status: "active", payment_status: "paid" })
             .eq("id", session.metadata.subscriberId);
         }
+
+        // Shop order: mark as paid and decrement stock
+        if (session.metadata?.order_number) {
+          const { data: order } = await supabase
+            .from("shop_orders")
+            .select("*")
+            .eq("order_number", session.metadata.order_number)
+            .single();
+
+          if (order) {
+            await supabase
+              .from("shop_orders")
+              .update({ payment_status: "paid" })
+              .eq("id", order.id);
+
+            // Decrement stock
+            for (const item of order.items) {
+              const { data: product } = await supabase
+                .from("products")
+                .select("stock")
+                .eq("id", item.product_id)
+                .single();
+              if (product) {
+                const newStock = Math.max(0, (product.stock || 0) - item.quantity);
+                await supabase
+                  .from("products")
+                  .update({ stock: newStock })
+                  .eq("id", item.product_id);
+              }
+            }
+
+            // Send confirmation email
+            await sendOrderConfirmationEmail({
+              orderNumber: order.order_number,
+              name: order.customer_name,
+              email: order.customer_email,
+              items: order.items,
+              subtotal: order.subtotal,
+              shippingCost: order.shipping_cost,
+              total: order.total,
+              shippingMethod: order.shipping_method,
+            });
+          }
+        }
         break;
       }
 
       case "checkout.session.expired": {
         const session = event.data.object as {
-          metadata?: { bookingId?: string; subscriberId?: string; type?: string };
+          metadata?: { bookingId?: string; subscriberId?: string; type?: string; order_number?: string };
         };
 
         if (session.metadata?.bookingId && session.metadata?.type !== "subscription") {
@@ -68,6 +113,14 @@ export async function POST(req: NextRequest) {
             .from("bookings")
             .update({ payment_status: "expired" })
             .eq("id", session.metadata.bookingId);
+        }
+
+        // Mark expired shop orders
+        if (session.metadata?.order_number) {
+          await supabase
+            .from("shop_orders")
+            .update({ payment_status: "expired" })
+            .eq("order_number", session.metadata.order_number);
         }
         break;
       }

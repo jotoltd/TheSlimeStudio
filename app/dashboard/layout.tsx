@@ -23,7 +23,8 @@ const navSections = [
     label: "Shop & Customers",
     items: [
       { href: "/dashboard/shop", label: "Shop", icon: "🛍️" },
-      { href: "/dashboard/subscribers", label: "Subscribers", icon: "📦" },
+      { href: "/dashboard/orders", label: "Orders", icon: "📦" },
+      { href: "/dashboard/subscribers", label: "Subscribers", icon: "�" },
       { href: "/dashboard/enquiries", label: "Enquiries", icon: "✉️" },
     ],
   },

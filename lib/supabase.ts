@@ -20,6 +20,7 @@ export type Product = {
   price: number;
   category: string;
   stock: number;
+  image_url: string | null;
   created_at: string;
 };
 
@@ -127,4 +128,24 @@ export type DateOverride = {
   is_open: boolean;
   time_slots: string[];
   label: string | null;
+};
+
+export type ShopOrder = {
+  id: string;
+  order_number: string;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string | null;
+  shipping_method: string; // 'collection' or 'delivery'
+  shipping_address: string | null;
+  shipping_city: string | null;
+  shipping_postcode: string | null;
+  items: { product_id: string; name: string; price: number; quantity: number; image_url: string | null }[];
+  subtotal: number;
+  shipping_cost: number;
+  total: number;
+  payment_status: string;
+  stripe_session_id: string | null;
+  notes: string | null;
+  created_at: string;
 };

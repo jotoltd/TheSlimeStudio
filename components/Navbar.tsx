@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
+import { useCart } from "@/components/CartContext";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -18,6 +19,7 @@ export default function Navbar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const { itemCount, openCart } = useCart();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -55,7 +57,23 @@ export default function Navbar() {
           ))}
         </ul>
 
-        <div className="hidden md:flex items-center">
+        <div className="hidden md:flex items-center gap-3">
+          <button
+            onClick={openCart}
+            className="relative w-10 h-10 rounded-full hover:bg-ink/10 grid place-items-center transition-colors"
+            aria-label="Open cart"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-ink/70">
+              <circle cx="9" cy="21" r="1" />
+              <circle cx="20" cy="21" r="1" />
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+            </svg>
+            {itemCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 w-5 h-5 rounded-full bg-[#ff2d78] text-white text-[0.65rem] font-bold grid place-items-center">
+                {itemCount}
+              </span>
+            )}
+          </button>
           <Link href="/booking" className="btn-primary" style={{ padding: "10px 22px", fontSize: "0.9rem" }}>
             Book Now
           </Link>

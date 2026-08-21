@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import MaintenanceGate from "@/components/MaintenanceGate";
+import { CartProvider } from "@/components/CartContext";
+import CartDrawer from "@/components/CartDrawer";
 
 export const metadata: Metadata = {
   title: "The Slime Studio — Create, Play & Discover Slime Magic in Norfolk",
@@ -27,7 +29,14 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body><MaintenanceGate>{children}</MaintenanceGate></body>
+      <body>
+        <MaintenanceGate>
+          <CartProvider>
+            {children}
+            <CartDrawer />
+          </CartProvider>
+        </MaintenanceGate>
+      </body>
     </html>
   );
 }
