@@ -34,6 +34,39 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Cannot book a session in the past. Please choose a future time slot." }, { status: 400 });
   }
 
+  // Validate time slot against opening hours
+  const { data: override } = await supabaseAdmin
+    .from("date_overrides")
+    .select("is_open, time_slots")
+    .eq("date", date)
+    .single();
+
+  let allowedSlots: string[] | null = null;
+  let isOpen = true;
+
+  if (override) {
+    isOpen = override.is_open;
+    allowedSlots = override.time_slots;
+  } else {
+    const dow = new Date(date + "T00:00:00").getDay();
+    const { data: weekly } = await supabaseAdmin
+      .from("opening_hours")
+      .select("is_open, time_slots")
+      .eq("day_of_week", dow)
+      .single();
+    if (weekly) {
+      isOpen = weekly.is_open;
+      allowedSlots = weekly.time_slots;
+    }
+  }
+
+  if (!isOpen) {
+    return NextResponse.json({ error: "We're closed on this date. Please choose another day." }, { status: 400 });
+  }
+  if (allowedSlots && allowedSlots.length > 0 && !allowedSlots.includes(timeSlot)) {
+    return NextResponse.json({ error: "This time slot is not available on the selected date." }, { status: 400 });
+  }
+
   // Server-side capacity check before creating payment intent
   const { data: settings } = await supabaseAdmin
     .from("booking_settings")

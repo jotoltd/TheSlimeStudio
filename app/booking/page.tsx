@@ -5,13 +5,12 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Calendar from "@/components/Calendar";
 import { supabase, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, PRICE_PER_PERSON, MAX_DAILY_BOOKINGS as DEFAULT_MAX } from "@/lib/supabase";
-import type { BookingSettings } from "@/lib/supabase";
+import type { BookingSettings, OpeningHour, DateOverride } from "@/lib/supabase";
 
 const InlinePayment = lazy(() => import("@/components/InlinePayment"));
 
 function todayISO() {
   const d = new Date();
-  if (d.getDay() === 0) d.setDate(d.getDate() + 1);
   d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
   return d.toISOString().split("T")[0];
 }
@@ -35,6 +34,9 @@ function BookingPageInner() {
   const [timeSlots, setTimeSlots] = useState<string[]>(DEFAULT_SLOTS);
   const [slotCapacity, setSlotCapacity] = useState(DEFAULT_CAP);
   const [maxDaily, setMaxDaily] = useState(DEFAULT_MAX);
+  const [openingHours, setOpeningHours] = useState<OpeningHour[]>([]);
+  const [dateOverrides, setDateOverrides] = useState<DateOverride[]>([]);
+  const [globalSlots, setGlobalSlots] = useState<string[]>(DEFAULT_SLOTS);
 
 
   useEffect(() => {
@@ -42,13 +44,17 @@ function BookingPageInner() {
       if (data) {
         const s = data as BookingSettings;
         setPricePerPerson(s.price_per_person);
-        if (s.time_slots && s.time_slots.length > 0) setTimeSlots(s.time_slots);
+        if (s.time_slots && s.time_slots.length > 0) { setTimeSlots(s.time_slots); setGlobalSlots(s.time_slots); }
         if (s.slot_capacity) setSlotCapacity(s.slot_capacity);
         if (s.max_daily_bookings) setMaxDaily(s.max_daily_bookings);
       }
     });
     fetch("/api/blocked-dates").then(r => r.json()).then(d => {
       if (d.blockedDates) setBlockedDates(d.blockedDates.map((b: { date: string }) => b.date));
+    }).catch(() => {});
+    fetch("/api/opening-hours").then(r => r.json()).then(d => {
+      if (d.weekly) setOpeningHours(d.weekly);
+      if (d.overrides) setDateOverrides(d.overrides);
     }).catch(() => {});
 
     // Handle Stripe 3D Secure redirect: if redirected back with payment_intent param,
@@ -107,10 +113,55 @@ function BookingPageInner() {
     }
   }, []);
 
+  // Compute which time slots are available for a given date
+  function getSlotsForDate(forDate: string): { slots: string[]; isOpen: boolean } {
+    // Check date override first
+    const override = dateOverrides.find((o) => o.date === forDate);
+    if (override) {
+      return { slots: override.is_open ? override.time_slots : [], isOpen: override.is_open };
+    }
+    // Check weekly schedule
+    const dow = new Date(forDate + "T00:00:00").getDay();
+    const weekly = openingHours.find((w) => w.day_of_week === dow);
+    if (weekly) {
+      return { slots: weekly.is_open ? weekly.time_slots : [], isOpen: weekly.is_open };
+    }
+    // Fall back to global time slots from settings
+    return { slots: globalSlots, isOpen: true };
+  }
+
+  // Get closed dates for calendar (dates with no override and weekly schedule says closed)
+  function getClosedDates(): string[] {
+    const closed: string[] = [];
+    // Only compute if we have opening hours set
+    if (openingHours.length === 0) return closed;
+    const today = new Date();
+    for (let i = 0; i < 90; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() + i);
+      const iso = d.toISOString().split("T")[0];
+      // Skip if there's a date override for this date
+      if (dateOverrides.some((o) => o.date === iso)) continue;
+      // Skip if blocked
+      if (blockedDates.includes(iso)) continue;
+      const dow = d.getDay();
+      const weekly = openingHours.find((w) => w.day_of_week === dow);
+      if (weekly && !weekly.is_open) closed.push(iso);
+    }
+    return closed;
+  }
+
   useEffect(() => {
-    loadAvailability(date);
+    const { slots, isOpen } = getSlotsForDate(date);
+    setTimeSlots(slots);
+    if (!isOpen) {
+      setRemaining({});
+      setLoadingSlots(false);
+    } else {
+      loadAvailability(date);
+    }
     setTimeSlot("");
-  }, [date, slotCapacity, timeSlots]);
+  }, [date, slotCapacity, openingHours, dateOverrides, globalSlots]);
 
 
   function isSlotInPast(slot: string, forDate: string) {
@@ -128,8 +179,9 @@ function BookingPageInner() {
     (data || []).forEach((b: { time_slot: string; people: number; payment_status: string }) => {
       used[b.time_slot] = (used[b.time_slot] || 0) + b.people;
     });
+    const currentSlots = getSlotsForDate(forDate).slots;
     const rem: Record<string, number> = {};
-    timeSlots.forEach((slot) => {
+    currentSlots.forEach((slot) => {
       rem[slot] = Math.max(0, slotCapacity - (used[slot] || 0));
     });
     setRemaining(rem);
@@ -364,13 +416,17 @@ function BookingPageInner() {
 
               <div className="mb-6">
                 <label className="block text-sm font-medium mb-2">Date</label>
-                <Calendar value={date} onChange={setDate} min={todayISO()} disableDays={[0]} blockedDates={blockedDates} />
+                <Calendar value={date} onChange={setDate} min={todayISO()} disableDays={[]} blockedDates={[...blockedDates, ...getClosedDates()]} />
               </div>
 
               <div className="mb-6">
                 <label className="block text-sm font-medium mb-3">Time Slot (1 hour)</label>
                 {loadingSlots ? (
                   <div className="text-sm text-ink-soft py-4 text-center">Checking availability...</div>
+                ) : timeSlots.length === 0 ? (
+                  <div className="text-sm text-ink-soft py-4 text-center bg-ink/[0.03] rounded-xl">
+                    We're closed on this day. Please choose another date.
+                  </div>
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 md:gap-3">
                     {timeSlots.map((slot) => {
