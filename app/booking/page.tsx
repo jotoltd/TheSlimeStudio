@@ -136,13 +136,14 @@ function BookingPageInner() {
     // Only compute if we have opening hours set
     if (openingHours.length === 0) return closed;
     const today = new Date();
-    for (let i = 0; i < 90; i++) {
+    today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+    for (let i = 0; i < 365; i++) {
       const d = new Date(today);
       d.setDate(d.getDate() + i);
       const iso = d.toISOString().split("T")[0];
-      // Skip if there's a date override for this date
+      // Skip if there's a date override for this date (override takes priority)
       if (dateOverrides.some((o) => o.date === iso)) continue;
-      // Skip if blocked
+      // Skip if blocked — blocked dates already in the list, no need to duplicate
       if (blockedDates.includes(iso)) continue;
       const dow = d.getDay();
       const weekly = openingHours.find((w) => w.day_of_week === dow);
