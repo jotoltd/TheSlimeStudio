@@ -142,7 +142,8 @@ function BookingPageInner() {
       d.setDate(d.getDate() + i);
       const iso = d.toISOString().split("T")[0];
       // Skip if there's a date override for this date (override takes priority)
-      if (dateOverrides.some((o) => o.date === iso)) continue;
+      const ov = dateOverrides.find((o) => o.date === iso);
+      if (ov) continue;
       // Skip if blocked — blocked dates already in the list, no need to duplicate
       if (blockedDates.includes(iso)) continue;
       const dow = d.getDay();
@@ -417,7 +418,11 @@ function BookingPageInner() {
 
               <div className="mb-6">
                 <label className="block text-sm font-medium mb-2">Date</label>
-                <Calendar value={date} onChange={setDate} min={todayISO()} disableDays={[]} blockedDates={[...blockedDates, ...getClosedDates()]} />
+                <Calendar value={date} onChange={setDate} min={todayISO()} disableDays={[]} blockedDates={[...blockedDates.filter((bd) => {
+                  // Don't block dates that have an 'open' override
+                  const ov = dateOverrides.find((o) => o.date === bd);
+                  return !(ov && ov.is_open);
+                }), ...getClosedDates()]} />
               </div>
 
               <div className="mb-6">
