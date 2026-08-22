@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripeAsync, getStripeModeAsync, getStripeKeysForMode } from "@/lib/stripe";
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase";
 import { sendOrderConfirmationEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
@@ -44,14 +44,14 @@ export async function POST(req: NextRequest) {
         };
 
         if (session.metadata?.bookingId && session.metadata?.type !== "subscription") {
-          await supabase
+          await supabaseAdmin
             .from("bookings")
             .update({ payment_status: "paid" })
             .eq("id", session.metadata.bookingId);
         }
 
         if (session.metadata?.subscriberId) {
-          await supabase
+          await supabaseAdmin
             .from("subscribers")
             .update({ status: "active", payment_status: "paid" })
             .eq("id", session.metadata.subscriberId);
@@ -59,28 +59,28 @@ export async function POST(req: NextRequest) {
 
         // Shop order: mark as paid and decrement stock
         if (session.metadata?.order_number) {
-          const { data: order } = await supabase
+          const { data: order } = await supabaseAdmin
             .from("shop_orders")
             .select("*")
             .eq("order_number", session.metadata.order_number)
             .single();
 
           if (order) {
-            await supabase
+            await supabaseAdmin
               .from("shop_orders")
               .update({ payment_status: "paid" })
               .eq("id", order.id);
 
             // Decrement stock
             for (const item of order.items) {
-              const { data: product } = await supabase
+              const { data: product } = await supabaseAdmin
                 .from("products")
                 .select("stock")
                 .eq("id", item.product_id)
                 .single();
               if (product) {
                 const newStock = Math.max(0, (product.stock || 0) - item.quantity);
-                await supabase
+                await supabaseAdmin
                   .from("products")
                   .update({ stock: newStock })
                   .eq("id", item.product_id);
@@ -109,7 +109,7 @@ export async function POST(req: NextRequest) {
         };
 
         if (session.metadata?.bookingId && session.metadata?.type !== "subscription") {
-          await supabase
+          await supabaseAdmin
             .from("bookings")
             .update({ payment_status: "expired" })
             .eq("id", session.metadata.bookingId);
@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
 
         // Mark expired shop orders
         if (session.metadata?.order_number) {
-          await supabase
+          await supabaseAdmin
             .from("shop_orders")
             .update({ payment_status: "expired" })
             .eq("order_number", session.metadata.order_number);
@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
         };
 
         if (charge.metadata?.bookingId) {
-          await supabase
+          await supabaseAdmin
             .from("bookings")
             .update({ payment_status: "refunded" })
             .eq("id", charge.metadata.bookingId);
@@ -160,7 +160,7 @@ export async function POST(req: NextRequest) {
 
         // If bookingId exists, update it (old checkout session flow)
         if (intent.metadata?.bookingId) {
-          await supabase
+          await supabaseAdmin
             .from("bookings")
             .update({ payment_status: "paid" })
             .eq("id", intent.metadata.bookingId);
@@ -180,7 +180,7 @@ export async function POST(req: NextRequest) {
         };
 
         if (intent.metadata?.bookingId && intent.metadata?.type !== "subscription") {
-          await supabase
+          await supabaseAdmin
             .from("bookings")
             .update({ payment_status: "unpaid" })
             .eq("id", intent.metadata.bookingId);

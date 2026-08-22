@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     isParty?: boolean;
   };
 
-  if (!email || !totalPrice || !date || !timeSlot) {
+  if (!name || !email || !totalPrice || !date || !timeSlot) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
