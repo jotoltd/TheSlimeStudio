@@ -465,42 +465,56 @@ export default function BookingsAdminPage() {
             <div className="overflow-x-auto">
               <table className="w-full border-collapse">
                 <thead>
-                  <tr className="text-left text-[0.75rem] text-ink-soft uppercase tracking-wider">
+                  <tr className="text-left text-[0.7rem] text-ink-soft uppercase tracking-wider border-b-2 border-ink/[0.08]">
                     {bulkMode && <th className="pb-3 pr-2"></th>}
-                    <th className="pb-3 pr-4">Date</th><th className="pb-3 pr-4">Time</th><th className="pb-3 pr-4">People</th>
-                    <th className="pb-3 pr-4">Price</th><th className="pb-3 pr-4">Payment</th><th className="pb-3 pr-4">Name</th>
-                    <th className="pb-3 pr-4">Contact</th><th className="pb-3 pr-4">Attendance</th><th className="pb-3">Actions</th>
+                    <th className="pb-3 pr-4 font-semibold">Session Date</th>
+                    <th className="pb-3 pr-4 font-semibold">Time</th>
+                    <th className="pb-3 pr-4 font-semibold">People</th>
+                    <th className="pb-3 pr-4 font-semibold">Price</th>
+                    <th className="pb-3 pr-4 font-semibold">Payment</th>
+                    <th className="pb-3 pr-4 font-semibold">Customer</th>
+                    <th className="pb-3 pr-4 font-semibold">Booked</th>
+                    <th className="pb-3 pr-4 font-semibold">Attendance</th>
+                    <th className="pb-3 font-semibold">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredBookings.map((b) => (
-                    <tr key={b.id} className={`border-t border-ink/[0.08] ${bulkMode && selectedBookings.has(b.id) ? "bg-sky-blue-light/20" : ""}`}>
+                    <tr key={b.id} className={`border-b border-ink/[0.05] hover:bg-ink/[0.02] transition-colors ${bulkMode && selectedBookings.has(b.id) ? "bg-sky-blue-light/20" : ""}`}>
                       {bulkMode && (
                         <td className="py-3 pr-2">
                           <input type="checkbox" checked={selectedBookings.has(b.id)} onChange={() => toggleSelection(b.id)} className="w-4 h-4" />
                         </td>
                       )}
-                      <td className="py-3 pr-4 text-[0.9rem]">{new Date(b.date).toLocaleDateString("en-GB")}</td>
-                      <td className="py-3 pr-4 text-[0.9rem]">{b.time_slot}</td>
-                      <td className="py-3 pr-4 text-[0.9rem]">{b.people}</td>
-                      <td className="py-3 pr-4 text-[0.9rem]">£{Number(b.total_price).toFixed(2)}</td>
-                      <td className="py-3 pr-4 text-[0.9rem]">
+                      <td className="py-3.5 pr-4">
+                        <div className="text-[0.9rem] font-medium text-ink">{new Date(b.date + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</div>
+                        <div className="text-[0.75rem] text-ink-soft">{new Date(b.date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short" })}</div>
+                      </td>
+                      <td className="py-3.5 pr-4 text-[0.9rem] font-display">{b.time_slot}</td>
+                      <td className="py-3.5 pr-4 text-[0.9rem]">{b.people}</td>
+                      <td className="py-3.5 pr-4 text-[0.9rem] font-display">£{Number(b.total_price).toFixed(2)}</td>
+                      <td className="py-3.5 pr-4">
                         <span className={`px-2 py-0.5 rounded-full text-[0.75rem] font-medium ${
                           b.payment_status === "paid" ? "bg-green-100 text-green-700" :
                           b.payment_status === "refunded" ? "bg-orange-100 text-orange-700" :
                           b.payment_status === "expired" ? "bg-red-100 text-red-700" : "bg-ink/5 text-ink-soft"
                         }`}>{b.payment_status || "unpaid"}</span>
                       </td>
-                      <td className="py-3 pr-4 text-[0.9rem]">
-                        {b.name}
-                        {b.is_party && <span className="ml-1 text-[0.65rem] bg-bright-lavender/20 px-1.5 py-0.5 rounded-full align-middle">Party</span>}
+                      <td className="py-3.5 pr-4">
+                        <div className="text-[0.9rem] font-medium text-ink">
+                          {b.name}
+                          {b.is_party && <span className="ml-1.5 text-[0.6rem] bg-bright-lavender/20 px-1.5 py-0.5 rounded-full align-middle">Party</span>}
+                        </div>
+                        <div className="text-[0.8rem] text-ink-soft">{b.email}</div>
+                        {b.phone && <div className="text-[0.75rem] text-ink-soft">{b.phone}</div>}
+                        {b.notes && <div className="text-[0.7rem] text-ink-soft mt-0.5 italic">📝 {b.notes.length > 30 ? b.notes.slice(0, 30) + "…" : b.notes}</div>}
                       </td>
-                      <td className="py-3 pr-4 text-[0.9rem]"><div>{b.email}</div>{b.phone && <div className="text-ink-soft text-[0.8rem]">{b.phone}</div>}</td>
-                      <td className="py-3 pr-4">
+                      <td className="py-3.5 pr-4 text-[0.8rem] text-ink-soft">{new Date(b.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</td>
+                      <td className="py-3.5 pr-4">
                         <select
                           value={b.attendance_status || "pending"}
                           onChange={(e) => updateAttendance(b.id, e.target.value)}
-                          className={`text-[0.75rem] px-2 py-1 rounded-lg border-0 ${
+                          className={`text-[0.75rem] px-2 py-1 rounded-lg border-0 cursor-pointer ${
                             b.attendance_status === "attended" ? "bg-green-100 text-green-700" :
                             b.attendance_status === "no_show" ? "bg-red-100 text-red-700" :
                             "bg-ink/5 text-ink-soft"
@@ -511,11 +525,11 @@ export default function BookingsAdminPage() {
                           <option value="no_show">No-show</option>
                         </select>
                       </td>
-                      <td className="py-3">
-                        <div className="flex gap-2">
-                          <button onClick={() => startEdit(b)} className="px-3 py-1.5 rounded-lg bg-sky-blue-light/30 text-ink text-[0.8rem] hover:bg-sky-blue-light/50 transition-colors">Edit</button>
-                          <button onClick={() => cancelBooking(b.id, b.name)} disabled={cancellingId === b.id} className="px-3 py-1.5 rounded-lg bg-red-100 text-red-700 text-[0.8rem] hover:bg-red-200 transition-colors disabled:opacity-60">
-                            {cancellingId === b.id ? "..." : "Cancel"}
+                      <td className="py-3.5">
+                        <div className="flex gap-1.5">
+                          <button onClick={() => startEdit(b)} className="px-2.5 py-1.5 rounded-lg bg-sky-blue-light/30 text-ink text-[0.8rem] hover:bg-sky-blue-light/50 transition-colors">Edit</button>
+                          <button onClick={() => cancelBooking(b.id, b.name)} disabled={cancellingId === b.id} className="px-2.5 py-1.5 rounded-lg bg-red-100 text-red-700 text-[0.8rem] hover:bg-red-200 transition-colors disabled:opacity-60">
+                            {cancellingId === b.id ? "…" : "Cancel"}
                           </button>
                         </div>
                       </td>
