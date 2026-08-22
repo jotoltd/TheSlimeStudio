@@ -291,15 +291,15 @@ export default function BookingsAdminPage() {
             <option value="party">Parties</option>
           </select>
           <div className="flex rounded-lg overflow-hidden border border-ink/10 ml-auto">
-            <button onClick={() => setViewMode("calendar")} className={`px-3 py-2 text-[0.8rem] font-medium ${viewMode === "calendar" ? "bg-ink text-white" : "bg-white text-ink"}`}>📅 Calendar</button>
-            <button onClick={() => setViewMode("table")} className={`px-3 py-2 text-[0.8rem] font-medium ${viewMode === "table" ? "bg-ink text-white" : "bg-white text-ink"}`}>📋 Table</button>
+            <button onClick={() => setViewMode("calendar")} className={`px-3 py-2 text-[0.8rem] font-medium transition-colors ${viewMode === "calendar" ? "bg-ink text-white" : "bg-white text-ink hover:bg-ink/5"}`}>Calendar</button>
+            <button onClick={() => setViewMode("table")} className={`px-3 py-2 text-[0.8rem] font-medium transition-colors ${viewMode === "table" ? "bg-ink text-white" : "bg-white text-ink hover:bg-ink/5"}`}>Table</button>
           </div>
         </div>
       </div>
 
       {duplicates.length > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
-          <h3 className="font-display text-[0.95rem] text-amber-800 mb-2">⚠️ Duplicate Bookings Detected ({duplicates.length})</h3>
+          <h3 className="font-display text-[0.95rem] text-amber-800 mb-2">Duplicate Bookings Detected ({duplicates.length})</h3>
           <div className="space-y-1">
             {duplicates.slice(0, 5).map(({ key, bookings: bs }) => {
               const [name, date, time] = key.split("|");
@@ -317,7 +317,7 @@ export default function BookingsAdminPage() {
       {todaysBookings.length > 0 && (
         <div className="bg-white rounded-[20px] p-5 md:p-6 shadow-sm mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-display text-[1.1rem]">📅 Today's Bookings ({todaysBookings.length})</h2>
+            <h2 className="font-display text-[1.1rem]">Today's Bookings ({todaysBookings.length})</h2>
             <span className="text-[0.85rem] text-ink-soft">{todaysBookings.reduce((s, b) => s + b.people, 0)} people total</span>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
@@ -372,7 +372,10 @@ export default function BookingsAdminPage() {
       </div>
 
       {loading ? (
-        <div className="bg-white rounded-[20px] p-8 shadow-sm text-center text-ink-soft text-[0.9rem]">Loading bookings...</div>
+        <div className="bg-white rounded-[20px] p-8 shadow-sm text-center">
+          <div className="inline-block w-6 h-6 border-2 border-ink/20 border-t-sky-blue-light rounded-full animate-spin mb-2"></div>
+          <div className="text-ink-soft text-[0.9rem]">Loading bookings...</div>
+        </div>
       ) : viewMode === "calendar" ? (
         <div className="space-y-6">
           {/* Calendar */}
@@ -549,7 +552,7 @@ export default function BookingsAdminPage() {
 
       {editingBooking && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setEditingBooking(null)}>
-          <div className="bg-white rounded-[24px] p-8 max-w-md w-full shadow-xl" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-[24px] p-6 md:p-8 max-w-lg w-full shadow-xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <h2 className="font-display text-[1.2rem] mb-5">Edit Booking</h2>
             <div className="space-y-4">
               <div>
@@ -674,7 +677,7 @@ export default function BookingsAdminPage() {
       {showCustomerLookup && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={() => setShowCustomerLookup(false)}>
           <div className="bg-white rounded-2xl p-6 md:p-8 max-w-2xl w-full max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <h2 className="font-display text-lg mb-4">🔍 Customer Lookup</h2>
+            <h2 className="font-display text-lg mb-4">Customer Lookup</h2>
             <p className="text-[0.85rem] text-ink-soft mb-4">Search by name, email, or phone to see all bookings for a customer.</p>
             <div className="flex gap-2 mb-4">
               <input

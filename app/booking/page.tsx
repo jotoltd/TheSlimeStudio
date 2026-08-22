@@ -498,7 +498,7 @@ function BookingPageInner() {
                           onClick={() => selectSlot(slot)}
                           className={`rounded-xl py-3 text-sm font-display transition-all ${
                             disabled
-                              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                              ? "bg-ink/[0.03] text-ink/30 cursor-not-allowed"
                               : timeSlot === slot
                               ? "bg-sky-blue-light text-ink shadow-sm"
                               : "bg-ink/[0.04] text-ink hover:bg-sky-blue-light/30"
@@ -586,7 +586,10 @@ function BookingPageInner() {
               )}
 
               <div className="text-center">
-                <button type="submit" disabled={status === "sending"} className="btn-primary disabled:opacity-60 w-full justify-center">
+                <button type="submit" disabled={status === "sending"} className="btn-primary disabled:opacity-60 w-full justify-center inline-flex items-center gap-2">
+                  {status === "sending" && (
+                    <span className="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
+                  )}
                   {status === "sending" ? "Processing..." : `Continue to Payment — £${totalPrice.toFixed(2)}`}
                 </button>
               </div>
