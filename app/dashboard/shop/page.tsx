@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase, type Product, type ShopSettings } from "@/lib/supabase";
+import PageHeader from "@/components/PageHeader";
 
 export default function ShopAdminPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -126,18 +127,18 @@ export default function ShopAdminPage() {
 
   return (
     <div className="py-8 md:py-10 px-5 md:px-10">
-      <div className="flex flex-wrap justify-between items-center gap-4 mb-8">
-        <div>
-          <h1 className="font-display text-[1.6rem] md:text-[2rem]">Shop</h1>
-          <p className="text-ink-soft text-[0.9rem] mt-1">Manage your product catalogue and stock levels.</p>
-        </div>
-        <button
-          onClick={openAddModal}
-          className="px-6 py-2.5 rounded-full bg-sky-blue-light text-ink text-[0.9rem] font-medium hover:-translate-y-0.5 hover:shadow-sm transition-all"
-        >
-          + Add Product
-        </button>
-      </div>
+      <PageHeader
+        title="Shop"
+        subtitle="Manage your product catalogue and stock levels."
+        actions={
+          <button
+            onClick={openAddModal}
+            className="px-6 py-2.5 rounded-full bg-sky-blue-light text-ink text-[0.9rem] font-medium hover:-translate-y-0.5 hover:shadow-sm transition-all"
+          >
+            + Add Product
+          </button>
+        }
+      />
 
       {/* Shop Mode + Launch Date */}
       <div className="bg-white rounded-[20px] p-7 shadow-sm mb-6">

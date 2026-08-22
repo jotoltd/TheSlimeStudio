@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { supabase, type OpeningHour, type DateOverride, TIME_SLOTS as DEFAULT_SLOTS } from "@/lib/supabase";
+import { useToast } from "@/components/Toast";
+import PageHeader from "@/components/PageHeader";
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -17,7 +19,7 @@ export default function OpeningHoursPage() {
   const [overrides, setOverrides] = useState<DateOverride[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState("");
+  const { toast } = useToast();
 
   // Override form
   const [ovDate, setOvDate] = useState(todayISO());
@@ -25,7 +27,6 @@ export default function OpeningHoursPage() {
   const [ovSlots, setOvSlots] = useState<string>(DEFAULT_SLOTS.join("\n"));
   const [ovLabel, setOvLabel] = useState("");
   const [savingOv, setSavingOv] = useState(false);
-  const [ovMsg, setOvMsg] = useState("");
 
   useEffect(() => { load(); }, []);
 
@@ -75,7 +76,7 @@ export default function OpeningHoursPage() {
   }
 
   async function saveWeekly() {
-    setSaving(true); setMsg("");
+    setSaving(true);
     const schedule = weekly.map((w) => ({
       day_of_week: w.day_of_week,
       is_open: w.is_open,
@@ -88,17 +89,17 @@ export default function OpeningHoursPage() {
         body: JSON.stringify({ action: "save_weekly", schedule }),
       });
       const data = await res.json();
-      if (!res.ok) { setMsg(data.error || "Failed to save"); console.error("Save weekly error:", data); }
-      else { setMsg("Weekly schedule saved!"); load(); }
+      if (!res.ok) { toast(data.error || "Failed to save", "error"); console.error("Save weekly error:", data); }
+      else { toast("Weekly schedule saved!"); load(); }
     } catch {
-      setMsg("Network error");
+      toast("Network error", "error");
     }
     setSaving(false);
   }
 
   async function addOverride() {
-    if (!ovDate) { setOvMsg("Please select a date"); return; }
-    setSavingOv(true); setOvMsg("");
+    if (!ovDate) { toast("Please select a date", "error"); return; }
+    setSavingOv(true);
     const slots = ovIsOpen ? ovSlots.split("\n").map((s) => s.trim()).filter(Boolean) : [];
     try {
       const res = await fetch("/api/opening-hours", {
@@ -113,14 +114,14 @@ export default function OpeningHoursPage() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) { setOvMsg(data.error || "Failed to save"); }
+      if (!res.ok) { toast(data.error || "Failed to save", "error"); }
       else {
-        setOvMsg("Override saved!");
+        toast("Override saved!");
         setOvLabel("");
         load();
       }
     } catch {
-      setOvMsg("Network error");
+      toast("Network error", "error");
     }
     setSavingOv(false);
   }
@@ -142,10 +143,7 @@ export default function OpeningHoursPage() {
 
   return (
     <div className="py-8 md:py-10 px-5 md:px-10">
-      <div className="mb-8">
-        <h1 className="font-display text-[1.6rem] md:text-[2rem]">Opening Hours</h1>
-        <p className="text-ink-soft text-[0.9rem] mt-1">Control which days you're open and what time slots are available.</p>
-      </div>
+      <PageHeader title="Opening Hours" subtitle="Control which days you're open and what time slots are available." />
 
       {loading ? (
         <div className="bg-white rounded-[20px] p-8 shadow-sm text-center text-ink-soft text-[0.9rem]">Loading...</div>
@@ -199,8 +197,6 @@ export default function OpeningHoursPage() {
                 );
               })}
             </div>
-
-            {msg && <p className={`text-[0.85rem] mt-4 ${msg.includes("saved") ? "text-green-600" : "text-red-600"}`}>{msg}</p>}
           </div>
 
           {/* Date Overrides */}
@@ -261,7 +257,6 @@ export default function OpeningHoursPage() {
                 <button onClick={addOverride} disabled={savingOv} className="px-5 py-2.5 rounded-full bg-bright-lavender text-white text-[0.85rem] font-medium disabled:opacity-60 hover:opacity-90 transition-all">
                   {savingOv ? "Saving..." : "Add Override"}
                 </button>
-                {ovMsg && <p className={`text-[0.85rem] ${ovMsg.includes("saved") ? "text-green-600" : "text-red-600"}`}>{ovMsg}</p>}
               </div>
             </div>
 
@@ -337,8 +332,7 @@ export default function OpeningHoursPage() {
             <p className="font-medium text-ink mb-1">How it works:</p>
             <ul className="space-y-1 ml-4 list-disc">
               <li><strong>Weekly schedule</strong> sets your default opening hours for each day of the week</li>
-              <li><strong>Date overrides</strong> take priority over the weekly schedule for specific dates</li>
-              <li><strong>Blocked dates</strong> (in the Blocked Dates page) always take top priority — the date is fully closed regardless</li>
+              <li><strong>Date overrides</strong> take priority over the weekly schedule for specific dates — use these for holidays, special events, or one-off openings/closures</li>
               <li>If no weekly schedule is set, the system falls back to the global time slots in Settings</li>
             </ul>
           </div>

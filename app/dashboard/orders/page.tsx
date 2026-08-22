@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase, type ShopOrder } from "@/lib/supabase";
+import PageHeader from "@/components/PageHeader";
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<ShopOrder[]>([]);
@@ -38,10 +39,7 @@ export default function OrdersPage() {
 
   return (
     <div className="py-8 md:py-10 px-5 md:px-10">
-      <div className="mb-8">
-        <h1 className="font-display text-[1.6rem] md:text-[2rem]">Shop Orders</h1>
-        <p className="text-ink-soft text-[0.9rem] mt-1">View and manage customer orders from the shop.</p>
-      </div>
+      <PageHeader title="Shop Orders" subtitle="View and manage customer orders from the shop." />
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
