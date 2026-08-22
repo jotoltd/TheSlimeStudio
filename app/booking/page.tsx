@@ -52,7 +52,7 @@ function BookingPageInner() {
     fetch("/api/blocked-dates").then(r => r.json()).then(d => {
       if (d.blockedDates) setBlockedDates(d.blockedDates.map((b: { date: string }) => b.date));
     }).catch(() => {});
-    fetch("/api/opening-hours").then(r => r.json()).then(d => {
+    fetch("/api/opening-hours", { cache: "no-store" }).then(r => r.json()).then(d => {
       if (d.weekly) setOpeningHours(d.weekly);
       if (d.overrides) setDateOverrides(d.overrides);
     }).catch(() => {});

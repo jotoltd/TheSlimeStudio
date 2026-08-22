@@ -6,19 +6,24 @@ export const runtime = "nodejs";
 
 // GET — public, returns weekly schedule + date overrides
 export async function GET() {
-  const { data: weekly } = await supabaseAdmin
+  const { data: weekly, error: weeklyErr } = await supabaseAdmin
     .from("opening_hours")
     .select("*")
     .order("day_of_week", { ascending: true });
 
-  const { data: overrides } = await supabaseAdmin
+  const { data: overrides, error: overridesErr } = await supabaseAdmin
     .from("date_overrides")
     .select("*")
     .order("date", { ascending: true });
 
+  if (weeklyErr) console.error("opening_hours GET weekly error:", weeklyErr);
+  if (overridesErr) console.error("opening_hours GET overrides error:", overridesErr);
+
   return NextResponse.json({
     weekly: weekly || [],
     overrides: overrides || [],
+  }, {
+    headers: { "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0" },
   });
 }
 
@@ -35,20 +40,30 @@ export async function POST(req: NextRequest) {
   if (action === "save_weekly") {
     const { schedule } = body as { schedule: { day_of_week: number; is_open: boolean; time_slots: string[] }[] };
 
-    // Delete existing and re-insert
-    await supabaseAdmin.from("opening_hours").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-
-    if (schedule.length > 0) {
-      const { error } = await supabaseAdmin.from("opening_hours").insert(
-        schedule.map((s) => ({
+    // Delete existing and re-insert using upsert for reliability
+    for (const s of schedule) {
+      const { error } = await supabaseAdmin
+        .from("opening_hours")
+        .upsert({
           day_of_week: s.day_of_week,
           is_open: s.is_open,
           time_slots: s.time_slots,
-        }))
-      );
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        }, { onConflict: "day_of_week" });
+      if (error) {
+        console.error("opening_hours save error for day", s.day_of_week, error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
     }
-    return NextResponse.json({ success: true });
+    // Delete any days that are no longer in the schedule (0-6 not in schedule)
+    const savedDays = schedule.map((s) => s.day_of_week);
+    for (let dow = 0; dow <= 6; dow++) {
+      if (!savedDays.includes(dow)) {
+        await supabaseAdmin.from("opening_hours").delete().eq("day_of_week", dow);
+      }
+    }
+    return NextResponse.json({ success: true }, {
+      headers: { "Cache-Control": "no-store" },
+    });
   }
 
   if (action === "add_override") {

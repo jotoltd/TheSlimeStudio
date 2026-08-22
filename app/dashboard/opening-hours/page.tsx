@@ -32,7 +32,7 @@ export default function OpeningHoursPage() {
   async function load() {
     setLoading(true);
     try {
-      const res = await fetch("/api/opening-hours");
+      const res = await fetch("/api/opening-hours", { cache: "no-store" });
       const data = await res.json();
       if (data.weekly) setWeekly(data.weekly);
       if (data.overrides) setOverrides(data.overrides);
@@ -88,7 +88,7 @@ export default function OpeningHoursPage() {
         body: JSON.stringify({ action: "save_weekly", schedule }),
       });
       const data = await res.json();
-      if (!res.ok) { setMsg(data.error || "Failed to save"); }
+      if (!res.ok) { setMsg(data.error || "Failed to save"); console.error("Save weekly error:", data); }
       else { setMsg("Weekly schedule saved!"); load(); }
     } catch {
       setMsg("Network error");
