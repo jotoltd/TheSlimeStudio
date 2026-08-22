@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase, type Booking, type BookingSettings, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, MAX_DAILY_BOOKINGS as DEFAULT_MAX } from "@/lib/supabase";
+import PageHeader from "@/components/PageHeader";
 
 type ViewMode = "calendar" | "table";
 
@@ -33,7 +34,7 @@ export default function BookingsAdminPage() {
   const [slotCapacity, setSlotCapacity] = useState(DEFAULT_CAP);
   const [maxDaily, setMaxDaily] = useState(DEFAULT_MAX);
   const [searchQuery, setSearchQuery] = useState("");
-  const [payFilter, setPayFilter] = useState<"all" | "paid" | "unpaid" | "refunded" | "pending">("all");
+  const [payFilter, setPayFilter] = useState<"all" | "paid" | "unpaid" | "refunded" | "expired">("all");
   const [partyFilter, setPartyFilter] = useState<"all" | "party" | "regular">("all");
   const [selectedBookings, setSelectedBookings] = useState<Set<string>>(new Set());
   const [bulkMode, setBulkMode] = useState(false);
@@ -73,7 +74,7 @@ export default function BookingsAdminPage() {
   async function loadBookings() {
     setLoading(true);
     const todayStr = new Date().toISOString().split("T")[0];
-    let query = supabase.from("bookings").select("*").neq("payment_status", "refunded");
+    let query = supabase.from("bookings").select("*");
     if (filter === "upcoming") query = query.gte("date", todayStr);
     if (filter === "past") query = query.lt("date", todayStr);
     const { data } = await query.order("date", { ascending: filter !== "past" }).order("time_slot", { ascending: true });
@@ -81,8 +82,12 @@ export default function BookingsAdminPage() {
     setLoading(false);
   }
 
-  async function cancelBooking(id: string, name: string) {
-    if (!confirm(`Cancel the booking for "${name}"? This cannot be undone. An email will be sent to the customer.`)) return;
+  async function cancelBooking(id: string, name: string, paymentStatus?: string) {
+    const isPaid = paymentStatus === "paid";
+    const msg = isPaid
+      ? `Cancel the booking for "${name}"? This will refund the customer via Stripe and send them a cancellation email. This cannot be undone.`
+      : `Cancel the booking for "${name}"? This will delete it and send a cancellation email. This cannot be undone.`;
+    if (!confirm(msg)) return;
     setCancellingId(id);
     try {
       const res = await fetch("/api/cancel-booking", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bookingId: id }) });
@@ -213,8 +218,8 @@ export default function BookingsAdminPage() {
     const q = searchQuery.toLowerCase().trim();
     if (q && !b.name.toLowerCase().includes(q) && !b.email.toLowerCase().includes(q) && !b.date.includes(q) && !(b.phone || "").toLowerCase().includes(q)) return false;
     if (payFilter !== "all") {
-      if (payFilter === "unpaid" && b.payment_status && b.payment_status !== "unpaid") return false;
-      if (payFilter !== "unpaid" && (b.payment_status || "unpaid") !== payFilter) return false;
+      const status = b.payment_status || "unpaid";
+      if (status !== payFilter) return false;
     }
     if (partyFilter === "party" && !b.is_party) return false;
     if (partyFilter === "regular" && b.is_party) return false;
@@ -228,22 +233,22 @@ export default function BookingsAdminPage() {
   filteredBookings.forEach((b) => { const d = b.date; if (!bookingsByDate[d]) bookingsByDate[d] = []; bookingsByDate[d].push(b); });
   const selectedDateBookings = selectedDate ? (bookingsByDate[selectedDate] || []) : [];
   const totalPeople = filteredBookings.reduce((sum, b) => sum + b.people, 0);
-  const totalRevenue = filteredBookings.reduce((sum, b) => sum + Number(b.total_price), 0);
+  const totalRevenue = filteredBookings.filter((b) => b.payment_status === "paid").reduce((sum, b) => sum + Number(b.total_price), 0);
 
   return (
     <div className="py-8 md:py-10 px-5 md:px-10">
-      <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
-        <div>
-          <h1 className="font-display text-[1.6rem] md:text-[2rem]">Bookings</h1>
-          <p className="text-ink-soft text-[0.9rem] mt-1">Manage all slime-making session bookings.</p>
-        </div>
-        <div className="flex gap-2 flex-wrap items-center">
-          <button onClick={() => setShowAddBooking(true)} className="px-3 md:px-4 py-2 rounded-full text-[0.8rem] md:text-[0.85rem] font-medium bg-bright-lavender text-white hover:opacity-90 transition-all">+ Add Booking</button>
-          <button onClick={() => setShowCustomerLookup(true)} className="px-3 md:px-4 py-2 rounded-full text-[0.8rem] md:text-[0.85rem] font-medium bg-white text-ink hover:bg-sky-blue-light/20 transition-all">🔍 Customer</button>
-          <a href="/api/export-ical" className="px-3 md:px-4 py-2 rounded-full text-[0.8rem] md:text-[0.85rem] font-medium bg-white text-ink hover:bg-sky-blue-light/20 transition-all">📅 iCal</a>
-          <button onClick={() => { setBulkMode(!bulkMode); setSelectedBookings(new Set()); }} className={`px-3 md:px-4 py-2 rounded-full text-[0.8rem] md:text-[0.85rem] font-medium transition-all ${bulkMode ? "bg-ink text-white" : "bg-white text-ink hover:bg-sky-blue-light/20"}`}>☑ Bulk</button>
-        </div>
-      </div>
+      <PageHeader
+        title="Bookings"
+        subtitle="Manage all slime-making session bookings."
+        actions={
+          <div className="flex gap-2 flex-wrap items-center">
+            <button onClick={() => setShowAddBooking(true)} className="px-3 md:px-4 py-2 rounded-full text-[0.8rem] md:text-[0.85rem] font-medium bg-bright-lavender text-white hover:opacity-90 transition-all">+ Add Booking</button>
+            <button onClick={() => setShowCustomerLookup(true)} className="px-3 md:px-4 py-2 rounded-full text-[0.8rem] md:text-[0.85rem] font-medium bg-white text-ink hover:bg-sky-blue-light/20 transition-all">Customer Lookup</button>
+            <a href="/api/export-ical" className="px-3 md:px-4 py-2 rounded-full text-[0.8rem] md:text-[0.85rem] font-medium bg-white text-ink hover:bg-sky-blue-light/20 transition-all">iCal Export</a>
+            <button onClick={() => { setBulkMode(!bulkMode); setSelectedBookings(new Set()); }} className={`px-3 md:px-4 py-2 rounded-full text-[0.8rem] md:text-[0.85rem] font-medium transition-all ${bulkMode ? "bg-ink text-white" : "bg-white text-ink hover:bg-sky-blue-light/20"}`}>{bulkMode ? "Exit Bulk" : "Bulk Select"}</button>
+          </div>
+        }
+      />
 
       {/* Filter bar */}
       <div className="bg-white rounded-[16px] p-3 md:p-4 shadow-sm mb-6 flex flex-col gap-3">
@@ -272,9 +277,9 @@ export default function BookingsAdminPage() {
           >
             <option value="all">All Payments</option>
             <option value="paid">Paid</option>
-            <option value="pending">Pending</option>
             <option value="unpaid">Unpaid</option>
             <option value="refunded">Refunded</option>
+            <option value="expired">Expired</option>
           </select>
           <select
             value={partyFilter}
@@ -435,7 +440,7 @@ export default function BookingsAdminPage() {
                 ) : (
                   <div className="grid sm:grid-cols-2 gap-3">
                     {selectedDateBookings.map((b) => (
-                      <BookingCard key={b.id} b={b} onEdit={() => startEdit(b)} onCancel={() => cancelBooking(b.id, b.name)} cancelling={cancellingId === b.id} />
+                      <BookingCard key={b.id} b={b} onEdit={() => startEdit(b)} onCancel={() => cancelBooking(b.id, b.name, b.payment_status)} cancelling={cancellingId === b.id} />
                     ))}
                   </div>
                 )}
@@ -449,7 +454,7 @@ export default function BookingsAdminPage() {
                 ) : (
                   <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {filteredBookings.map((b) => (
-                      <BookingCard key={b.id} b={b} onEdit={() => startEdit(b)} onCancel={() => cancelBooking(b.id, b.name)} cancelling={cancellingId === b.id} />
+                      <BookingCard key={b.id} b={b} onEdit={() => startEdit(b)} onCancel={() => cancelBooking(b.id, b.name, b.payment_status)} cancelling={cancellingId === b.id} />
                     ))}
                   </div>
                 )}
@@ -528,7 +533,7 @@ export default function BookingsAdminPage() {
                       <td className="py-3.5">
                         <div className="flex gap-1.5">
                           <button onClick={() => startEdit(b)} className="px-2.5 py-1.5 rounded-lg bg-sky-blue-light/30 text-ink text-[0.8rem] hover:bg-sky-blue-light/50 transition-colors">Edit</button>
-                          <button onClick={() => cancelBooking(b.id, b.name)} disabled={cancellingId === b.id} className="px-2.5 py-1.5 rounded-lg bg-red-100 text-red-700 text-[0.8rem] hover:bg-red-200 transition-colors disabled:opacity-60">
+                          <button onClick={() => cancelBooking(b.id, b.name, b.payment_status)} disabled={cancellingId === b.id} className="px-2.5 py-1.5 rounded-lg bg-red-100 text-red-700 text-[0.8rem] hover:bg-red-200 transition-colors disabled:opacity-60">
                             {cancellingId === b.id ? "…" : "Cancel"}
                           </button>
                         </div>
