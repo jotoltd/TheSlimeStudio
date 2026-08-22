@@ -29,6 +29,7 @@ function BookingPageInner() {
   const [clientSecret, setClientSecret] = useState("");
   const [publishableKey, setPublishableKey] = useState("");
   const [paymentIntentId, setPaymentIntentId] = useState("");
+  const [bookingId, setBookingId] = useState("");
   const [blockedDates, setBlockedDates] = useState<string[]>([]);
   const [pricePerPerson, setPricePerPerson] = useState(PRICE_PER_PERSON);
   const [timeSlots, setTimeSlots] = useState<string[]>(DEFAULT_SLOTS);
@@ -320,15 +321,63 @@ function BookingPageInner() {
       <section className="section">
         <div className="container max-w-2xl">
           {status === "paid" ? (
-            <div className="bg-white rounded-3xl p-6 md:p-10 shadow-sm text-center">
-              <div className="text-4xl md:text-5xl mb-4">🎉</div>
-              <h2 className="font-display text-xl md:text-2xl mb-3">
-                Payment Successful — Booking Confirmed!
-              </h2>
-              <p className="text-ink-soft mb-6">
-                Your payment has been received and your booking is confirmed. We've sent a confirmation to your email — see you soon!
-              </p>
-              <button onClick={() => setStatus("idle")} className="btn-primary">
+            <div className="bg-white rounded-3xl p-6 md:p-10 shadow-sm">
+              <div className="text-center mb-6">
+                <div className="w-14 h-14 rounded-full bg-green-100 grid place-items-center mx-auto mb-4">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                </div>
+                <h2 className="font-display text-xl md:text-2xl mb-2">Booking Confirmed!</h2>
+                <p className="text-ink-soft text-sm">
+                  We've sent a confirmation to <strong className="text-ink">{email}</strong>. See you soon!
+                </p>
+              </div>
+
+              {/* Booking summary */}
+              <div className="border-2 border-ink/[0.08] rounded-2xl overflow-hidden">
+                <div className="bg-ink/[0.02] px-5 py-3 flex items-center justify-between">
+                  <span className="text-[0.7rem] uppercase tracking-wider text-ink-soft font-semibold">Booking Details</span>
+                  {bookingId && <span className="text-[0.7rem] text-ink-soft font-mono">Ref: {bookingId.slice(0, 8).toUpperCase()}</span>}
+                </div>
+                <div className="divide-y divide-ink/[0.06]">
+                  <div className="flex items-center justify-between px-5 py-3.5">
+                    <span className="text-[0.85rem] text-ink-soft">Date</span>
+                    <span className="text-[0.9rem] font-medium text-ink">{new Date(date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</span>
+                  </div>
+                  <div className="flex items-center justify-between px-5 py-3.5">
+                    <span className="text-[0.85rem] text-ink-soft">Time</span>
+                    <span className="text-[0.9rem] font-medium text-ink">{timeSlot} — {timeSlot.split(":").map(Number).length === 2 ? (() => { const [h, m] = timeSlot.split(":").map(Number); const end = new Date(); end.setHours(h + 1, m); return `${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}`; })() : ""}</span>
+                  </div>
+                  <div className="flex items-center justify-between px-5 py-3.5">
+                    <span className="text-[0.85rem] text-ink-soft">Slime Makers</span>
+                    <span className="text-[0.9rem] font-medium text-ink">{people} {people === 1 ? "person" : "people"}</span>
+                  </div>
+                  <div className="flex items-center justify-between px-5 py-3.5">
+                    <span className="text-[0.85rem] text-ink-soft">Name</span>
+                    <span className="text-[0.9rem] font-medium text-ink">{name}</span>
+                  </div>
+                  {phone && (
+                    <div className="flex items-center justify-between px-5 py-3.5">
+                      <span className="text-[0.85rem] text-ink-soft">Phone</span>
+                      <span className="text-[0.9rem] font-medium text-ink">{phone}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between px-5 py-3.5">
+                    <span className="text-[0.85rem] text-ink-soft">Total Paid</span>
+                    <span className="text-[0.9rem] font-display text-ink">£{totalPrice.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Address */}
+              <div className="mt-4 bg-sky-blue-light/10 rounded-xl px-5 py-4 flex items-start gap-3">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-ink-soft flex-shrink-0 mt-0.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
+                <div>
+                  <div className="text-[0.85rem] font-medium text-ink">Unit A, Feathers Yard, Holt, NR25 6BF</div>
+                  <div className="text-[0.8rem] text-ink-soft mt-0.5">Please arrive 5 minutes before your session</div>
+                </div>
+              </div>
+
+              <button onClick={() => { setStatus("idle"); setBookingId(""); }} className="btn-primary w-full justify-center mt-6">
                 Make Another Booking
               </button>
             </div>
@@ -377,6 +426,7 @@ function BookingPageInner() {
                         const data = await res.json();
                         if (res.ok && data.success) {
                           // Booking confirmed — send email
+                          if (data.bookingId) setBookingId(data.bookingId);
                           fetch("/api/booking-confirmation", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
