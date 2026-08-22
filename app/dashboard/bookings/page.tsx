@@ -42,6 +42,17 @@ export default function BookingsAdminPage() {
   const [customerQuery, setCustomerQuery] = useState("");
   const [customerResults, setCustomerResults] = useState<Booking[]>([]);
   const [duplicates, setDuplicates] = useState<{ key: string; bookings: Booking[] }[]>([]);
+  const [sortField, setSortField] = useState<"date" | "time_slot" | "people" | "total_price" | "name" | "payment_status" | "created_at">("date");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  function toggleSort(field: typeof sortField) {
+    if (sortField === field) {
+      setSortDir(sortDir === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDir("asc");
+    }
+  }
 
   useEffect(() => { loadBookings(); }, [filter]);
 
@@ -234,6 +245,20 @@ export default function BookingsAdminPage() {
   const selectedDateBookings = selectedDate ? (bookingsByDate[selectedDate] || []) : [];
   const totalPeople = filteredBookings.reduce((sum, b) => sum + b.people, 0);
   const totalRevenue = filteredBookings.filter((b) => b.payment_status === "paid").reduce((sum, b) => sum + Number(b.total_price), 0);
+
+  const sortedBookings = [...filteredBookings].sort((a, b) => {
+    let cmp = 0;
+    switch (sortField) {
+      case "date": cmp = a.date.localeCompare(b.date) || a.time_slot.localeCompare(b.time_slot); break;
+      case "time_slot": cmp = a.time_slot.localeCompare(b.time_slot); break;
+      case "people": cmp = a.people - b.people; break;
+      case "total_price": cmp = Number(a.total_price) - Number(b.total_price); break;
+      case "name": cmp = a.name.toLowerCase().localeCompare(b.name.toLowerCase()); break;
+      case "payment_status": cmp = (a.payment_status || "unpaid").localeCompare(b.payment_status || "unpaid"); break;
+      case "created_at": cmp = a.created_at.localeCompare(b.created_at); break;
+    }
+    return sortDir === "asc" ? cmp : -cmp;
+  });
 
   return (
     <div className="py-8 md:py-10 px-5 md:px-10">
@@ -475,19 +500,19 @@ export default function BookingsAdminPage() {
                 <thead>
                   <tr className="text-left text-[0.7rem] text-ink-soft uppercase tracking-wider border-b-2 border-ink/[0.08]">
                     {bulkMode && <th className="pb-3 pr-2"></th>}
-                    <th className="pb-3 pr-4 font-semibold">Session Date</th>
-                    <th className="pb-3 pr-4 font-semibold">Time</th>
-                    <th className="pb-3 pr-4 font-semibold">People</th>
-                    <th className="pb-3 pr-4 font-semibold">Price</th>
-                    <th className="pb-3 pr-4 font-semibold">Payment</th>
-                    <th className="pb-3 pr-4 font-semibold">Customer</th>
-                    <th className="pb-3 pr-4 font-semibold">Booked</th>
+                    <th className="pb-3 pr-4 font-semibold cursor-pointer hover:text-ink select-none" onClick={() => toggleSort("date")}>Session Date {sortField === "date" && (sortDir === "asc" ? "↑" : "↓")}</th>
+                    <th className="pb-3 pr-4 font-semibold cursor-pointer hover:text-ink select-none" onClick={() => toggleSort("time_slot")}>Time {sortField === "time_slot" && (sortDir === "asc" ? "↑" : "↓")}</th>
+                    <th className="pb-3 pr-4 font-semibold cursor-pointer hover:text-ink select-none" onClick={() => toggleSort("people")}>People {sortField === "people" && (sortDir === "asc" ? "↑" : "↓")}</th>
+                    <th className="pb-3 pr-4 font-semibold cursor-pointer hover:text-ink select-none" onClick={() => toggleSort("total_price")}>Price {sortField === "total_price" && (sortDir === "asc" ? "↑" : "↓")}</th>
+                    <th className="pb-3 pr-4 font-semibold cursor-pointer hover:text-ink select-none" onClick={() => toggleSort("payment_status")}>Payment {sortField === "payment_status" && (sortDir === "asc" ? "↑" : "↓")}</th>
+                    <th className="pb-3 pr-4 font-semibold cursor-pointer hover:text-ink select-none" onClick={() => toggleSort("name")}>Customer {sortField === "name" && (sortDir === "asc" ? "↑" : "↓")}</th>
+                    <th className="pb-3 pr-4 font-semibold cursor-pointer hover:text-ink select-none" onClick={() => toggleSort("created_at")}>Booked {sortField === "created_at" && (sortDir === "asc" ? "↑" : "↓")}</th>
                     <th className="pb-3 pr-4 font-semibold">Attendance</th>
                     <th className="pb-3 font-semibold">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredBookings.map((b) => (
+                  {sortedBookings.map((b) => (
                     <tr key={b.id} className={`border-b border-ink/[0.05] hover:bg-ink/[0.02] transition-colors ${bulkMode && selectedBookings.has(b.id) ? "bg-sky-blue-light/20" : ""}`}>
                       {bulkMode && (
                         <td className="py-3 pr-2">
