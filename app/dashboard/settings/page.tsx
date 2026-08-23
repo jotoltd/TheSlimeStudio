@@ -1,15 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase, type BookingSettings, type SiteSettings, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, MAX_DAILY_BOOKINGS as DEFAULT_MAX } from "@/lib/supabase";
+import { supabase, type BookingSettings, type SiteSettings, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, MAX_DAILY_BOOKINGS as DEFAULT_MAX, STAMPS_PER_REWARD as DEFAULT_STAMPS } from "@/lib/supabase";
 
 export default function SettingsPage() {
-  const [tab, setTab] = useState<"site" | "bookings" | "payments">("site");
+  const [tab, setTab] = useState<"site" | "bookings" | "payments" | "loyalty">("site");
 
   // Site settings
   const [siteSettings, setSiteSettings] = useState<SiteSettings | null>(null);
   const [maintDate, setMaintDate] = useState("");
   const [savingMaint, setSavingMaint] = useState(false);
+
+  // Loyalty settings
+  const [stampsPerReward, setStampsPerReward] = useState(DEFAULT_STAMPS);
+  const [savingLoyalty, setSavingLoyalty] = useState(false);
+  const [loyaltyMsg, setLoyaltyMsg] = useState("");
 
   // Stripe settings
   const [stripeMode, setStripeMode] = useState<"live" | "test">("test");
@@ -35,6 +40,7 @@ export default function SettingsPage() {
       const s = ss as SiteSettings;
       setSiteSettings(s);
       setMaintDate(new Date(s.launch_date).toISOString().slice(0, 16));
+      if (s.stamps_per_reward) setStampsPerReward(s.stamps_per_reward);
     }
 
     try {
@@ -66,6 +72,15 @@ export default function SettingsPage() {
     const newVal = !siteSettings.loyalty_enabled;
     setSiteSettings({ ...siteSettings, loyalty_enabled: newVal });
     await supabase.from("site_settings").update({ loyalty_enabled: newVal }).eq("id", 1);
+  }
+
+  async function saveLoyaltySettings() {
+    if (stampsPerReward < 1) { setLoyaltyMsg("Stamps per reward must be at least 1"); return; }
+    setSavingLoyalty(true); setLoyaltyMsg("");
+    const { error } = await supabase.from("site_settings").update({ stamps_per_reward: stampsPerReward }).eq("id", 1);
+    setSavingLoyalty(false);
+    if (error) setLoyaltyMsg("Failed to save: " + error.message);
+    else setLoyaltyMsg("Loyalty settings saved!");
   }
 
   async function saveMaintDate() {
@@ -120,6 +135,7 @@ export default function SettingsPage() {
   const tabs = [
     { key: "site" as const, icon: "🌐", label: "Site" },
     { key: "bookings" as const, icon: "📅", label: "Bookings" },
+    { key: "loyalty" as const, icon: "⭐", label: "Loyalty" },
     { key: "payments" as const, icon: "💳", label: "Payments" },
   ];
 
@@ -323,6 +339,86 @@ export default function SettingsPage() {
             <p className="text-[0.8rem] text-ink-soft">
               Both booking and subscription payments use the active mode. Switching takes effect immediately.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Loyalty tab */}
+      {tab === "loyalty" && (
+        <div className="space-y-6">
+          {/* Enable/disable */}
+          <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div>
+                <h2 className="font-display text-[1.1rem] mb-1">Loyalty Programme</h2>
+                <p className="text-[0.85rem] text-ink-soft">
+                  {siteSettings?.loyalty_enabled
+                    ? "ON — customers earn stamps per booking and can check their card online"
+                    : "OFF — loyalty page is hidden and stamps are not awarded"}
+                </p>
+              </div>
+              <button
+                onClick={toggleLoyalty}
+                className={`relative w-16 h-9 rounded-full transition-colors ${siteSettings?.loyalty_enabled ? "bg-green-400" : "bg-ink/15"}`}
+              >
+                <span
+                  className={`absolute top-1 left-1 w-7 h-7 rounded-full bg-white shadow-sm transition-transform ${
+                    siteSettings?.loyalty_enabled ? "translate-x-7" : ""
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
+          {/* Stamps per reward */}
+          <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm">
+            <h2 className="font-display text-[1.1rem] mb-1">Stamps Per Free Session</h2>
+            <p className="text-[0.85rem] text-ink-soft mb-4">
+              How many stamps a customer needs to collect before earning a free session.
+            </p>
+            <div className="flex items-center gap-3 flex-wrap">
+              <input
+                type="number"
+                min="1"
+                max="50"
+                value={stampsPerReward}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setStampsPerReward(v === "" ? 0 : parseInt(v) || 0);
+                }}
+                className="w-32 px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
+              />
+              <span className="text-[0.85rem] text-ink-soft">stamps = 1 free session</span>
+              <button
+                onClick={saveLoyaltySettings}
+                disabled={savingLoyalty}
+                className="px-6 py-2.5 rounded-full bg-sky-blue-light text-ink text-[0.9rem] font-medium disabled:opacity-60 hover:-translate-y-0.5 hover:shadow-sm transition-all"
+              >
+                {savingLoyalty ? "Saving..." : "Save"}
+              </button>
+            </div>
+            {loyaltyMsg && (
+              <p className={`text-[0.85rem] mt-3 ${loyaltyMsg.includes("saved") ? "text-green-600" : "text-red-600"}`}>{loyaltyMsg}</p>
+            )}
+            <div className="mt-4 bg-sky-blue-light/10 rounded-xl p-4">
+              <p className="text-[0.8rem] text-ink-soft">
+                <strong>How it works:</strong> Each paid online booking awards 1 stamp. When a customer reaches {stampsPerReward || DEFAULT_STAMPS} stamps, they automatically earn a free session reward. Rewards can be redeemed from the admin loyalty dashboard.
+              </p>
+            </div>
+          </div>
+
+          {/* Quick link to loyalty dashboard */}
+          <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm">
+            <h2 className="font-display text-[1.1rem] mb-1">Manage Loyalty Cards</h2>
+            <p className="text-[0.85rem] text-ink-soft mb-4">
+              View all member cards, add/remove stamps, and redeem free session rewards.
+            </p>
+            <a
+              href="/dashboard/loyalty"
+              className="inline-block px-6 py-2.5 rounded-full bg-bright-lavender text-white text-[0.9rem] font-medium hover:opacity-90 transition-opacity"
+            >
+              Go to Loyalty Dashboard →
+            </a>
           </div>
         </div>
       )}

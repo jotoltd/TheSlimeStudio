@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { supabase, STAMPS_PER_REWARD } from "@/lib/supabase";
+import { supabase, STAMPS_PER_REWARD as DEFAULT_STAMPS } from "@/lib/supabase";
 import type { LoyaltyCard } from "@/lib/supabase";
 
 export default function LoyaltyPage() {
@@ -13,15 +13,19 @@ export default function LoyaltyPage() {
   const [searched, setSearched] = useState(false);
   const [loyaltyEnabled, setLoyaltyEnabled] = useState(true);
   const [checkingEnabled, setCheckingEnabled] = useState(true);
+  const [stampsPerReward, setStampsPerReward] = useState(DEFAULT_STAMPS);
 
   useEffect(() => {
     supabase
       .from("site_settings")
-      .select("loyalty_enabled")
+      .select("loyalty_enabled, stamps_per_reward")
       .eq("id", 1)
       .single()
       .then(({ data }) => {
-        if (data) setLoyaltyEnabled(!!data.loyalty_enabled);
+        if (data) {
+          setLoyaltyEnabled(!!data.loyalty_enabled);
+          if (data.stamps_per_reward) setStampsPerReward(data.stamps_per_reward);
+        }
         setCheckingEnabled(false);
       });
   }, []);
@@ -40,7 +44,7 @@ export default function LoyaltyPage() {
   }
 
   const availableRewards = card ? card.rewards_earned - card.rewards_redeemed : 0;
-  const stampsNeeded = card ? STAMPS_PER_REWARD - card.stamps : STAMPS_PER_REWARD;
+  const stampsNeeded = card ? stampsPerReward - card.stamps : stampsPerReward;
 
   return (
     <>
@@ -50,7 +54,7 @@ export default function LoyaltyPage() {
         <div className="container">
           <h1 className="font-display text-[1.5rem] md:text-[3.2rem] mt-3 mb-3 text-ink">Loyalty Card</h1>
           <p className="text-[0.95rem] md:text-[1.1rem] text-ink/80 max-w-[560px] mx-auto">
-            Book {STAMPS_PER_REWARD} sessions, get your next one free! Enter your email below to check your stamps.
+            Book {stampsPerReward} sessions, get your next one free! Enter your email below to check your stamps.
           </p>
         </div>
       </section>
@@ -107,10 +111,10 @@ export default function LoyaltyPage() {
                 <div className="bg-gradient-to-br from-sky-blue-light/20 to-bright-lavender/10 rounded-2xl p-5 mb-5">
                   <div className="flex items-center justify-between mb-4">
                     <span className="font-display text-[0.9rem] text-ink">Your Stamp Card</span>
-                    <span className="text-[0.8rem] text-ink-soft">{card.stamps} / {STAMPS_PER_REWARD}</span>
+                    <span className="text-[0.8rem] text-ink-soft">{card.stamps} / {stampsPerReward}</span>
                   </div>
                   <div className="flex gap-2 justify-center flex-wrap">
-                    {Array.from({ length: STAMPS_PER_REWARD }).map((_, i) => (
+                    {Array.from({ length: stampsPerReward }).map((_, i) => (
                       <div
                         key={i}
                         className={`w-12 h-12 rounded-full grid place-items-center text-lg font-bold transition-all ${
@@ -202,9 +206,9 @@ export default function LoyaltyPage() {
               </div>
               <div className="text-center">
                 <div className="w-10 h-10 rounded-full bg-bright-lavender/20 grid place-items-center mx-auto mb-2">
-                  <span className="font-display text-[0.9rem] text-bright-lavender">{STAMPS_PER_REWARD}</span>
+                  <span className="font-display text-[0.9rem] text-bright-lavender">{stampsPerReward}</span>
                 </div>
-                <p className="text-[0.8rem] text-ink-soft">Collect {STAMPS_PER_REWARD} stamps for a free session</p>
+                <p className="text-[0.8rem] text-ink-soft">Collect {stampsPerReward} stamps for a free session</p>
               </div>
             </div>
           </div>

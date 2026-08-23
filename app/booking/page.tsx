@@ -392,7 +392,7 @@ function BookingPageInner() {
                   <div>
                     <div className="text-[0.85rem] font-medium text-bright-lavender">You earned a loyalty stamp!</div>
                     <div className="text-[0.8rem] text-ink-soft mt-0.5">
-                      Collect 10 stamps for a free session.{" "}
+                      Collect stamps for a free session.{" "}
                       <a href="/loyalty" className="underline hover:text-ink">Check your card →</a>
                     </div>
                   </div>

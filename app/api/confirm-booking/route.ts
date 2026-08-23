@@ -153,11 +153,12 @@ export async function POST(req: NextRequest) {
   try {
     const { data: siteSettings } = await supabaseAdmin
       .from("site_settings")
-      .select("loyalty_enabled")
+      .select("loyalty_enabled, stamps_per_reward")
       .eq("id", 1)
       .single();
 
     if (siteSettings?.loyalty_enabled) {
+      const stampsPerReward = siteSettings.stamps_per_reward || STAMPS_PER_REWARD;
       const { data: existingCard } = await supabaseAdmin
         .from("loyalty_cards")
         .select("id, stamps, total_stamps, rewards_earned")
@@ -170,9 +171,9 @@ export async function POST(req: NextRequest) {
         let newRewards = existingCard.rewards_earned;
         let stampCount = newStamps;
 
-        if (newStamps >= STAMPS_PER_REWARD) {
+        if (newStamps >= stampsPerReward) {
           newRewards += 1;
-          stampCount = newStamps - STAMPS_PER_REWARD;
+          stampCount = newStamps - stampsPerReward;
         }
 
         await supabaseAdmin

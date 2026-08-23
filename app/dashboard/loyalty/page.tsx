@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase, type LoyaltyCard, STAMPS_PER_REWARD } from "@/lib/supabase";
+import { supabase, type LoyaltyCard, STAMPS_PER_REWARD as DEFAULT_STAMPS } from "@/lib/supabase";
 import { useToast } from "@/components/Toast";
 import PageHeader from "@/components/PageHeader";
 
@@ -9,6 +9,7 @@ export default function LoyaltyAdminPage() {
   const [cards, setCards] = useState<LoyaltyCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [stampsPerReward, setStampsPerReward] = useState(DEFAULT_STAMPS);
   const { toast } = useToast();
 
   useEffect(() => { load(); }, []);
@@ -17,6 +18,8 @@ export default function LoyaltyAdminPage() {
     setLoading(true);
     const { data } = await supabase.from("loyalty_cards").select("*").order("updated_at", { ascending: false });
     if (data) setCards(data as LoyaltyCard[]);
+    const { data: settings } = await supabase.from("site_settings").select("stamps_per_reward").eq("id", 1).single();
+    if (settings?.stamps_per_reward) setStampsPerReward(settings.stamps_per_reward);
     setLoading(false);
   }
 
@@ -50,9 +53,9 @@ export default function LoyaltyAdminPage() {
     const newTotal = card.total_stamps + 1;
     let newRewards = card.rewards_earned;
     let stampCount = newStamps;
-    if (newStamps >= STAMPS_PER_REWARD) {
+    if (newStamps >= stampsPerReward) {
       newRewards += 1;
-      stampCount = newStamps - STAMPS_PER_REWARD;
+      stampCount = newStamps - stampsPerReward;
     }
     const { error } = await supabase
       .from("loyalty_cards")
@@ -76,7 +79,7 @@ export default function LoyaltyAdminPage() {
 
   return (
     <div className="py-8 md:py-10 px-5 md:px-10">
-      <PageHeader title="Loyalty Programme" subtitle={`Digital stamp cards — ${STAMPS_PER_REWARD} stamps = 1 free session`} />
+      <PageHeader title="Loyalty Programme" subtitle={`Digital stamp cards — ${stampsPerReward} stamps = 1 free session`} />
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -140,7 +143,7 @@ export default function LoyaltyAdminPage() {
 
                   {/* Stamp visual */}
                   <div className="flex gap-1.5 flex-wrap mb-3">
-                    {Array.from({ length: STAMPS_PER_REWARD }).map((_, i) => (
+                    {Array.from({ length: stampsPerReward }).map((_, i) => (
                       <div
                         key={i}
                         className={`w-8 h-8 rounded-full grid place-items-center text-[0.7rem] font-bold ${

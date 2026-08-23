@@ -107,6 +107,7 @@ export type SiteSettings = {
   id: number;
   maintenance_mode: boolean;
   loyalty_enabled: boolean;
+  stamps_per_reward: number;
   launch_date: string;
   stripe_mode?: string;
   updated_at: string;
