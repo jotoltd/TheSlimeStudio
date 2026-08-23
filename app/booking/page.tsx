@@ -380,6 +380,18 @@ function BookingPageInner() {
               <button onClick={() => { setStatus("idle"); setBookingId(""); }} className="btn-primary w-full justify-center mt-6">
                 Make Another Booking
               </button>
+
+              {/* Loyalty stamp notification */}
+              <div className="mt-4 bg-bright-lavender/10 rounded-xl px-5 py-4 flex items-center gap-3">
+                <span className="text-2xl">★</span>
+                <div>
+                  <div className="text-[0.85rem] font-medium text-bright-lavender">You earned a loyalty stamp!</div>
+                  <div className="text-[0.8rem] text-ink-soft mt-0.5">
+                    Collect 10 stamps for a free session.{" "}
+                    <a href="/loyalty" className="underline hover:text-ink">Check your card →</a>
+                  </div>
+                </div>
+              </div>
             </div>
           ) : status === "cancelled" ? (
             <div className="bg-white rounded-3xl p-6 md:p-10 shadow-sm text-center">

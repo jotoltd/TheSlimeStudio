@@ -114,6 +114,20 @@ export type SiteSettings = {
 export const TIME_SLOTS = ["10:00", "11:00", "12:00", "13:00", "14:00", "15:00"];
 export const SLOT_CAPACITY = 5;
 export const MAX_DAILY_BOOKINGS = 5;
+
+export type LoyaltyCard = {
+  id: string;
+  email: string;
+  name: string;
+  stamps: number;
+  total_stamps: number;
+  rewards_earned: number;
+  rewards_redeemed: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export const STAMPS_PER_REWARD = 10;
 export const PRICE_PER_PERSON = 15;
 
 export type OpeningHour = {

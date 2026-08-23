@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripeAsync } from "@/lib/stripe";
-import { supabaseAdmin } from "@/lib/supabase";
+import { supabaseAdmin, STAMPS_PER_REWARD } from "@/lib/supabase";
 import { getResend, EMAIL_FROM, CONTACT_EMAIL, logEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
@@ -147,6 +147,49 @@ export async function POST(req: NextRequest) {
     }
   } catch (e) {
     console.error("Failed to send admin notification:", e);
+  }
+
+  // Award loyalty stamp
+  try {
+    const { data: existingCard } = await supabaseAdmin
+      .from("loyalty_cards")
+      .select("id, stamps, total_stamps, rewards_earned")
+      .eq("email", email.toLowerCase())
+      .single();
+
+    if (existingCard) {
+      const newStamps = existingCard.stamps + 1;
+      const newTotal = existingCard.total_stamps + 1;
+      let newRewards = existingCard.rewards_earned;
+      let stampCount = newStamps;
+
+      if (newStamps >= STAMPS_PER_REWARD) {
+        newRewards += 1;
+        stampCount = newStamps - STAMPS_PER_REWARD;
+      }
+
+      await supabaseAdmin
+        .from("loyalty_cards")
+        .update({
+          stamps: stampCount,
+          total_stamps: newTotal,
+          rewards_earned: newRewards,
+          name,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existingCard.id);
+    } else {
+      await supabaseAdmin.from("loyalty_cards").insert({
+        email: email.toLowerCase(),
+        name,
+        stamps: 1,
+        total_stamps: 1,
+        rewards_earned: 0,
+        rewards_redeemed: 0,
+      });
+    }
+  } catch (e) {
+    console.error("Failed to award loyalty stamp:", e);
   }
 
   return NextResponse.json({ success: true, bookingId: data.id, name, email, date, timeSlot, people, totalPrice });
