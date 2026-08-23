@@ -14,11 +14,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { date, time_slot, people, name, email, phone, is_party, notes, total_price } = await req.json();
+  const { date, time_slot, people, name, email, phone, is_party, notes, total_price, duration } = await req.json();
 
   if (!date || !time_slot || !name) {
     return NextResponse.json({ error: "Date, time slot and name are required" }, { status: 400 });
   }
+
+  const bookingDuration = duration === 2 ? 2 : 1;
 
   const numPeople = parseInt(people, 10) || 1;
 
@@ -66,22 +68,59 @@ export async function POST(req: NextRequest) {
   }
 
   // Insert the booking
+  const sessionId = `manual_${Date.now()}`;
   const { data, error } = await supabaseAdmin.from("bookings").insert({
     date,
     time_slot,
     people: numPeople,
     total_price: total_price || 0,
     name,
-    email: email || null,
+    email: email || "",
     phone: phone || null,
     is_party: is_party || false,
     payment_status: "paid",
     notes: notes || null,
-    stripe_session_id: `manual_${Date.now()}`,
+    stripe_session_id: sessionId,
   }).select("id").single();
 
   if (error) {
     return NextResponse.json({ error: "Failed to add booking: " + error.message }, { status: 500 });
+  }
+
+  // If 2-hour duration, create a second booking to block the next hour
+  if (bookingDuration === 2) {
+    const [h, m] = time_slot.split(":").map(Number);
+    const nextSlot = `${String(h + 1).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+
+    const { error: err2 } = await supabaseAdmin.from("bookings").insert({
+      date,
+      time_slot: nextSlot,
+      people: numPeople,
+      total_price: 0,
+      name,
+      email: email || "",
+      phone: phone || null,
+      is_party: is_party || false,
+      payment_status: "paid",
+      notes: `[Blocked for 2-hour party — primary slot ${time_slot}]${notes ? " " + notes : ""}`,
+      stripe_session_id: `${sessionId}_slot2`,
+    });
+
+    if (err2) {
+      return NextResponse.json({
+        success: true,
+        bookingId: data.id,
+        slotRemaining: slotRemaining - numPeople,
+        warning: `Primary booking created at ${time_slot}, but failed to block ${nextSlot}: ${err2.message}`,
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      bookingId: data.id,
+      slotRemaining: slotRemaining - numPeople,
+      secondSlotBlocked: nextSlot,
+    });
   }
 
   return NextResponse.json({ success: true, bookingId: data.id, slotRemaining: slotRemaining - numPeople });

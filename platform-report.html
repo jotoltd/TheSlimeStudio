@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Slime Studio — Full Platform Report</title>
+<style>
+  @page { margin: 1.8cm; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; color: #1a1a2e; line-height: 1.6; background: #f5f5f7; padding: 40px 20px; }
+  .page { max-width: 820px; margin: 0 auto 40px; background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 2px 20px rgba(0,0,0,0.08); }
+  .cover { background: linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%); padding: 90px 60px; text-align: center; }
+  .cover h1 { font-size: 2.6rem; font-weight: 800; margin-bottom: 12px; color: #1a1a2e; }
+  .cover .subtitle { font-size: 1.15rem; color: #1a1a2e; opacity: 0.8; margin-bottom: 30px; }
+  .cover .meta { display: inline-block; background: rgba(255,255,255,0.5); border-radius: 100px; padding: 8px 24px; font-size: 0.9rem; color: #1a1a2e; font-weight: 500; }
+  .cover .date { margin-top: 20px; font-size: 0.85rem; color: #1a1a2e; opacity: 0.6; }
+  .content { padding: 50px 60px; }
+  .content-section { margin-bottom: 40px; }
+  .content-section:last-child { margin-bottom: 0; }
+  h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 2px solid #e8e8ed; color: #1a1a2e; }
+  h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: 8px; color: #1a1a2e; }
+  h4 { font-size: 0.95rem; font-weight: 600; margin-bottom: 6px; color: #1a1a2e; }
+  p { margin-bottom: 12px; font-size: 0.95rem; color: #444; }
+  .badge { display: inline-block; padding: 3px 12px; border-radius: 100px; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .badge-high { background: #f8d7da; color: #721c24; }
+  .badge-medium { background: #cce5ff; color: #004085; }
+  .badge-low { background: #fff3cd; color: #856404; }
+  .badge-bug { background: #e2d9f3; color: #4a3f7a; }
+  .badge-missing { background: #d1ecf1; color: #0c5460; }
+  .badge-done { background: #d4edda; color: #155724; }
+  .card { border: 1px solid #e8e8ed; border-radius: 12px; padding: 20px 24px; margin-bottom: 14px; }
+  .card-high { border-left: 4px solid #dc3545; }
+  .card-medium { border-left: 4px solid #007bff; }
+  .card-low { border-left: 4px solid #ffc107; }
+  .card-bug { border-left: 4px solid #6f42c1; }
+  .card-missing { border-left: 4px solid #17a2b8; }
+  .card-title { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+  .card-title h3 { margin-bottom: 0; }
+  .card p { margin-bottom: 0; }
+  .card .effort { margin-top: 8px; font-size: 0.83rem; color: #888; }
+  ul { margin: 8px 0 12px 20px; }
+  li { margin-bottom: 6px; font-size: 0.92rem; color: #444; }
+  .checklist { list-style: none; margin: 12px 0; }
+  .checklist li { padding-left: 28px; position: relative; margin-bottom: 10px; }
+  .checklist li::before { content: "✓"; position: absolute; left: 0; top: 0; width: 20px; height: 20px; background: #28a745; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; }
+  .checklist-missing { list-style: none; margin: 12px 0; }
+  .checklist-missing li { padding-left: 28px; position: relative; margin-bottom: 10px; }
+  .checklist-missing li::before { content: "✕"; position: absolute; left: 0; top: 0; width: 20px; height: 20px; background: #dc3545; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.88rem; }
+  th { text-align: left; padding: 10px 14px; background: #f8f9fa; font-weight: 600; color: #1a1a2e; border-bottom: 2px solid #e8e8ed; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; }
+  td { padding: 10px 14px; border-bottom: 1px solid #e8e8ed; color: #444; }
+  .page-break { page-break-after: always; }
+  .footer { text-align: center; padding: 30px 60px; background: #f8f9fa; font-size: 0.85rem; color: #666; border-top: 1px solid #e8e8ed; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 20px 0; }
+  .stat { text-align: center; padding: 18px; border-radius: 12px; background: #f8f9fa; }
+  .stat-number { font-size: 1.7rem; font-weight: 800; color: #1a1a2e; }
+  .stat-label { font-size: 0.75rem; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+  .platform-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 16px 0; }
+  .platform-item { padding: 14px 18px; border-radius: 10px; background: #f8f9fa; border: 1px solid #e8e8ed; }
+  .platform-item h3 { font-size: 0.95rem; margin-bottom: 4px; }
+  .platform-item p { font-size: 0.83rem; color: #666; margin-bottom: 0; }
+  .tech-stack { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 16px 0; }
+  .tech-item { padding: 14px 18px; border-radius: 10px; background: #f8f9fa; border: 1px solid #e8e8ed; }
+  .tech-item h4 { margin-bottom: 4px; }
+  .tech-item p { font-size: 0.83rem; color: #666; margin-bottom: 0; }
+  .toc { list-style: none; margin: 16px 0; }
+  .toc li { padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 0.95rem; }
+  .toc li a { text-decoration: none; color: #1a1a2e; font-weight: 500; }
+  .toc li span { color: #888; font-size: 0.85rem; margin-left: 8px; }
+  .callout { background: #f0f7ff; border: 1px solid #cce5ff; border-radius: 12px; padding: 16px 20px; margin: 16px 0; font-size: 0.9rem; color: #004085; }
+  .callout-warning { background: #fff9e6; border: 1px solid #ffe082; border-radius: 12px; padding: 16px 20px; margin: 16px 0; font-size: 0.9rem; color: #856404; }
+  .callout-info { background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 12px; padding: 16px 20px; margin: 16px 0; font-size: 0.9rem; color: #2e7d32; }
+  code { background: #f0f0f5; padding: 2px 6px; border-radius: 4px; font-size: 0.85rem; font-family: 'SF Mono', 'Monaco', 'Courier New', monospace; }
+  @media print { body { background: white; padding: 0; } .page { box-shadow: none; margin: 0; max-width: none; border-radius: 0; } }
+</style>
+</head>
+<body>
+
+<!-- ============ COVER ============ -->
+<div class="page">
+  <div class="cover">
+    <h1>Full Platform Report</h1>
+    <div class="subtitle">The Slime Studio — Holt, Norfolk</div>
+    <div class="meta">Suggestions · Recommendations · Missing Features · Bugs</div>
+    <div class="date">August 2026</div>
+  </div>
+  <div class="content">
+    <div class="content-section">
+      <h2>Document Purpose</h2>
+      <p>
+        This is a comprehensive audit of the entire Slime Studio platform — every page, every feature, every API route.
+        It covers what's currently working, what's missing entirely, bugs and inconsistencies found, and a full set of
+        suggestions and recommendations organised by area and priority. This document is intended to help the client
+        understand the current state of the platform and make informed decisions about what to build next.
+      </p>
+    </div>
+
+    <div class="content-section">
+      <h2>At a Glance</h2>
+      <div class="stats">
+        <div class="stat"><div class="stat-number">11</div><div class="stat-label">Platform Areas</div></div>
+        <div class="stat"><div class="stat-number">48</div><div class="stat-label">Suggestions</div></div>
+        <div class="stat"><div class="stat-number">14</div><div class="stat-label">Missing Features</div></div>
+        <div class="stat"><div class="stat-number">9</div><div class="stat-label">Bugs / Issues</div></div>
+      </div>
+    </div>
+
+    <div class="content-section">
+      <h2>Table of Contents</h2>
+      <ul class="toc">
+        <li><a href="#overview">1. Platform Overview</a><span>Current tech stack and page inventory</span></li>
+        <li><a href="#booking">2. Booking System</a><span>Suggestions, missing features, bugs</span></li>
+        <li><a href="#shop">3. Online Shop</a><span>Suggestions, missing features, bugs</span></li>
+        <li><a href="#parties">4. Party Bookings</a><span>Suggestions, missing features</span></li>
+        <li><a href="#admin">5. Admin Dashboard</a><span>Suggestions, missing features, bugs</span></li>
+        <li><a href="#customer">6. Customer-Facing Pages</a><span>Homepage, About, Gallery, FAQs, Contact</span></li>
+        <li><a href="#email">7. Email &amp; Communications</a><span>Suggestions, missing features</span></li>
+        <li><a href="#marketing">8. Marketing &amp; Retention</a><span>Loyalty, gift vouchers, referrals</span></li>
+        <li><a href="#security">9. Security &amp; Performance</a><span>Suggestions, bugs</span></li>
+        <li><a href="#seo">10. SEO &amp; Discoverability</a><span>Suggestions, missing features</span></li>
+        <li><a href="#tech">11. Technical Debt</a><span>Code quality, consistency issues</span></li>
+        <li><a href="#priority">12. Priority Summary</a><span>All items sorted by priority</span></li>
+        <li><a href="#quickwins">13. Quick Wins</a><span>Items under 2 hours</span></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PLATFORM OVERVIEW ============ -->
+<div class="page page-break" id="overview">
+  <div class="content">
+    <div class="content-section">
+      <h2>1. Platform Overview</h2>
+      <p>The Slime Studio platform is a full-stack Next.js application handling online bookings with Stripe payments, an online shop, party enquiries, a subscription box service, and a comprehensive admin dashboard.</p>
+
+      <h3>Tech Stack</h3>
+      <div class="tech-stack">
+        <div class="tech-item"><h4>Frontend</h4><p>Next.js 13 App Router, React, Tailwind CSS</p></div>
+        <div class="tech-item"><h4>Backend</h4><p>Next.js API routes (22 endpoints)</p></div>
+        <div class="tech-item"><h4>Database</h4><p>Supabase (PostgreSQL) with Row Level Security</p></div>
+        <div class="tech-item"><h4>Payments</h4><p>Stripe Payment Intents + Checkout Sessions, 3D Secure</p></div>
+        <div class="tech-item"><h4>Email</h4><p>Resend API (transactional emails)</p></div>
+        <div class="tech-item"><h4>Hosting</h4><p>Vercel (production deployments)</p></div>
+        <div class="tech-item"><h4>Fonts</h4><p>Google Fonts — Poppins (300–600)</p></div>
+        <div class="tech-item"><h4>Icons</h4><p>Mixed — SVG (admin sidebar), emoji (customer pages)</p></div>
+      </div>
+
+      <h3>Page Inventory</h3>
+      <div class="platform-grid">
+        <div class="platform-item"><h3>Homepage</h3><p>Hero, how-it-works, gallery preview, why-choose-us, CTA</p></div>
+        <div class="platform-item"><h3>Booking</h3><p>Calendar, time slots, Stripe payment, 3DS, success page</p></div>
+        <div class="platform-item"><h3>Shop</h3><p>Product catalogue, category filters, cart, Stripe checkout</p></div>
+        <div class="platform-item"><h3>Parties</h3><p>Info page, tiered pricing, what's included, enquiry form</p></div>
+        <div class="platform-item"><h3>About</h3><p>Image carousel, studio story, feature cards, CTAs</p></div>
+        <div class="platform-item"><h3>Gallery</h3><p>Static emoji placeholder grid (no real photos)</p></div>
+        <div class="platform-item"><h3>FAQs</h3><p>Static 10-question list</p></div>
+        <div class="platform-item"><h3>Contact</h3><p>Info cards + enquiry form to Supabase</p></div>
+        <div class="platform-item"><h3>Subscribe</h3><p>Slime subscription box, Stripe checkout, success/cancel</p></div>
+        <div class="platform-item"><h3>Admin Login</h3><p>Token-based auth, session cookie</p></div>
+        <div class="platform-item"><h3>Admin Dashboard</h3><p>Overview, bookings, orders, shop, enquiries, revenue, subscribers, subscriptions, opening hours, content, email logs, settings, export</p></div>
+        <div class="platform-item"><h3>API Routes</h3><p>22 endpoints covering bookings, payments, shop, subscriptions, auth, emails, exports</p></div>
+      </div>
+    </div>
+
+    <div class="content-section">
+      <h3>What's Working Well</h3>
+      <ul class="checklist">
+        <li><strong>Triple-layered capacity checks</strong> — Client, payment intent API, and confirm-booking API all verify slot and daily capacity independently</li>
+        <li><strong>3D Secure support</strong> — Stripe Elements with automatic 3DS redirect, booking details recovered from payment intent metadata</li>
+        <li><strong>Idempotency protection</strong> — Duplicate booking prevention via <code>stripe_session_id</code> check</li>
+        <li><strong>Server-side validation</strong> — Email format, past date/time prevention, slot availability against opening hours</li>
+        <li><strong>Opening hours + date overrides</strong> — Admin can override weekly schedule for specific dates</li>
+        <li><strong>Sortable admin table</strong> — Click any column header to sort bookings</li>
+        <li><strong>Duplicate booking detection</strong> — Same name + date + time slot flagged in admin</li>
+        <li><strong>Attendance tracking</strong> — Mark bookings as attended or no-show</li>
+        <li><strong>Revenue dashboard</strong> — Monthly charts, payment status breakdown, subscription revenue</li>
+        <li><strong>Email logging</strong> — All sent emails logged with status for audit trail</li>
+        <li><strong>Maintenance mode</strong> — Site can be put into maintenance from admin settings</li>
+        <li><strong>Stripe test/live toggle</strong> — Switch between test and live mode from admin</li>
+        <li><strong>Cart system</strong> — Full shopping cart with quantity management and drawer UI</li>
+        <li><strong>Subscription box</strong> — Monthly slime box with Stripe checkout</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ============ BOOKING SYSTEM ============ -->
+<div class="page page-break" id="booking">
+  <div class="content">
+    <div class="content-section">
+      <h2>2. Booking System</h2>
+
+      <h3>2.1 Suggestions</h3>
+
+      <div class="card card-high">
+        <div class="card-title"><h3>#1 SMS Booking Reminders</h3><span class="badge badge-high">High</span></div>
+        <p>Send an automated SMS reminder 24 hours before each session. The customer's phone number is already captured during booking. This would significantly reduce no-shows and last-minute cancellations. Integration via Twilio with a scheduled cron job (e.g. Vercel Cron).</p>
+        <div class="effort"><strong>Effort:</strong> 1–2 days · <strong>Ongoing cost:</strong> ~£0.04 per SMS</div>
+      </div>
+
+      <div class="card card-high">
+        <div class="card-title"><h3>#2 Customer Self-Service Rescheduling</h3><span class="badge badge-high">High</span></div>
+        <p>Currently, customers must contact the studio to change their date or time. A secure reschedule link in the confirmation email would allow customers to move their booking to another available slot (if capacity allows) without admin involvement. No refund needed — just update the date/time.</p>
+        <div class="effort"><strong>Effort:</strong> 2–3 days</div>
+      </div>
+
+      <div class="card card-medium">
+        <div class="card-title"><h3>#3 "What to Expect" Information on Booking Page</h3><span class="badge badge-medium">Medium</span></div>
+        <p>The booking page doesn't currently explain what happens during a session. A short info box covering age guidance, what to wear, session duration, what's included, and parking info would set expectations and reduce pre-booking enquiries.</p>
+        <div class="effort"><strong>Effort:</strong> 2 hours · <strong>Requires:</strong> Content from client</div>
+      </div>
+
+      <div class="card card-medium">
+        <div class="card-title"><h3>#4 Customer Self-Service Cancellation</h3><span class="badge badge-medium">Medium</span></div>
+        <p>Allow customers to cancel their own booking via a secure link in the confirmation email, with an automatic Stripe refund. Requires a cancellation policy decision (e.g. full refund up to 48 hours before, no refund within 48 hours). Currently all cancellations are admin-handled.</p>
+        <div class="effort"><strong>Effort:</strong> 1–2 days · <strong>Requires:</strong> Cancellation policy decision</div>
+      </div>
+
+      <div class="card card-low">
+        <div class="card-title"><h3>#5 Waitlist for Full Slots</h3><span class="badge badge-low">Low</span></div>
+        <p>When a slot is full, customers see "Full" and must try another slot. A waitlist would capture their interest and automatically notify them if a spot opens up from a cancellation. This maximises capacity utilisation and captures demand data.</p>
+        <div class="effort"><strong>Effort:</strong> 2–3 days</div>
+      </div>
+
+      <div class="card card-low">
+        <div class="card-title"><h3>#6 Time Ranges on Slot Selection</h3><span class="badge badge-low">Low</span></div>
+        <p>Time slots currently show "11:00" but not the session end time. Displaying "11:00–12:00" would make it clearer that sessions are one hour and help customers plan their day.</p>
+        <div class="effort"><strong>Effort:</strong> 30 minutes</div>
+      </div>
+
+      <div class="card card-low">
+        <div class="card-title"><h3>#7 Group / Family Booking Names</h3><span class="badge badge-low">Low</span></div>
+        <p>Currently a booking has one name. For groups, it would be useful to capture the names of all attendees (especially for parties and school trips). This helps with check-in and safety registers.</p>
+        <div class="effort"><strong>Effort:</strong> 1 day</div>
+      </div>
+
+      <h3>2.2 Missing Features</h3>
+
+      <div class="card card-missing">
+        <div class="card-title"><h3>#8 Booking Reference in Confirmation Email</h3><span class="badge badge-missing">Missing</span></div>
+        <p>The booking confirmation email sent via Resend does not include the booking reference number. The success page shows it, but the email doesn't. Customers can't reference their booking when contacting the studio.</p>
+        <div class="effort"><strong>Effort:</strong> 1 hour</div>
+      </div>
+
+      <div class="card card-missing">
+        <div class="card-title"><h3>#9 Reschedule / Cancel Link in Email</h3><span class="badge badge-missing">Missing</span></div>
+        <p>The confirmation email contains no actionable links for the customer to reschedule or cancel. They must phone or email the studio. See suggestions #2 and #4 above.</p>
+        <div class="effort"><strong>Effort:</strong> Covered by #2 and #4</div>
+      </div>
+
+      <div class="card card-missing">
+        <div class="card-title"><h3>#10 Booking Calendar on Success Page — Add to Calendar Button</h3><span class="badge badge-missing">Missing</span></div>
+        <p>The booking success page shows the session details but doesn't offer an "Add to Calendar" button (Google Calendar / Apple Calendar / Outlook). This would help customers remember their session and reduce no-shows.</p>
+        <div class="effort"><strong>Effort:</strong> 1 hour</div>
+      </div>
+
+      <h3>2.3 Bugs &amp; Issues</h3>
+
+      <div class="card card-bug">
+        <div class="card-title"><h3>#11 Revenue Page Counts All Bookings in Total</h3><span class="badge badge-bug">Bug</span></div>
+        <p>The revenue page at <code>/dashboard/revenue</code> shows "Total Revenue" which sums <code>total_price</code> for ALL bookings including unpaid, expired, and refunded. This inflates the figure. The "Paid Revenue" figure is correct, but the "Total Revenue" headline number is misleading. Should either be labelled "Gross (incl. unpaid)" or only count paid.</p>
+        <div class="effort"><strong>Effort:</strong> 30 minutes</div>
+      </div>
+
+      <div class="card card-bug">
+        <div class="card-title"><h3>#12 Calendar Date Construction Fragility</h3><span class="badge badge-bug">Bug</span></div>
+        <p>In <code>/app/dashboard/bookings/page.tsx</code>, the admin calendar constructs ISO date strings manually with string padding (e.g. <code>`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`</code>) instead of using <code>toISOString()</code>. This is fragile and could break across timezone edges. Should use proper date utilities.</p>
+        <div class="effort"><strong>Effort:</strong> 1 hour</div>
+      </div>
+
+      <div class="card card-bug">
+        <div class="card-title"><h3>#13 BookingCard Notes Still Uses Emoji</h3><span class="badge badge-bug">Bug</span></div>
+        <p>The <code>BookingCard</code> component in the admin bookings page still renders <code>📝 {b.notes}</code> with an emoji prefix. The rest of the admin was cleaned up to use SVG icons, but this was missed.</p>
+        <div class="effort"><strong>Effort:</strong> 5 minutes</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ONLINE SHOP ============ -->
+<div class="page page-break" id="shop">
+  <div class="content">
+    <div class="content-section">
+      <h2>3. Online Shop</h2>
+      <div class="callout">
+        <strong>Note:</strong> The shop is currently in "coming soon" mode with a countdown timer. The product catalogue, cart, and checkout are all built and functional — just hidden behind the <code>shopLive</code> flag in <code>shop_settings</code>. The suggestions below apply to when the shop goes live.
+      </div>
+
+      <h3>3.1 Suggestions</h3>
+
+      <div class="card card-high">
+        <div class="card-title"><h3>#14 Product Reviews &amp; Ratings</h3><span class="badge badge-high">High</span></div>
+        <p>Allow customers to leave star ratings and reviews on shop products. Social proof drives conversions significantly. Reviews could be collected post-purchase via a follow-up email asking customers to rate their items.</p>
+        <div class="effort"><strong>Effort:</strong> 2–3 days</div>
+      </div>
+
+      <div class="card card-high">
+        <div class="card-title"><h3>#15 Post-Purchase Review Email</h3><span class="badge badge-high">High</span></div>
+        <p>Automatically email customers 7 days after their shop order to ask for a product review and offer a discount code for their next purchase. This builds reviews, encourages repeat purchases, and strengthens the email list.</p>
+        <div class="effort"><strong>Effort:</strong> 1–2 days</div>
+      </div>
+
+      <div class="card card-medium">
+        <div class="card-title"><h3>#16 Discount Codes / Promotions</h3><span class="badge badge-medium">Medium</span></div>
+        <p>The shop has no discount code system. Adding promo codes (percentage off, fixed amount, free shipping) would enable seasonal promotions, influencer collaborations, and customer retention campaigns. Stripe Coupons can handle this server-side.</p>
+        <div class="effort"><strong>Effort:</strong> 1–2 days</div>
+      </div>
+
+      <div class="card card-medium">
+        <div class="card-title"><h3>#17 Product Search &amp; Sorting</h3><span class="badge badge-medium">Medium</span></div>
+        <p>The shop has category filters but no search bar or sort options (price low-high, newest, popular). As the catalogue grows, customers will need to search and sort to find products. A simple text search + sort dropdown would suffice.</p>
+        <div class="effort"><strong>Effort:</strong> 1 day</div>
+      </div>
+
+      <div class="card card-low">
+        <div class="card-title"><h3>#18 Related Products / Cross-Sell</h3><span class="badge badge-low">Low</span></div>
+        <p>Show "You might also like" suggestions on product pages and at checkout. E.g. if buying a DIY kit, suggest slime accessories. This increases average order value.</p>
+        <div class="effort"><strong>Effort:</strong> 1–2 days</div>
+      </div>
+
+      <div class="card card-low">
+        <div class="card-title"><h3>#19 Product Detail Pages</h3><span class="badge badge-low">Low</span></div>
+        <p>Currently products appear to be displayed via <code>ProductCard</code> components in a grid. If there are no individual product detail pages (with larger images, full description, ingredients/safety info), these should be added. Especially important for slime products which may need safety/age warnings.</p>
+        <div class="effort"><strong>Effort:</strong> 1–2 days</div>
+      </div>
+
+      <h3>3.2 Missing Features</h3>
+
+      <div class="card card-missing">
+        <div class="card-title"><h3>#20 Shop Order Tracking / Status Notifications</h3><span class="badge badge-missing">Missing</span></div>
+        <p>Shop orders go from "paid" to nothing. There's no order status tracking (Processing → Packed → Shipped → Delivered) and no email notifications at each stage. Customers will inevitably ask "where's my order?" The admin orders page can update <code>payment_status</code> but there's no fulfilment status field.</p>
+        <div class="effort"><strong>Effort:</strong> 1–2 days</div>
+      </div>
+
+      <div class="card card-missing">
+        <div class="card-title"><h3>#21 Shipping Cost Configuration</h3><span class="badge badge-missing">Missing</span></div>
+        <p>The <code>ShopOrder</code> type has <code>shipping_cost</code> and <code>shipping_method</code> fields, but there's no admin UI to configure shipping rates. Are these hardcoded? The client needs to be able to set delivery costs, free shipping thresholds, and collection vs delivery options.</p>
+        <div class="effort"><strong>Effort:</strong> 1 day</div>
+      </div>
+
+      <div class="card card-missing">
+        <div class="card-title"><h3>#22 Out-of-Stock Product Handling</h3><span class="badge badge-missing">Missing</span></div>
+        <p>The admin dashboard shows a low-stock alert (≤5 units), but there's no visible "Out of Stock" badge or disabled state on the customer-facing <code>ProductCard</code>. Products with 0 stock should either be hidden or shown as unavailable with a "Notify me" option.</p>
+        <div class="effort"><strong>Effort:</strong> 2 hours</div>
+      </div>
+
+      <h3>3.3 Bugs &amp; Issues</h3>
+
+      <div class="card card-bug">
+        <div class="card-title"><h3>#23 Shop "Coming Soon" Gift Card Text Mismatch</h3><span class="badge badge-bug">Bug</span></div>
+        <p>The shop's "coming soon" page mentions "Our gift cards are available!" and shows a gift card visual, but there's no actual gift card purchase flow. This is misleading to customers. Either remove the gift card mention or implement gift card functionality (see #36).</p>
+        <div class="effort"><strong>Effort:</strong> 5 minutes to remove, 2–3 days to implement</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PARTY BOOKINGS ============ -->
+<div class="page page-break" id="parties">
+  <div class="content">
+    <div class="content-section">
+      <h2>4. Party Bookings</h2>
+
+      <h3>4.1 Suggestions</h3>
+
+      <div class="card card-high">
+        <div class="card-title"><h3>#24 Party Booking Online Payment</h3><span class="badge badge-high">High</span></div>
+        <p>Party bookings currently use an enquiry form with no online payment. Adding Stripe checkout for party deposits (e.g. £50 non-refundable deposit) or full payment would secure bookings and reduce no-shows. The tiered pricing logic (<code>priceForCount</code>) already exists — it just needs payment integration.</p>
+        <div class="effort"><strong>Effort:</strong> 2–3 days</div>
+      </div>
+
+      <div class="card card-medium">
+        <div class="card-title"><h3>#25 Party Add-Ons (Food, Cake, Party Bags)</h3><span class="badge badge-medium">Medium</span></div>
+        <p>The party page lists what's included but there are no optional add-ons. Common party extras: party food, birthday cake, party bags, extra time, extra children. These could be selectable during the booking process with incremental pricing.</p>
+        <div class="effort"><strong>Effort:</strong> 2 days</div>
+      </div>
+
+      <div class="card card-medium">
+        <div class="card-title"><h3>#26 Party Calendar Availability</h3><span class="badge badge-medium">Medium</span></div>
+        <p>The party enquiry form has a date picker but doesn't check studio availability. The client has to manually check and confirm. Integrating the existing opening hours / date overrides system would show only available party dates and prevent double-booking.</p>
+        <div class="effort"><strong>Effort:</strong> 1–2 days</div>
+      </div>
+
+      <div class="card card-low">
+        <div class="card-title"><h3>#27 Party Themes</h3><span class="badge badge-low">Low</span></div>
+        <p>Offer themed party packages (e.g. "Unicorn Slime Party", "Galaxy Slime Party", "Halloween Slime Party") with themed colours, decorations, and slime types. This adds variety and premium pricing potential.</p>
+        <div class="effort"><strong>Effort:</strong> 1 day (dev) · <strong>Requires:</strong> Theme content from client</div>
+      </div>
+
+      <h3>4.2 Missing Features</h3>
+
+      <div class="card card-missing">
+        <div class="card-title"><h3>#28 Party Enquiry Auto-Reply Email</h3><span class="badge badge-missing">Missing</span></div>
+        <p>When a party enquiry is submitted, it's saved to the <code>enquiries</code> table in Supabase, but no email is sent to the customer confirming receipt. They see a "Sent!" screen but receive nothing in their inbox. An auto-reply email would reassure them and set expectations for response time.</p>
+        <div class="effort"><strong>Effort:</strong> 1 hour</div>
+      </div>
+
+      <div class="card card-missing">
+        <div class="card-title"><h3>#29 Admin Notification for Party Enquiries</h3><span class="badge badge-missing">Missing</span></div>
+        <p>Party enquiries are saved to the database but there's no email notification sent to the studio. The admin has to manually check the enquiries dashboard. A notification email (like the one sent for regular bookings) would ensure timely responses.</p>
+        <div class="effort"><strong>Effort:</strong> 1 hour</div>
+      </div>
+
+      <div class="card card-missing">
+        <div class="card-title"><h3>#30 Party Enquiry — Structured Data Fields</h3><span class="badge badge-missing">Missing</span></div>
+        <p>The party enquiry form packs all data (date, children count, phone) into a single <code>message</code> string. This makes it hard to filter, sort, or report on party enquiries in the admin. The <code>enquiries</code> table has <code>enquiry_type</code>, <code>preferred_date</code>, and <code>phone</code> fields that aren't being used for party submissions.</p>
+        <div class="effort"><strong>Effort:</strong> 2 hours</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ADMIN DASHBOARD ============ -->
+<div class="page page-break" id="admin">
+  <div class="content">
+    <div class="content-section">
+      <h2>5. Admin Dashboard</h2>
+
+      <h3>5.1 Suggestions</h3>
+
+      <div class="card card-high">
+        <div class="card-title"><h3>#31 Revenue Analytics Dashboard</h3><span class="badge badge-high">High</span></div>
+        <p>The dashboard shows basic revenue stats (today, week, month) and an 8-week bookings chart. A proper analytics view with revenue trends, booking conversion rates, average group size, peak hours heatmap, shop sales breakdown, and period-over-period comparisons (e.g. "up 23% vs last month") would give actionable business insights.</p>
+        <div class="effort"><strong>Effort:</strong> 2–3 days</div>
+      </div>
+
+      <div class="card card-medium">
+        <div class="card-title"><h3>#32 Staff Multi-User Access with Roles</h3><span class="badge badge-medium">Medium</span></div>
+        <p>Currently there appears to be a single admin login. Adding multi-user support with role-based permissions (e.g. full admin vs front-desk staff who can only view/edit bookings but not change settings or view revenue) would be important as the business grows and hires staff.</p>
+        <div class="effort"><strong>Effort:</strong> 2–3 days</div>
+      </div>
+
+      <div class="card card-medium">
+        <div class="card-title"><h3>#33 Automated Low-Stock Email Alerts</h3><span class="badge badge-medium">Medium</span></div>
+        <p>The dashboard shows a low-stock count but doesn't proactively notify. An email alert when a product drops below a threshold (e.g. 5 units) would help the client reorder in time before selling out.</p>
+        <div class="effort"><strong>Effort:</strong> 1 day</div>
+      </div>
+
+      <div class="card card-medium">
+        <div class="card-title"><h3>#34 CSV Export of Bookings/Orders</h3><span class="badge badge-medium">Medium</span></div>
+        <p>The admin has iCal export for bookings but no CSV/Excel export. A CSV export of filtered bookings and shop orders (with all fields) would be useful for accounting, import into other tools, and sharing with staff who don't have dashboard access.</p>
+        <div class="effort"><strong>Effort:</strong> 2 hours</div>
+      </div>
+
+      <div class="card card-low">
+        <div class="card-title"><h3>#35 Google Calendar Two-Way Sync</h3><span class="badge badge-low">Low</span></div>
+        <p>iCal export exists, but a direct Google Calendar integration (two-way sync) would let the client see bookings alongside other appointments. Could also block time slots when the client marks themselves unavailable in Google Calendar.</p>
+        <div class="effort"><strong>Effort:</strong> 2–3 days</div>
+      </div>
+
+      <h3>5.2 Missing Features</h3>
+
+      <div class="card card-missing">
+        <div class="card-title"><h3>#36 Gift Voucher System</h3><span class="badge badge-missing">Missing</span></div>
+        <p>The shop's "coming soon" page mentions gift cards, but there's no gift voucher system anywhere in the platform. Online gift vouchers (purchased via Stripe, emailed to recipient with a code) are a major revenue driver for experience businesses. The recipient redeems the code during booking, with Stripe applying the credit.</p>
+        <div class="effort"><strong>Effort:</strong> 2–3 days</div>
+      </div>
+
+      <div class="card card-missing">
+        <div class="card-title"><h3>#37 Shop Order Fulfilment Status</h3><span class="badge badge-missing">Missing</span></div>
+        <p>The admin orders page can update <code>payment_status</code> but there's no fulfilment workflow (Processing → Packed → Shipped → Delivered). No way to track which orders need packing, which are shipped, etc. See also #20.</p>
+        <div class="effort"><strong>Effort:</strong> 1–2 days</div>
+      </div>
+
+      <div class="card card-missing">
+        <div class="card-title"><h3>#38 Content Management — Gallery &amp; FAQs</h3><span class="badge badge-missing">Missing</span></div>
+        <p>The admin has a "Content" page that can edit homepage, parties, and about text. But the gallery photos and FAQs are hardcoded in the page files — the client cannot update them without developer help. These should be database-driven and editable from the admin.</p>
+        <div class="effort"><strong>Effort:</strong> 1–2 days</div>
+      </div>
+
+      <div class="card card-missing">
+        <div class="card-title"><h3>#39 Blocked Dates Page Still in Sidebar</h3><span class="badge badge-missing">Missing</span></div>
+        <p>The admin sidebar includes a "Blocked Dates" link at <code>/dashboard/blocked-dates</code>, but this functionality was replaced by Date Overrides in the Opening Hours page. The blocked dates page may be redundant or broken. Should be removed from the sidebar or redirect to opening hours.</p>
+        <div class="effort"><strong>Effort:</strong> 30 minutes</div>
+      </div>
+
+      <h3>5.3 Bugs &amp; Issues</h3>
+
+      <div class="card card-bug">
+        <div class="card-title"><h3>#40 Dashboard Stat Cards Still Use Emojis</h3><span class="badge badge-bug">Bug</span></div>
+        <p>The main dashboard page at <code>/dashboard/page.tsx</code> uses emoji icons (📅🛍️✉️📦➕) for stat cards and quick action buttons. The sidebar was upgraded to SVG icons but the dashboard cards weren't. Also the "Today's Sessions" list uses <code>📝</code> for notes. Inconsistent with the SVG icon system.</p>
+        <div class="effort"><strong>Effort:</strong> 1 hour</div>
+      </div>
+
+      <div class="card card-bug">
+        <div class="card-title"><h3>#41 Revenue Page "Total Revenue" Includes Unpaid/Expired</h3><span class="badge badge-bug">Bug</span></div>
+        <p>As noted in #11, the revenue page calculates <code>totalRevenue</code> by summing all bookings regardless of payment status. This is the headline number and is misleading. Should only count paid bookings, or be clearly labelled as "Gross (all statuses)".</p>
+        <div class="effort"><strong>Effort:</strong> 30 minutes</div>
+      </div>
+
+      <div class="card card-bug">
+        <div class="card-title"><h3>#42 Dashboard "Welcome back, Lara! ✨" Hardcoded</h3><span class="badge badge-bug">Bug</span></div>
+        <p>The dashboard welcome banner hardcodes "Lara" and an emoji. If multi-user access is added (#32), this should use the logged-in user's <code>display_name</code> from the <code>Admin</code> type. The emoji should also be removed for consistency.</p>
+        <div class="effort"><strong>Effort:</strong> 30 minutes</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ CUSTOMER-FACING PAGES ============ -->
+<div class="page page-break" id="customer">
+  <div class="content">
+    <div class="content-section">
+      <h2>6. Customer-Facing Pages</h2>
+
+      <h3>6.1 Homepage</h3>
+
+      <div class="card card-high">
+        <div class="card-title"><h3>#43 Google Reviews Integration</h3><span class="badge badge-high">High</span></div>
+        <p>Displaying Google reviews on the homepage would build trust with new visitors. Google Places API can fetch reviews automatically, or testimonials could be manually curated. Star rating schema markup would also help with SEO (see #55).</p>
+        <div class="effort"><strong>Effort:</strong> 1 day</div>
+      </div>
+
+      <div class="card card-medium">
+        <div class="card-title"><h3>#44 Homepage "Why Choose Us" Uses Emojis</h3><span class="badge badge-medium">Medium</span></div>
+        <p>The "Families love making memories" section uses emoji icons (👨‍👩‍👧🎓✨) for the three feature cards. These should be replaced with proper SVG icons for visual consistency and to avoid cross-platform rendering differences.</p>
+        <div class="effort"><strong>Effort:</strong> 1 hour</div>
+      </div>
+
+      <div class="card card-low">
+        <div class="card-title"><h3>#45 Homepage Gallery Images Not Clickable</h3><span class="badge badge-low">Low</span></div>
+        <p>The "A Peek Inside" gallery grid has <code>cursor-pointer</code> and <code>hover:scale-105</code> suggesting clickability, but clicking does nothing. Should either open a lightbox/modal or link to the full gallery page.</p>
+        <div class="effort"><strong>Effort:</strong> 1 hour (lightbox) or 15 mins (link)</div>
+      </div>
+
+      <h3>6.2 Gallery Page</h3>
+
+      <div class="card card-high">
+        <div class="card-title"><h3>#46 Real Gallery with Photos</h3><span class="badge badge-high">High</span></div>
+        <p>The gallery page (<code>/app/gallery/page.tsx</code>) shows a grid of emoji placeholders (🌈🫧✨🎨💜🍓☁️🦄⭐🍭🧁🌸) with gradient backgrounds — no actual photos. This is a significant missed opportunity. A real photo gallery showcasing slime creations, happy customers, and studio moments would build excitement and social proof. Could pull from Instagram or be admin-managed via Supabase Storage.</p>
+        <div class="effort"><strong>Effort:</strong> 1–2 days (dev) · <strong>Requires:</strong> Photos from client</div>
+      </div>
+
+      <h3>6.3 FAQs Page</h3>
+
+      <div class="card card-medium">
+        <div class="card-title"><h3>#47 FAQs as Accordion with Search</h3><span class="badge badge-medium">Medium</span></div>
+        <p>The FAQs page is a static list of 10 questions. Converting to an accordion (expand/collapse) with a search filter would make it easier for customers to find answers, especially as the FAQ list grows. Also consider adding a "Was this helpful?" feedback mechanism to identify gaps.</p>
+        <div class="effort"><strong>Effort:</strong> 2 hours</div>
+      </div>
+
+      <div class="card card-low">
+        <div class="card-title"><h3>#48 FAQs Not Editable from Admin</h3><span class="badge badge-low">Low</span></div>
+        <p>FAQs are hardcoded in <code>/app/faqs/page.tsx</code>. The client cannot add, edit, or remove FAQs without developer help. Should be stored in the database and editable from the admin content page. See also #38.</p>
+        <div class="effort"><strong>Effort:</strong> 1 day</div>
+      </div>
+
+      <h3>6.4 Contact Page</h3>
+
+      <div class="card card-low">
+        <div class="card-title"><h3>#49 Contact Form Spam Protection</h3><span class="badge badge-low">Low</span></div>
+        <p>The contact form submits directly to Supabase with no spam protection (honeypot, reCAPTCHA, or rate limiting). Adding a simple honeypot field or Cloudflare Turnstile challenge would prevent automated spam submissions.</p>
+        <div class="effort"><strong>Effort:</strong> 1 hour</div>
+      </div>
+
+      <div class="card card-low">
+        <div class="card-title"><h3>#50 "Find Us" Google Maps Embed</h3><span class="badge badge-low">Low</span></div>
+        <p>The contact page lists the address as text but doesn't show a map. Embedding a Google Maps iframe with the studio location would help customers plan their visit, especially those unfamiliar with Holt.</p>
+        <div class="effort"><strong>Effort:</strong> 30 minutes</div>
+      </div>
+
+      <div class="card card-low">
+        <div class="card-title"><h3>#51 Contact Form Uses Emojis for Input Icons</h3><span class="badge badge-low">Low</span></div>
+        <p>The contact form uses emoji icons (👤✉️💬) inside input fields. These should be replaced with SVG icons for consistency with the rest of the platform. Also the focus border colour is hardcoded to <code>#ff2d78</code> instead of using the design token system.</p>
+        <div class="effort"><strong>Effort:</strong> 1 hour</div>
+      </div>
+
+      <div class="card card-low">
+        <div class="card-title"><h3>#52 Contact Info Cards Use Emojis</h3><span class="badge badge-low">Low</span></div>
+        <p>The contact info cards (Visit Us, Opening Hours, Email) use emoji icons (📍🕐✉️). Should be SVG icons for consistency.</p>
+        <div class="effort"><strong>Effort:</strong> 30 minutes</div>
+      </div>
+
+      <h3>6.5 About Page</h3>
+
+      <div class="card card-low">
+        <div class="card-title"><h3>#53 About Page Decorative Emojis</h3><span class="badge badge-low">Low</span></div>
+        <p>The about page has decorative emojis (⭐📍) in the blob decorations and address pill. These should be SVG or removed for a cleaner, more professional look.</p>
+        <div class="effort"><strong>Effort:</strong> 30 minutes</div>
+      </div>
+
+      <div class="card card-low">
+        <div class="card-title"><h3>#54 About Page Carousel — No Auto-Play</h3><span class="badge badge-low">Low</span></div>
+        <p>The image carousel on the about page requires manual navigation. Adding auto-play (with pause on hover) would make it more engaging and ensure all images are seen, not just the first one.</p>
+        <div class="effort"><strong>Effort:</strong> 30 minutes</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ EMAIL & COMMUNICATIONS ============ -->
+<div class="page page-break" id="email">
+  <div class="content">
+    <div class="content-section">
+      <h2>7. Email &amp; Communications</h2>
+
+      <h3>7.1 Suggestions</h3>
+
+      <div class="card card-high">
+        <div class="card-title"><h3>#55 Email Marketing Pipeline</h3><span class="badge badge-high">High</span></div>
+        <p>The platform has a subscription/newsletter feature and sends transactional emails via Resend, but there's no email marketing pipeline. Integrating with Mailchimp or using Resend's marketing features to send monthly newsletters, seasonal promotions, and re-engagement campaigns to past bookers would drive repeat business. The subscriber list exists — it just needs to be utilised.</p>
+        <div class="effort"><strong>Effort:</strong> 1–2 days · <strong>Ongoing cost:</strong> Email platform subscription</div>
+      </div>
+
+      <div class="card card-medium">
+        <div class="card-title"><h3>#56 Branded Email Templates</h3><span class="badge badge-medium">Medium</span></div>
+        <p>The booking confirmation email is sent as HTML via Resend but likely uses a basic template. Creating a properly branded email template with the Slime Studio logo, colours, fonts, and footer would improve brand perception and professionalism in every customer touchpoint.</p>
+        <div class="effort"><strong>Effort:</strong> 1 day</div>
+      </div>
+
+      <div class="card card-medium">
+        <div class="card-title"><h3>#57 Post-Booking Follow-Up Email</h3><span class="badge badge-medium">Medium</span></div>
+        <p>After a customer attends a session, send a follow-up email 24 hours later thanking them, asking for a Google review, and offering a discount on their next booking or shop purchase. This builds reviews, encourages repeat business, and strengthens the email list.</p>
+        <div class="effort"><strong>Effort:</strong> 1 day</div>
+      </div>
+
+      <h3>7.2 Missing Features</h3>
+
+      <div class="card card-missing">
+        <div class="card-title"><h3>#58 Booking Reference in Email</h3><span class="badge badge-missing">Missing</span></div>
+        <p>The confirmation email doesn't include the booking reference. The success page shows it, but the email doesn't. See also #8.</p>
+        <div class="effort"><strong>Effort:</strong> 1 hour</div>
+      </div>
+
+      <div class="card card-missing">
+        <div class="card-title"><h3>#59 Party &amp; Contact Enquiry Auto-Reply</h3><span class="badge badge-missing">Missing</span></div>
+        <p>No auto-reply email is sent when a party enquiry or contact form submission is received. The customer sees a success screen but gets no email confirmation. See also #28 and #29.</p>
+        <div class="effort"><strong>Effort:</strong> 1 hour</div>
+      </div>
+
+      <div class="card card-missing">
+        <div class="card-title"><h3>#60 Admin Notification for Contact Form Submissions</h3><span class="badge badge-missing">Missing</span></div>
+        <p>Contact form submissions are saved to Supabase but no email is sent to the studio. The admin has to manually check the enquiries dashboard. A notification email would ensure timely responses.</p>
+        <div class="effort"><strong>Effort:</strong> 1 hour</div>
+      </div>
+
+      <div class="card card-missing">
+        <div class="card-title"><h3>#61 Shop Order Confirmation Email</h3><span class="badge badge-missing">Missing</span></div>
+        <p>There's no confirmation email sent to customers after a shop purchase. The Stripe webhook handles payment status updates but doesn't trigger an email. An order confirmation with items, total, shipping address, and expected delivery/collection info is standard for e-commerce.</p>
+        <div class="effort"><strong>Effort:</strong> 1–2 hours</div>
+      </div>
+
+      <div class="card card-missing">
+        <div class="card-title"><h3>#62 Subscription Confirmation Email</h3><span class="badge badge-missing">Missing</span></div>
+        <p>No confirmation email is sent when a customer subscribes to the slime box. They see a success page but receive no email with their subscription details, billing date, or what to expect next.</p>
+        <div class="effort"><strong>Effort:</strong> 1 hour</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MARKETING & RETENTION ============ -->
+<div class="page page-break" id="marketing">
+  <div class="content">
+    <div class="content-section">
+      <h2>8. Marketing &amp; Retention</h2>
+
+      <div class="card card-high">
+        <div class="card-title"><h3>#63 Loyalty / Repeat Customer Programme</h3><span class="badge badge-high">High</span></div>
+        <p>Track repeat bookings and offer a loyalty reward (e.g. "Every 5th session free" or "10% off your next booking"). The customer lookup tool already exists in admin — a loyalty tier system could be built on top of booking history. This encourages repeat visits and makes customers feel valued.</p>
+        <div class="effort"><strong>Effort:</strong> 2–3 days</div>
+      </div>
+
+      <div class="card card-medium">
+        <div class="card-title"><h3>#64 Gift Vouchers</h3><span class="badge badge-medium">Medium</span></div>
+        <p>Online gift vouchers (purchased via Stripe, emailed to recipient with a code) are a major revenue driver for experience-based businesses. They're especially popular for birthdays and holidays. The recipient redeems the code during booking, with Stripe applying the credit. The shop "coming soon" page already mentions gift cards — this needs to be delivered.</p>
+        <div class="effort"><strong>Effort:</strong> 2–3 days</div>
+      </div>
+
+      <div class="card card-medium">
+        <div class="card-title"><h3>#65 Seasonal / School Holiday Promotions</h3><span class="badge badge-medium">Medium</span></div>
+        <p>Special themed sessions during school holidays (Halloween slime, Christmas slime, Easter slime). These could be priced differently, have custom time slots, and be promoted via email/social. The date override system already supports special scheduling — this would extend it to themed content and pricing.</p>
+        <div class="effort"><strong>Effort:</strong> 1–2 days per seasonal campaign</div>
+      </div>
+
+      <div class="card card-medium">
+        <div class="card-title"><h3>#66 Instagram Feed Integration</h3><span class="badge badge-medium">Medium</span></div>
+        <p>The studio has an Instagram account (<code>@theslimestudioexperience</code>). Embedding a live Instagram feed on the homepage or gallery would keep the site feeling fresh and drive social follows without manual updates.</p>
+        <div class="effort"><strong>Effort:</strong> 1 day</div>
+      </div>
+
+      <div class="card card-low">
+        <div class="card-title"><h3>#67 Referral Programme</h3><span class="badge badge-low">Low</span></div>
+        <p>"Refer a friend and both get £5 off" — generate a unique referral link for each customer, track when a new booking uses it, and apply a discount to both parties. Word-of-mouth is powerful for family-focused businesses.</p>
+        <div class="effort"><strong>Effort:</strong> 2–3 days</div>
+      </div>
+
+      <div class="card card-low">
+        <div class="card-title"><h3>#68 Newsletter Signup in Footer</h3><span class="badge badge-low">Low</span></div>
+        <p>The footer has social links and an admin link but no newsletter signup. Adding a simple email capture field in the footer would grow the mailing list passively from every page visit. Currently the only newsletter signup is on the dedicated <code>/subscribe</code> page which requires a paid subscription.</p>
+        <div class="effort"><strong>Effort:</strong> 2 hours</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SECURITY & PERFORMANCE ============ -->
+<div class="page page-break" id="security">
+  <div class="content">
+    <div class="content-section">
+      <h2>9. Security &amp; Performance</h2>
+
+      <h3>9.1 Suggestions</h3>
+
+      <div class="card card-medium">
+        <div class="card-title"><h3>#69 Rate Limiting on API Routes</h3><span class="badge badge-medium">Medium</span></div>
+        <p>API routes like <code>/api/create-payment-intent</code>, <code>/api/confirm-booking</code>, and the enquiry submission endpoints have no rate limiting. A malicious actor could spam the endpoints. Adding basic rate limiting (e.g. via Vercel's built-in limits or a simple IP-based throttle) would protect against abuse.</p>
+        <div class="effort"><strong>Effort:</strong> 1 day</div>
+      </div>
+
+      <div class="card card-medium">
+        <div class="card-title"><h3>#70 Image Optimisation</h3><span class="badge badge-medium">Medium</span></div>
+        <p>All images across the site use standard <code>&lt;img&gt;</code> tags with local paths (e.g. <code>/images/slime_mixing.jpg.jpeg</code>). Next.js <code>&lt;Image&gt;</code> component would provide automatic optimisation, lazy loading, responsive sizing, and WebP conversion — significantly improving page load times and LCP scores.</p>
+        <div class="effort"><strong>Effort:</strong> 1–2 days (site-wide migration)</div>
+      </div>
+
+      <div class="card card-low">
+        <div class="card-title"><h3>#71 Admin Auth — Password Hashing Verification</h3><span class="badge badge-low">Low</span></div>
+        <p>The admin login uses a token-based system with <code>password_hash</code> stored in the database. Should verify that passwords are properly hashed with bcrypt or argon2 (not plain text or weak hashing) and that the session token has a reasonable expiry.</p>
+        <div class="effort"><strong>Effort:</strong> 2 hours (audit and fix if needed)</div>
+      </div>
+
+      <div class="card card-low">
+        <div class="card-title"><h3>#72 Supabase RLS Policy Audit</h3><span class="badge badge-low">Low</span></div>
+        <p>The customer-facing pages use the anon Supabase client (<code>supabase</code>) which is subject to RLS. The admin and webhooks use <code>supabaseAdmin</code> which bypasses RLS. Should verify that RLS policies are properly configured so customers can only read public data and insert enquiries/bookings — not read other customers' bookings or modify data.</p>
+        <div class="effort"><strong>Effort:</strong> 2 hours (audit)</div>
+      </div>
+
+      <h3>9.2 Bugs &amp; Issues</h3>
+
+      <div class="card card-bug">
+        <div class="card-title"><h3>#73 Client-Side Capacity Checks Use Anon Supabase</h3><span class="badge badge-bug">Bug</span></div>
+        <p>The booking page (<code>/app/booking/page.tsx</code>) performs client-side capacity checks using the anon <code>supabase</code> client, querying <code>bookings</code> with <code>.eq("payment_status", "paid")</code>. If RLS policies restrict access to the <code>bookings</code> table, these queries could return empty results, making the client think there's availability when there isn't. The server-side checks in the payment intent API are the real protection, but the client-side checks should work correctly too. Verify RLS allows reading aggregate booking data for availability checks.</p>
+        <div class="effort"><strong>Effort:</strong> 1 hour (verify and fix RLS if needed)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SEO ============ -->
+<div class="page page-break" id="seo">
+  <div class="content">
+    <div class="content-section">
+      <h2>10. SEO &amp; Discoverability</h2>
+
+      <div class="card card-medium">
+        <div class="card-title"><h3>#74 Structured Data (JSON-LD)</h3><span class="badge badge-medium">Medium</span></div>
+        <p>Add <code>LocalBusiness</code> structured data with name, address, geo-coordinates, opening hours, price range, telephone, and aggregate rating. This enables rich snippets in Google search results (star ratings, opening hours, address) and improves local SEO visibility for searches like "slime studio Norfolk" or "kids activities Holt".</p>
+        <div class="effort"><strong>Effort:</strong> 1 day</div>
+      </div>
+
+      <div class="card card-medium">
+        <div class="card-title"><h3>#75 Per-Page Meta Descriptions &amp; Open Graph Tags</h3><span class="badge badge-medium">Medium</span></div>
+        <p>The root layout has a global meta description, but individual pages (booking, shop, parties, about, gallery, FAQs, contact) don't have page-specific <code>metadata</code> exports. Each page should have its own title, description, and Open Graph image for social sharing. Next.js App Router supports per-page metadata exports natively.</p>
+        <div class="effort"><strong>Effort:</strong> 2 hours</div>
+      </div>
+
+      <div class="card card-medium">
+        <div class="card-title"><h3>#76 Sitemap.xml &amp; Robots.txt</h3><span class="badge badge-medium">Medium</span></div>
+        <p>No <code>sitemap.xml</code> or <code>robots.txt</code> was found in the project. These are essential for search engine crawling. Next.js 13 supports <code>app/sitemap.ts</code> and <code>app/robots.ts</code> natively — easy to add.</p>
+        <div class="effort"><strong>Effort:</strong> 1 hour</div>
+      </div>
+
+      <div class="card card-low">
+        <div class="card-title"><h3>#77 Image Alt Text</h3><span class="badge badge-low">Low</span></div>
+        <p>Many images across the site have generic or empty alt text (e.g. <code>alt=""</code> on the homepage hero image). Proper descriptive alt text improves accessibility and SEO. Every image should have meaningful alt text describing what's shown.</p>
+        <div class="effort"><strong>Effort:</strong> 2 hours</div>
+      </div>
+
+      <div class="card card-low">
+        <div class="card-title"><h3>#78 Google Business Profile Integration</h3><span class="badge badge-low">Low</span></div>
+        <p>Ensure the Google Business Profile is fully set up with accurate opening hours, photos, booking link, and product catalogue. This is the primary way local customers will find the studio. The opening hours in the admin should sync with Google Business Profile hours.</p>
+        <div class="effort"><strong>Effort:</strong> 2 hours (setup) · <strong>Requires:</strong> Client Google account access</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ TECHNICAL DEBT ============ -->
+<div class="page page-break" id="tech">
+  <div class="content">
+    <div class="content-section">
+      <h2>11. Technical Debt</h2>
+
+      <div class="card card-medium">
+        <div class="card-title"><h3>#79 Inconsistent Icon System</h3><span class="badge badge-medium">Medium</span></div>
+        <p>The platform uses a mix of SVG icons (admin sidebar, cart, social links) and emoji icons (homepage, contact, about, parties, dashboard stat cards, booking card notes). This creates visual inconsistency and cross-platform rendering issues. A unified SVG icon system should be used everywhere.</p>
+        <div class="effort"><strong>Effort:</strong> 1 day (site-wide cleanup)</div>
+      </div>
+
+      <div class="card card-medium">
+        <div class="card-title"><h3>#80 Hardcoded Colours Instead of Design Tokens</h3><span class="badge badge-medium">Medium</span></div>
+        <p>Many pages use hardcoded hex colours (e.g. <code>#ff2d78</code>, <code>#ffc4fb</code>, <code>#abf7dc</code>, <code>#64d8ec</code>) instead of the Tailwind design tokens (<code>bg-sky-blue-light</code>, <code>bg-bright-lavender</code>, etc.). This makes global colour changes difficult and inconsistent. All colours should use the defined Tailwind custom colours.</p>
+        <div class="effort"><strong>Effort:</strong> 1 day (site-wide refactor)</div>
+      </div>
+
+      <div class="card card-low">
+        <div class="card-title"><h3>#81 Image File Extensions</h3><span class="badge badge-low">Low</span></div>
+        <p>Image files have double extensions (e.g. <code>slime_mixing.jpg.jpeg</code>, <code>pink_slime_action.jpg.jpeg</code>). This is unusual and could cause issues with some tools or CDN configurations. Should be renamed to standard single extensions.</p>
+        <div class="effort"><strong>Effort:</strong> 1 hour (rename + update references)</div>
+      </div>
+
+      <div class="card card-low">
+        <div class="card-title"><h3>#82 No Error Boundaries</h3><span class="badge badge-low">Low</span></div>
+        <p>No React Error Boundaries are defined. If a component throws during render, the entire page crashes with a white screen. Adding <code>error.tsx</code> files in the app router would provide graceful fallback UI.</p>
+        <div class="effort"><strong>Effort:</strong> 2 hours</div>
+      </div>
+
+      <div class="card card-low">
+        <div class="card-title"><h3>#83 No Loading.tsx Files</h3><span class="badge badge-low">Low</span></div>
+        <p>No Next.js <code>loading.tsx</code> files are defined. Adding skeleton loaders or spinners at the route level would improve perceived performance for server-rendered pages.</p>
+        <div class="effort"><strong>Effort:</strong> 1 hour</div>
+      </div>
+
+      <div class="card card-low">
+        <div class="card-title"><h3>#84 Footer Missing Subscribe &amp; Gallery Links</h3><span class="badge badge-low">Low</span></div>
+        <p>The footer's "Explore" column lists Home, About, Parties, Shop, FAQs — but is missing Gallery and Subscribe. The navbar includes Subscribe but not Gallery. Navigation should be consistent across navbar and footer, and all pages should be reachable from both.</p>
+        <div class="effort"><strong>Effort:</strong> 15 minutes</div>
+      </div>
+
+      <div class="card card-low">
+        <div class="card-title"><h3>#85 About Page Links Use &lt;a&gt; Instead of &lt;Link&gt;</h3><span class="badge badge-low">Low</span></div>
+        <p>The about page uses <code>&lt;a href="/booking"&gt;</code> and <code>&lt;a href="/shop"&gt;</code> instead of Next.js <code>&lt;Link&gt;</code> components. This causes full page reloads instead of client-side navigation, which is slower and breaks the SPA experience.</p>
+        <div class="effort"><strong>Effort:</strong> 10 minutes</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PRIORITY SUMMARY ============ -->
+<div class="page page-break" id="priority">
+  <div class="content">
+    <div class="content-section">
+      <h2>12. Priority Summary</h2>
+      <p>All 48 items sorted by priority, then by effort within each priority tier.</p>
+
+      <h3>High Priority</h3>
+      <table>
+        <thead><tr><th>#</th><th>Suggestion</th><th>Category</th><th>Effort</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>SMS Booking Reminders</td><td>Booking</td><td>1–2 days</td></tr>
+          <tr><td>2</td><td>Customer Self-Service Rescheduling</td><td>Booking</td><td>2–3 days</td></tr>
+          <tr><td>14</td><td>Product Reviews &amp; Ratings</td><td>Shop</td><td>2–3 days</td></tr>
+          <tr><td>15</td><td>Post-Purchase Review Email</td><td>Shop</td><td>1–2 days</td></tr>
+          <tr><td>24</td><td>Party Booking Online Payment</td><td>Parties</td><td>2–3 days</td></tr>
+          <tr><td>31</td><td>Revenue Analytics Dashboard</td><td>Admin</td><td>2–3 days</td></tr>
+          <tr><td>43</td><td>Google Reviews Integration</td><td>Customer</td><td>1 day</td></tr>
+          <tr><td>46</td><td>Real Gallery with Photos</td><td>Customer</td><td>1–2 days</td></tr>
+          <tr><td>55</td><td>Email Marketing Pipeline</td><td>Email</td><td>1–2 days</td></tr>
+          <tr><td>63</td><td>Loyalty / Repeat Customer Programme</td><td>Marketing</td><td>2–3 days</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Medium Priority</h3>
+      <table>
+        <thead><tr><th>#</th><th>Suggestion</th><th>Category</th><th>Effort</th></tr></thead>
+        <tbody>
+          <tr><td>3</td><td>"What to Expect" Info Box</td><td>Booking</td><td>2 hours</td></tr>
+          <tr><td>4</td><td>Customer Self-Service Cancellation</td><td>Booking</td><td>1–2 days</td></tr>
+          <tr><td>16</td><td>Discount Codes / Promotions</td><td>Shop</td><td>1–2 days</td></tr>
+          <tr><td>17</td><td>Product Search &amp; Sorting</td><td>Shop</td><td>1 day</td></tr>
+          <tr><td>25</td><td>Party Add-Ons</td><td>Parties</td><td>2 days</td></tr>
+          <tr><td>26</td><td>Party Calendar Availability</td><td>Parties</td><td>1–2 days</td></tr>
+          <tr><td>32</td><td>Staff Multi-User Access</td><td>Admin</td><td>2–3 days</td></tr>
+          <tr><td>33</td><td>Automated Low-Stock Alerts</td><td>Admin</td><td>1 day</td></tr>
+          <tr><td>34</td><td>CSV Export</td><td>Admin</td><td>2 hours</td></tr>
+          <tr><td>44</td><td>Homepage Emojis → SVG</td><td>Customer</td><td>1 hour</td></tr>
+          <tr><td>47</td><td>FAQs Accordion with Search</td><td>Customer</td><td>2 hours</td></tr>
+          <tr><td>56</td><td>Branded Email Templates</td><td>Email</td><td>1 day</td></tr>
+          <tr><td>57</td><td>Post-Booking Follow-Up Email</td><td>Email</td><td>1 day</td></tr>
+          <tr><td>64</td><td>Gift Vouchers</td><td>Marketing</td><td>2–3 days</td></tr>
+          <tr><td>65</td><td>Seasonal Promotions</td><td>Marketing</td><td>1–2 days each</td></tr>
+          <tr><td>66</td><td>Instagram Feed Integration</td><td>Marketing</td><td>1 day</td></tr>
+          <tr><td>69</td><td>Rate Limiting on API Routes</td><td>Security</td><td>1 day</td></tr>
+          <tr><td>70</td><td>Image Optimisation (next/image)</td><td>Security</td><td>1–2 days</td></tr>
+          <tr><td>74</td><td>Structured Data (JSON-LD)</td><td>SEO</td><td>1 day</td></tr>
+          <tr><td>75</td><td>Per-Page Meta &amp; OG Tags</td><td>SEO</td><td>2 hours</td></tr>
+          <tr><td>76</td><td>Sitemap.xml &amp; Robots.txt</td><td>SEO</td><td>1 hour</td></tr>
+          <tr><td>79</td><td>Unified Icon System</td><td>Tech Debt</td><td>1 day</td></tr>
+          <tr><td>80</td><td>Design Token Colour Cleanup</td><td>Tech Debt</td><td>1 day</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Low Priority</h3>
+      <table>
+        <thead><tr><th>#</th><th>Suggestion</th><th>Category</th><th>Effort</th></tr></thead>
+        <tbody>
+          <tr><td>5</td><td>Waitlist for Full Slots</td><td>Booking</td><td>2–3 days</td></tr>
+          <tr><td>6</td><td>Time Ranges on Slots</td><td>Booking</td><td>30 mins</td></tr>
+          <tr><td>7</td><td>Group Booking Names</td><td>Booking</td><td>1 day</td></tr>
+          <tr><td>18</td><td>Related Products / Cross-Sell</td><td>Shop</td><td>1–2 days</td></tr>
+          <tr><td>19</td><td>Product Detail Pages</td><td>Shop</td><td>1–2 days</td></tr>
+          <tr><td>27</td><td>Party Themes</td><td>Parties</td><td>1 day</td></tr>
+          <tr><td>35</td><td>Google Calendar Sync</td><td>Admin</td><td>2–3 days</td></tr>
+          <tr><td>45</td><td>Homepage Gallery Clickable</td><td>Customer</td><td>1 hour</td></tr>
+          <tr><td>48</td><td>FAQs Admin-Editable</td><td>Customer</td><td>1 day</td></tr>
+          <tr><td>49</td><td>Contact Form Spam Protection</td><td>Customer</td><td>1 hour</td></tr>
+          <tr><td>50</td><td>Google Maps Embed</td><td>Customer</td><td>30 mins</td></tr>
+          <tr><td>51</td><td>Contact Form Emoji → SVG</td><td>Customer</td><td>1 hour</td></tr>
+          <tr><td>52</td><td>Contact Info Emoji → SVG</td><td>Customer</td><td>30 mins</td></tr>
+          <tr><td>53</td><td>About Page Decorative Emojis</td><td>Customer</td><td>30 mins</td></tr>
+          <tr><td>54</td><td>About Carousel Auto-Play</td><td>Customer</td><td>30 mins</td></tr>
+          <tr><td>67</td><td>Referral Programme</td><td>Marketing</td><td>2–3 days</td></tr>
+          <tr><td>68</td><td>Newsletter Signup in Footer</td><td>Marketing</td><td>2 hours</td></tr>
+          <tr><td>71</td><td>Admin Auth Audit</td><td>Security</td><td>2 hours</td></tr>
+          <tr><td>72</td><td>Supabase RLS Audit</td><td>Security</td><td>2 hours</td></tr>
+          <tr><td>77</td><td>Image Alt Text</td><td>SEO</td><td>2 hours</td></tr>
+          <tr><td>78</td><td>Google Business Profile</td><td>SEO</td><td>2 hours</td></tr>
+          <tr><td>81</td><td>Image File Double Extensions</td><td>Tech Debt</td><td>1 hour</td></tr>
+          <tr><td>82</td><td>Error Boundaries</td><td>Tech Debt</td><td>2 hours</td></tr>
+          <tr><td>83</td><td>Loading.tsx Files</td><td>Tech Debt</td><td>1 hour</td></tr>
+          <tr><td>84</td><td>Footer Missing Links</td><td>Tech Debt</td><td>15 mins</td></tr>
+          <tr><td>85</td><td>About Page &lt;a&gt; → &lt;Link&gt;</td><td>Tech Debt</td><td>10 mins</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Bugs &amp; Missing Features (Action Required)</h3>
+      <table>
+        <thead><tr><th>#</th><th>Item</th><th>Type</th><th>Effort</th></tr></thead>
+        <tbody>
+          <tr><td>8</td><td>Booking Reference in Email</td><td>Missing</td><td>1 hour</td></tr>
+          <tr><td>9</td><td>Reschedule/Cancel Link in Email</td><td>Missing</td><td>See #2, #4</td></tr>
+          <tr><td>10</td><td>Add to Calendar Button</td><td>Missing</td><td>1 hour</td></tr>
+          <tr><td>11</td><td>Revenue Page Total Includes Unpaid</td><td>Bug</td><td>30 mins</td></tr>
+          <tr><td>12</td><td>Calendar Date Construction</td><td>Bug</td><td>1 hour</td></tr>
+          <tr><td>13</td><td>BookingCard Notes Emoji</td><td>Bug</td><td>5 mins</td></tr>
+          <tr><td>20</td><td>Shop Order Tracking</td><td>Missing</td><td>1–2 days</td></tr>
+          <tr><td>21</td><td>Shipping Cost Config</td><td>Missing</td><td>1 day</td></tr>
+          <tr><td>22</td><td>Out-of-Stock Handling</td><td>Missing</td><td>2 hours</td></tr>
+          <tr><td>23</td><td>Shop Gift Card Text Mismatch</td><td>Bug</td><td>5 mins</td></tr>
+          <tr><td>28</td><td>Party Enquiry Auto-Reply</td><td>Missing</td><td>1 hour</td></tr>
+          <tr><td>29</td><td>Admin Notification for Parties</td><td>Missing</td><td>1 hour</td></tr>
+          <tr><td>30</td><td>Party Enquiry Structured Data</td><td>Missing</td><td>2 hours</td></tr>
+          <tr><td>36</td><td>Gift Voucher System</td><td>Missing</td><td>2–3 days</td></tr>
+          <tr><td>37</td><td>Shop Order Fulfilment Status</td><td>Missing</td><td>1–2 days</td></tr>
+          <tr><td>38</td><td>Gallery &amp; FAQs Admin-Editable</td><td>Missing</td><td>1–2 days</td></tr>
+          <tr><td>39</td><td>Blocked Dates Page in Sidebar</td><td>Missing</td><td>30 mins</td></tr>
+          <tr><td>40</td><td>Dashboard Stat Card Emojis</td><td>Bug</td><td>1 hour</td></tr>
+          <tr><td>41</td><td>Revenue Total Includes Unpaid</td><td>Bug</td><td>30 mins</td></tr>
+          <tr><td>42</td><td>Hardcoded "Lara" Name</td><td>Bug</td><td>30 mins</td></tr>
+          <tr><td>58</td><td>Booking Ref in Email (dup of #8)</td><td>Missing</td><td>1 hour</td></tr>
+          <tr><td>59</td><td>Party/Contact Auto-Reply</td><td>Missing</td><td>1 hour</td></tr>
+          <tr><td>60</td><td>Admin Notification for Contact</td><td>Missing</td><td>1 hour</td></tr>
+          <tr><td>61</td><td>Shop Order Confirmation Email</td><td>Missing</td><td>1–2 hours</td></tr>
+          <tr><td>62</td><td>Subscription Confirmation Email</td><td>Missing</td><td>1 hour</td></tr>
+          <tr><td>73</td><td>Client-Side Capacity RLS Risk</td><td>Bug</td><td>1 hour</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ============ QUICK WINS ============ -->
+<div class="page page-break" id="quickwins">
+  <div class="content">
+    <div class="content-section">
+      <h2>13. Quick Wins (Under 2 Hours Each)</h2>
+      <p>These items can all be implemented in under 2 hours each. Tackling these first would deliver immediate visible improvements with minimal effort.</p>
+
+      <table>
+        <thead><tr><th>#</th><th>Item</th><th>Type</th><th>Effort</th></tr></thead>
+        <tbody>
+          <tr><td>13</td><td>Remove emoji from BookingCard notes</td><td>Bug</td><td>5 mins</td></tr>
+          <tr><td>23</td><td>Remove misleading gift card text from shop coming soon</td><td>Bug</td><td>5 mins</td></tr>
+          <tr><td>85</td><td>About page <code>&lt;a&gt;</code> → <code>&lt;Link&gt;</code></td><td>Tech Debt</td><td>10 mins</td></tr>
+          <tr><td>84</td><td>Add Gallery + Subscribe to footer</td><td>Tech Debt</td><td>15 mins</td></tr>
+          <tr><td>6</td><td>Time ranges on slot selection</td><td>Suggestion</td><td>30 mins</td></tr>
+          <tr><td>11/41</td><td>Fix revenue page total to only count paid</td><td>Bug</td><td>30 mins</td></tr>
+          <tr><td>39</td><td>Remove/redirect blocked dates page</td><td>Missing</td><td>30 mins</td></tr>
+          <tr><td>50</td><td>Google Maps embed on contact page</td><td>Suggestion</td><td>30 mins</td></tr>
+          <tr><td>52</td><td>Contact info emoji → SVG</td><td>Suggestion</td><td>30 mins</td></tr>
+          <tr><td>53</td><td>About page decorative emojis</td><td>Suggestion</td><td>30 mins</td></tr>
+          <tr><td>54</td><td>About carousel auto-play</td><td>Suggestion</td><td>30 mins</td></tr>
+          <tr><td>76</td><td>Sitemap.xml &amp; robots.txt</td><td>SEO</td><td>1 hour</td></tr>
+          <tr><td>8/58</td><td>Booking reference in confirmation email</td><td>Missing</td><td>1 hour</td></tr>
+          <tr><td>10</td><td>Add to Calendar button on success page</td><td>Missing</td><td>1 hour</td></tr>
+          <tr><td>28/59</td><td>Party/contact enquiry auto-reply email</td><td>Missing</td><td>1 hour</td></tr>
+          <tr><td>29/60</td><td>Admin notification for enquiries</td><td>Missing</td><td>1 hour</td></tr>
+          <tr><td>40</td><td>Dashboard stat card emojis → SVG</td><td>Bug</td><td>1 hour</td></tr>
+          <tr><td>42</td><td>Dynamic admin name in dashboard</td><td>Bug</td><td>30 mins</td></tr>
+          <tr><td>44</td><td>Homepage "Why Choose Us" emojis → SVG</td><td>Suggestion</td><td>1 hour</td></tr>
+          <tr><td>45</td><td>Homepage gallery images clickable</td><td>Suggestion</td><td>1 hour</td></tr>
+          <tr><td>49</td><td>Contact form spam protection</td><td>Suggestion</td><td>1 hour</td></tr>
+          <tr><td>51</td><td>Contact form emoji → SVG icons</td><td>Suggestion</td><td>1 hour</td></tr>
+          <tr><td>62</td><td>Subscription confirmation email</td><td>Missing</td><td>1 hour</td></tr>
+          <tr><td>81</td><td>Fix image double extensions</td><td>Tech Debt</td><td>1 hour</td></tr>
+          <tr><td>83</td><td>Add loading.tsx files</td><td>Tech Debt</td><td>1 hour</td></tr>
+          <tr><td>3</td><td>"What to Expect" info box</td><td>Suggestion</td><td>2 hours</td></tr>
+          <tr><td>22</td><td>Out-of-stock product handling</td><td>Missing</td><td>2 hours</td></tr>
+          <tr><td>30</td><td>Party enquiry structured data fields</td><td>Missing</td><td>2 hours</td></tr>
+          <tr><td>34</td><td>CSV export</td><td>Suggestion</td><td>2 hours</td></tr>
+          <tr><td>47</td><td>FAQs accordion with search</td><td>Suggestion</td><td>2 hours</td></tr>
+          <tr><td>61</td><td>Shop order confirmation email</td><td>Missing</td><td>2 hours</td></tr>
+          <tr><td>68</td><td>Newsletter signup in footer</td><td>Suggestion</td><td>2 hours</td></tr>
+          <tr><td>75</td><td>Per-page meta &amp; OG tags</td><td>SEO</td><td>2 hours</td></tr>
+          <tr><td>77</td><td>Image alt text</td><td>SEO</td><td>2 hours</td></tr>
+          <tr><td>82</td><td>Error boundaries</td><td>Tech Debt</td><td>2 hours</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout-info">
+        <strong>Tip:</strong> If all quick wins were tackled together, they'd take approximately 3–4 days of development time and would resolve 9 bugs, 11 missing features, and 14 suggestions — a significant platform improvement with minimal investment.
+      </div>
+    </div>
+
+    <div class="content-section">
+      <h2>Recommended Roadmap</h2>
+
+      <h4>Phase 1: Quick Wins &amp; Bug Fixes (Week 1–2)</h4>
+      <ul>
+        <li>Fix all bugs (#11, #12, #13, #23, #40, #42, #73)</li>
+        <li>Implement all sub-2-hour items (see Quick Wins table above)</li>
+        <li>Add missing emails (#8, #28, #29, #59, #60, #61, #62)</li>
+        <li>Fix technical debt quick items (#84, #85)</li>
+      </ul>
+
+      <h4>Phase 2: Customer Experience (Week 3–4)</h4>
+      <ul>
+        <li>Real gallery with photos (#46) — requires client photos</li>
+        <li>Google reviews integration (#43)</li>
+        <li>"What to Expect" info on booking page (#3)</li>
+        <li>FAQs accordion (#47)</li>
+        <li>SEO basics: sitemap, meta tags, structured data (#74, #75, #76)</li>
+      </ul>
+
+      <h4>Phase 3: Revenue &amp; Growth (Week 5–8)</h4>
+      <ul>
+        <li>SMS booking reminders (#1)</li>
+        <li>Party booking online payment (#24)</li>
+        <li>Product reviews &amp; post-purchase email (#14, #15)</li>
+        <li>Loyalty programme (#63)</li>
+        <li>Gift vouchers (#64)</li>
+        <li>Email marketing pipeline (#55)</li>
+      </ul>
+
+      <h4>Phase 4: Platform Maturity (Ongoing)</h4>
+      <ul>
+        <li>Customer self-service rescheduling &amp; cancellation (#2, #4)</li>
+        <li>Revenue analytics dashboard (#31)</li>
+        <li>Staff multi-user access (#32)</li>
+        <li>Image optimisation migration (#70)</li>
+        <li>Unified icon system &amp; colour tokens (#79, #80)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FOOTER ============ -->
+<div class="page">
+  <div class="footer">
+    <p>The Slime Studio — Full Platform Report · August 2026</p>
+    <p style="margin-top: 8px;">Prepared by the Development Team · This document is confidential</p>
+    <p style="margin-top: 8px; font-size: 0.8rem; color: #999;">85 items total · 48 suggestions · 14 missing features · 9 bugs · 14 technical debt items</p>
+  </div>
+</div>
+
+</body>
+</html>

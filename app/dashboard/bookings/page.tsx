@@ -23,7 +23,7 @@ export default function BookingsAdminPage() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [editMsg, setEditMsg] = useState("");
   const [showAddBooking, setShowAddBooking] = useState(false);
-  const [addForm, setAddForm] = useState({ date: todayISO(), time_slot: "", people: "1", name: "", email: "", phone: "", notes: "", is_party: false, total_price: "0" });
+  const [addForm, setAddForm] = useState({ date: todayISO(), time_slot: "", people: "1", name: "", email: "", phone: "", notes: "", is_party: false, total_price: "0", duration: 1 as 1 | 2 });
   const [savingAdd, setSavingAdd] = useState(false);
   const [addMsg, setAddMsg] = useState("");
   const [addSlotAvailability, setAddSlotAvailability] = useState<Record<string, number>>({});
@@ -205,10 +205,12 @@ export default function BookingsAdminPage() {
       const data = await res.json();
       if (!res.ok) {
         setAddMsg(data.error || "Failed to add booking");
+      } else if (data.warning) {
+        setAddMsg(data.warning);
       } else {
         setAddMsg("");
         setShowAddBooking(false);
-        setAddForm({ date: todayISO(), time_slot: "", people: "1", name: "", email: "", phone: "", notes: "", is_party: false, total_price: "0" });
+        setAddForm({ date: todayISO(), time_slot: "", people: "1", name: "", email: "", phone: "", notes: "", is_party: false, total_price: "0", duration: 1 });
         loadBookings();
       }
     } catch {
@@ -677,8 +679,26 @@ export default function BookingsAdminPage() {
                 <textarea value={addForm.notes} onChange={(e) => setAddForm({ ...addForm, notes: e.target.value })} rows={2} placeholder="e.g. Party booking via Instagram" className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light resize-none" />
               </div>
               <div className="md:col-span-2">
+                <label className="block text-sm font-medium mb-1.5">Duration</label>
+                <div className="flex gap-3">
+                  <button type="button" onClick={() => setAddForm({ ...addForm, duration: 1 })} className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${addForm.duration === 1 ? "bg-sky-blue-light text-ink" : "bg-ink/5 text-ink-soft hover:bg-ink/10"}`}>1 hour</button>
+                  <button type="button" onClick={() => setAddForm({ ...addForm, duration: 2 })} className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${addForm.duration === 2 ? "bg-sky-blue-light text-ink" : "bg-ink/5 text-ink-soft hover:bg-ink/10"}`}>2 hours (party)</button>
+                </div>
+                {addForm.duration === 2 && addForm.time_slot && (() => {
+                  const [h] = addForm.time_slot.split(":").map(Number);
+                  const nextSlot = `${String(h + 1).padStart(2, "0")}:00`;
+                  const nextUsed = addSlotAvailability[nextSlot] || 0;
+                  const nextRemaining = slotCapacity - nextUsed;
+                  return (
+                    <p className={`text-[0.8rem] mt-2 ${nextRemaining > 0 ? "text-green-600" : "text-red-600"}`}>
+                      This will also block <strong>{nextSlot}</strong> ({nextRemaining > 0 ? `${nextRemaining} spot${nextRemaining === 1 ? "" : "s"} available` : "FULL"})
+                    </p>
+                  );
+                })()}
+              </div>
+              <div className="md:col-span-2">
                 <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={addForm.is_party} onChange={(e) => setAddForm({ ...addForm, is_party: e.target.checked })} />
+                  <input type="checkbox" checked={addForm.is_party} onChange={(e) => setAddForm({ ...addForm, is_party: e.target.checked, duration: e.target.checked ? 2 : 1 })} />
                   This is a party booking
                 </label>
               </div>
