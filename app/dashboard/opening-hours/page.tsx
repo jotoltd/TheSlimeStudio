@@ -27,6 +27,7 @@ export default function OpeningHoursPage() {
   const [ovSlots, setOvSlots] = useState<string>(DEFAULT_SLOTS.join("\n"));
   const [ovLabel, setOvLabel] = useState("");
   const [savingOv, setSavingOv] = useState(false);
+  const [editingOverride, setEditingOverride] = useState<string | null>(null);
 
   useEffect(() => { load(); }, []);
 
@@ -97,6 +98,23 @@ export default function OpeningHoursPage() {
     setSaving(false);
   }
 
+  function editOverride(o: DateOverride) {
+    setEditingOverride(o.date);
+    setOvDate(o.date);
+    setOvIsOpen(o.is_open);
+    setOvSlots(o.time_slots.join("\n"));
+    setOvLabel(o.label || "");
+    document.getElementById("override-form")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  function cancelEdit() {
+    setEditingOverride(null);
+    setOvDate(todayISO());
+    setOvIsOpen(true);
+    setOvSlots(DEFAULT_SLOTS.join("\n"));
+    setOvLabel("");
+  }
+
   async function addOverride() {
     if (!ovDate) { toast("Please select a date", "error"); return; }
     setSavingOv(true);
@@ -116,8 +134,12 @@ export default function OpeningHoursPage() {
       const data = await res.json();
       if (!res.ok) { toast(data.error || "Failed to save", "error"); }
       else {
-        toast("Override saved!");
+        toast(editingOverride ? "Override updated!" : "Override saved!");
+        setEditingOverride(null);
         setOvLabel("");
+        setOvDate(todayISO());
+        setOvIsOpen(true);
+        setOvSlots(DEFAULT_SLOTS.join("\n"));
         load();
       }
     } catch {
@@ -204,8 +226,8 @@ export default function OpeningHoursPage() {
             <h2 className="font-display text-[1.1rem] mb-1">Date Overrides</h2>
             <p className="text-[0.85rem] text-ink-soft mb-5">Override your weekly schedule for specific dates — school holidays, special events, one-off openings, etc.</p>
 
-            {/* Add override form */}
-            <div className="bg-ink/[0.02] rounded-xl p-4 mb-5">
+            {/* Add/edit override form */}
+            <div id="override-form" className={`rounded-xl p-4 mb-5 ${editingOverride ? "bg-sky-blue-light/10 border-2 border-sky-blue-light/30" : "bg-ink/[0.02]"}`}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className="block text-sm font-medium mb-1.5">Date</label>
@@ -255,8 +277,13 @@ export default function OpeningHoursPage() {
 
               <div className="flex items-center gap-4">
                 <button onClick={addOverride} disabled={savingOv} className="px-5 py-2.5 rounded-full bg-bright-lavender text-white text-[0.85rem] font-medium disabled:opacity-60 hover:opacity-90 transition-all">
-                  {savingOv ? "Saving..." : "Add Override"}
+                  {savingOv ? "Saving..." : editingOverride ? "Update Override" : "Add Override"}
                 </button>
+                {editingOverride && (
+                  <button onClick={cancelEdit} className="px-5 py-2.5 rounded-full bg-ink/5 text-ink-soft text-[0.85rem] font-medium hover:bg-ink/10 transition-all">
+                    Cancel
+                  </button>
+                )}
               </div>
             </div>
 
@@ -286,12 +313,20 @@ export default function OpeningHoursPage() {
                           </div>
                         </div>
                       </div>
-                      <button
-                        onClick={() => removeOverride(o.date)}
-                        className="px-3 py-1.5 rounded-lg bg-red-100 text-red-700 text-[0.8rem] hover:bg-red-200 transition-colors"
-                      >
-                        Remove
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => editOverride(o)}
+                          className="px-3 py-1.5 rounded-lg bg-sky-blue-light/30 text-ink text-[0.8rem] hover:bg-sky-blue-light/50 transition-colors"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => removeOverride(o.date)}
+                          className="px-3 py-1.5 rounded-lg bg-red-100 text-red-700 text-[0.8rem] hover:bg-red-200 transition-colors"
+                        >
+                          Remove
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

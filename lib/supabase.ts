@@ -20,6 +20,7 @@ export type Product = {
   price: number;
   category: string;
   stock: number;
+  weight?: number | null;
   image_url: string | null;
   created_at: string;
 };

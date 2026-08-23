@@ -13,7 +13,7 @@ export default function ShopAdminPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    name: "", description: "", price: "", category: "handmade", stock: "", image_url: ""
+    name: "", description: "", price: "", category: "handmade", stock: "", weight: "", image_url: ""
   });
   const [uploading, setUploading] = useState(false);
   const [stockEdits, setStockEdits] = useState<Record<string, number>>({});
@@ -83,6 +83,7 @@ export default function ShopAdminPage() {
       price: parseFloat(formData.price) || 0,
       category: formData.category,
       stock: parseInt(formData.stock) || 0,
+      weight: formData.weight ? parseInt(formData.weight) : null,
       image_url: formData.image_url || null,
     };
     if (editingId) {
@@ -98,7 +99,7 @@ export default function ShopAdminPage() {
 
   function openAddModal() {
     setEditingId(null);
-    setFormData({ name: "", description: "", price: "", category: "handmade", stock: "", image_url: "" });
+    setFormData({ name: "", description: "", price: "", category: "handmade", stock: "", weight: "", image_url: "" });
     setShowModal(true);
   }
 
@@ -110,6 +111,7 @@ export default function ShopAdminPage() {
       price: String(product.price),
       category: product.category,
       stock: String(product.stock || 0),
+      weight: product.weight ? String(product.weight) : "",
       image_url: product.image_url || "",
     });
     setShowModal(true);
@@ -118,7 +120,7 @@ export default function ShopAdminPage() {
   function closeModal() {
     setShowModal(false);
     setEditingId(null);
-    setFormData({ name: "", description: "", price: "", category: "handmade", stock: "", image_url: "" });
+    setFormData({ name: "", description: "", price: "", category: "handmade", stock: "", weight: "", image_url: "" });
   }
 
   const filtered = categoryFilter === "all" ? products : products.filter((p) => p.category === categoryFilter);
@@ -227,6 +229,7 @@ export default function ShopAdminPage() {
                   <th className="pb-3 pr-4">Name</th>
                   <th className="pb-3 pr-4">Category</th>
                   <th className="pb-3 pr-4">Price</th>
+                  <th className="pb-3 pr-4">Weight</th>
                   <th className="pb-3 pr-4">Stock</th>
                   <th className="pb-3 pr-4">Status</th>
                   <th className="pb-3">Actions</th>
@@ -241,6 +244,7 @@ export default function ShopAdminPage() {
                       <td className="py-3 pr-4 text-[0.9rem]">{p.name}</td>
                       <td className="py-3 pr-4 text-[0.9rem] capitalize">{p.category}</td>
                       <td className="py-3 pr-4 text-[0.9rem]">£{Number(p.price).toFixed(2)}</td>
+                      <td className="py-3 pr-4 text-[0.9rem] text-ink-soft">{p.weight ? `${p.weight}g` : "—"}</td>
                       <td className="py-3 pr-4">
                         <input
                           type="number"
@@ -386,6 +390,17 @@ export default function ShopAdminPage() {
                   placeholder="10"
                   className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Shipping Weight (grams)</label>
+                <input
+                  type="number"
+                  value={formData.weight}
+                  onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+                  placeholder="250"
+                  className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
+                />
+                <p className="text-[0.75rem] text-ink-soft mt-1">Used for calculating shipping costs at checkout. Leave empty if not needed.</p>
               </div>
             </div>
             <div className="flex gap-3 justify-end mt-6">
