@@ -12,7 +12,7 @@ export default function HomePage() {
         <div className="absolute inset-0 z-[1]">
           <img
             src="/images/slime_mixing.jpg.jpeg"
-            alt=""
+            alt="Children mixing colourful slime at The Slime Studio in Holt, Norfolk"
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(255,196,251,0.85) 0%, rgba(171,247,220,0.75) 100%)" }} />
@@ -146,22 +146,22 @@ export default function HomePage() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-2 md:gap-4">
             {[
-              "/images/slime_studio_pink_slime_experience.jpg.jpeg",
-              "/images/blue_slime_closeup.jpg.jpeg",
-              "/images/pink_slime_stretch.jpg.jpeg",
-              "/images/slime_studio_teal_slime.jpg.jpeg",
-              "/images/purple_finished_slime.jpg.jpeg",
-              "/images/slime_mixing.jpg.jpeg",
-              "/images/slime_studio_pink_slime_pot.jpg.jpeg",
-              "/images/slime_studio_slime_toppings.jpg.jpeg",
-              "/images/foam_beads.jpg.jpeg",
-              "/images/pink_slime_action.jpg.jpeg",
-            ].map((src, i) => (
+              { src: "/images/slime_studio_pink_slime_experience.jpg.jpeg", alt: "Child making pink slime at The Slime Studio" },
+              { src: "/images/blue_slime_closeup.jpg.jpeg", alt: "Close-up of blue slime with sparkles" },
+              { src: "/images/pink_slime_stretch.jpg.jpeg", alt: "Stretching pink slime at The Slime Studio" },
+              { src: "/images/slime_studio_teal_slime.jpg.jpeg", alt: "Teal slime creation at The Slime Studio" },
+              { src: "/images/purple_finished_slime.jpg.jpeg", alt: "Finished purple slime in a pot" },
+              { src: "/images/slime_mixing.jpg.jpeg", alt: "Children mixing slime together at The Slime Studio" },
+              { src: "/images/slime_studio_pink_slime_pot.jpg.jpeg", alt: "Pink slime in a pot with decorations" },
+              { src: "/images/slime_studio_slime_toppings.jpg.jpeg", alt: "Slime toppings and add-ons at The Slime Studio" },
+              { src: "/images/foam_beads.jpg.jpeg", alt: "Foam beads for slime making" },
+              { src: "/images/pink_slime_action.jpg.jpeg", alt: "Hands-on pink slime making at The Slime Studio" },
+            ].map((img, i) => (
               <div
                 key={i}
                 className="reveal relative aspect-square rounded-[20px] overflow-hidden cursor-pointer transition-transform hover:scale-105"
               >
-                <img src={src} alt={`Slime Studio creation ${i + 1}`} className="w-full h-full object-cover" />
+                <img src={img.src} alt={img.alt} className="w-full h-full object-cover" />
               </div>
             ))}
           </div>

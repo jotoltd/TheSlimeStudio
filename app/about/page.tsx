@@ -5,10 +5,10 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
 const carouselImages = [
-  "/images/slime_studio_pink_slime_experience.jpg.jpeg",
-  "/images/pink_slime_stretch.jpg.jpeg",
-  "/images/blue_slime_closeup.jpg.jpeg",
-  "/images/slime_mixing.jpg.jpeg",
+  { src: "/images/slime_studio_pink_slime_experience.jpg.jpeg", alt: "Child making pink slime at The Slime Studio in Holt" },
+  { src: "/images/pink_slime_stretch.jpg.jpeg", alt: "Stretching pink slime at The Slime Studio" },
+  { src: "/images/blue_slime_closeup.jpg.jpeg", alt: "Close-up of blue sparkle slime made at The Slime Studio" },
+  { src: "/images/slime_mixing.jpg.jpeg", alt: "Children mixing slime together at The Slime Studio" },
 ];
 
 const features = [
@@ -49,11 +49,11 @@ export default function AboutPage() {
 
       {/* Hero Carousel */}
       <div className="relative w-full aspect-[16/7] md:aspect-[16/5] overflow-hidden bg-ink">
-        {carouselImages.map((src, i) => (
+        {carouselImages.map((img, i) => (
           <img
-            key={src}
-            src={src}
-            alt="The Slime Studio"
+            key={img.src}
+            src={img.src}
+            alt={img.alt}
             className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
               i === slide ? "opacity-100" : "opacity-0"
             }`}

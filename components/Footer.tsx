@@ -46,6 +46,7 @@ export default function Footer() {
               <li><Link href="/parties" className="text-[0.9rem] hover:text-ink transition-colors">Parties</Link></li>
               <li><Link href="/shop" className="text-[0.9rem] hover:text-ink transition-colors">Shop</Link></li>
               {loyaltyEnabled && <li><Link href="/loyalty" className="text-[0.9rem] hover:text-ink transition-colors">Loyalty</Link></li>}
+              <li><Link href="/press" className="text-[0.9rem] hover:text-ink transition-colors">Press</Link></li>
               <li><Link href="/faqs" className="text-[0.9rem] hover:text-ink transition-colors">FAQs</Link></li>
             </ul>
           </div>
