@@ -38,6 +38,7 @@ function BookingPageInner() {
   const [openingHours, setOpeningHours] = useState<OpeningHour[]>([]);
   const [dateOverrides, setDateOverrides] = useState<DateOverride[]>([]);
   const [globalSlots, setGlobalSlots] = useState<string[]>(DEFAULT_SLOTS);
+  const [loyaltyEnabled, setLoyaltyEnabled] = useState(true);
 
 
   useEffect(() => {
@@ -57,6 +58,9 @@ function BookingPageInner() {
       if (d.weekly) setOpeningHours(d.weekly);
       if (d.overrides) setDateOverrides(d.overrides);
     }).catch(() => {});
+    supabase.from("site_settings").select("loyalty_enabled").eq("id", 1).single().then(({ data }) => {
+      if (data) setLoyaltyEnabled(!!data.loyalty_enabled);
+    });
 
     // Handle Stripe 3D Secure redirect: if redirected back with payment_intent param,
     // the payment may have succeeded but onSuccess never fired. Confirm booking directly.
@@ -382,16 +386,18 @@ function BookingPageInner() {
               </button>
 
               {/* Loyalty stamp notification */}
-              <div className="mt-4 bg-bright-lavender/10 rounded-xl px-5 py-4 flex items-center gap-3">
-                <span className="text-2xl">★</span>
-                <div>
-                  <div className="text-[0.85rem] font-medium text-bright-lavender">You earned a loyalty stamp!</div>
-                  <div className="text-[0.8rem] text-ink-soft mt-0.5">
-                    Collect 10 stamps for a free session.{" "}
-                    <a href="/loyalty" className="underline hover:text-ink">Check your card →</a>
+              {loyaltyEnabled && (
+                <div className="mt-4 bg-bright-lavender/10 rounded-xl px-5 py-4 flex items-center gap-3">
+                  <span className="text-2xl">★</span>
+                  <div>
+                    <div className="text-[0.85rem] font-medium text-bright-lavender">You earned a loyalty stamp!</div>
+                    <div className="text-[0.8rem] text-ink-soft mt-0.5">
+                      Collect 10 stamps for a free session.{" "}
+                      <a href="/loyalty" className="underline hover:text-ink">Check your card →</a>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           ) : status === "cancelled" ? (
             <div className="bg-white rounded-3xl p-6 md:p-10 shadow-sm text-center">

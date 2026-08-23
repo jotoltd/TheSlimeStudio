@@ -61,6 +61,13 @@ export default function SettingsPage() {
     await supabase.from("site_settings").update({ maintenance_mode: newVal }).eq("id", 1);
   }
 
+  async function toggleLoyalty() {
+    if (!siteSettings) return;
+    const newVal = !siteSettings.loyalty_enabled;
+    setSiteSettings({ ...siteSettings, loyalty_enabled: newVal });
+    await supabase.from("site_settings").update({ loyalty_enabled: newVal }).eq("id", 1);
+  }
+
   async function saveMaintDate() {
     if (!maintDate) return;
     setSavingMaint(true);
@@ -156,7 +163,30 @@ export default function SettingsPage() {
               />
             </button>
           </div>
-          <div className="border-t border-ink/[0.08] pt-6">
+          <div className="border-t border-ink/[0.08] pt-6 mt-6">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div>
+                <h2 className="font-display text-[1.1rem] mb-1">Loyalty Programme</h2>
+                <p className="text-[0.85rem] text-ink-soft">
+                  {siteSettings?.loyalty_enabled
+                    ? "ON — customers earn stamps per booking and can check their card online"
+                    : "OFF — loyalty page is hidden and stamps are not awarded"}
+                </p>
+              </div>
+              <button
+                onClick={toggleLoyalty}
+                className={`relative w-16 h-9 rounded-full transition-colors ${siteSettings?.loyalty_enabled ? "bg-green-400" : "bg-ink/15"}`}
+              >
+                <span
+                  className={`absolute top-1 left-1 w-7 h-7 rounded-full bg-white shadow-sm transition-transform ${
+                    siteSettings?.loyalty_enabled ? "translate-x-7" : ""
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
+          <div className="border-t border-ink/[0.08] pt-6 mt-6">
             <label className="block text-sm font-medium mb-2">Countdown Launch Date</label>
             <div className="flex gap-3 flex-wrap items-center">
               <input

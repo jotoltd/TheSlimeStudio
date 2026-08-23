@@ -1,7 +1,24 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import SocialLinks from "@/components/SocialLinks";
+import { supabase } from "@/lib/supabase";
 
 export default function Footer() {
+  const [loyaltyEnabled, setLoyaltyEnabled] = useState(true);
+
+  useEffect(() => {
+    supabase
+      .from("site_settings")
+      .select("loyalty_enabled")
+      .eq("id", 1)
+      .single()
+      .then(({ data }) => {
+        if (data) setLoyaltyEnabled(!!data.loyalty_enabled);
+      });
+  }, []);
+
   return (
     <footer className="text-ink pt-[60px] pb-[30px]" style={{ backgroundColor: "#FBF8F5" }}>
       <div className="container">
@@ -28,7 +45,7 @@ export default function Footer() {
               <li><Link href="/about" className="text-[0.9rem] hover:text-ink transition-colors">About</Link></li>
               <li><Link href="/parties" className="text-[0.9rem] hover:text-ink transition-colors">Parties</Link></li>
               <li><Link href="/shop" className="text-[0.9rem] hover:text-ink transition-colors">Shop</Link></li>
-              <li><Link href="/loyalty" className="text-[0.9rem] hover:text-ink transition-colors">Loyalty</Link></li>
+              {loyaltyEnabled && <li><Link href="/loyalty" className="text-[0.9rem] hover:text-ink transition-colors">Loyalty</Link></li>}
               <li><Link href="/faqs" className="text-[0.9rem] hover:text-ink transition-colors">FAQs</Link></li>
             </ul>
           </div>

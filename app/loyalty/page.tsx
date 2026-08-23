@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { supabase, STAMPS_PER_REWARD } from "@/lib/supabase";
@@ -11,6 +11,20 @@ export default function LoyaltyPage() {
   const [card, setCard] = useState<LoyaltyCard | null>(null);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [loyaltyEnabled, setLoyaltyEnabled] = useState(true);
+  const [checkingEnabled, setCheckingEnabled] = useState(true);
+
+  useEffect(() => {
+    supabase
+      .from("site_settings")
+      .select("loyalty_enabled")
+      .eq("id", 1)
+      .single()
+      .then(({ data }) => {
+        if (data) setLoyaltyEnabled(!!data.loyalty_enabled);
+        setCheckingEnabled(false);
+      });
+  }, []);
 
   async function lookupCard() {
     if (!email.trim()) return;
@@ -43,6 +57,21 @@ export default function LoyaltyPage() {
 
       <section className="section">
         <div className="container max-w-lg">
+          {checkingEnabled ? (
+            <div className="text-center py-10 text-ink-soft">Loading...</div>
+          ) : !loyaltyEnabled ? (
+            <div className="bg-white rounded-3xl p-6 md:p-10 shadow-sm text-center">
+              <div className="text-4xl mb-4">😴</div>
+              <h2 className="font-display text-xl mb-2">Loyalty Programme Paused</h2>
+              <p className="text-ink-soft text-[0.9rem] mb-6">
+                Our loyalty programme is currently being updated. Check back soon!
+              </p>
+              <a href="/booking" className="btn-primary inline-block" style={{ padding: "10px 28px", fontSize: "0.9rem" }}>
+                Book a Session
+              </a>
+            </div>
+          ) : (
+          <>
           {/* Email lookup */}
           <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm mb-6">
             <label className="block text-sm font-medium mb-2">Enter your email</label>
@@ -179,6 +208,8 @@ export default function LoyaltyPage() {
               </div>
             </div>
           </div>
+          </>
+          )}
         </div>
       </section>
 

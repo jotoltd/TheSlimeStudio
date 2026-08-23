@@ -4,8 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useCart } from "@/components/CartContext";
+import { supabase } from "@/lib/supabase";
 
-const navLinks = [
+const allNavLinks = [
   { href: "/", label: "Home" },
   { href: "/about", label: "About" },
   { href: "/parties", label: "Parties" },
@@ -20,7 +21,23 @@ export default function Navbar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [loyaltyEnabled, setLoyaltyEnabled] = useState(true);
   const { itemCount, openCart } = useCart();
+
+  useEffect(() => {
+    supabase
+      .from("site_settings")
+      .select("loyalty_enabled")
+      .eq("id", 1)
+      .single()
+      .then(({ data }) => {
+        if (data) setLoyaltyEnabled(!!data.loyalty_enabled);
+      });
+  }, []);
+
+  const navLinks = loyaltyEnabled
+    ? allNavLinks
+    : allNavLinks.filter((l) => l.href !== "/loyalty");
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
