@@ -125,7 +125,7 @@ function SubscribePageInner() {
         </div>
       </section>
 
-      <section className="section">
+      <section className="section px-4">
         <div className="container max-w-4xl grid md:grid-cols-2 gap-6 md:gap-10">
           {/* Details */}
           <div>

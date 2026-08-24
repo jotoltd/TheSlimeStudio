@@ -50,7 +50,7 @@ export default function LoyaltyPage() {
     <>
       <Navbar />
 
-      <section className="py-[50px] md:py-[70px] text-center" style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}>
+      <section className="py-[50px] md:py-[70px] text-center px-4" style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}>
         <div className="container">
           <h1 className="font-display text-[1.5rem] md:text-[3.2rem] mt-3 mb-3 text-ink">Loyalty Card</h1>
           <p className="text-[0.95rem] md:text-[1.1rem] text-ink/80 max-w-[560px] mx-auto">
@@ -59,7 +59,7 @@ export default function LoyaltyPage() {
         </div>
       </section>
 
-      <section className="section">
+      <section className="section px-4">
         <div className="container max-w-lg">
           {checkingEnabled ? (
             <div className="text-center py-10 text-ink-soft">Loading...</div>
@@ -70,7 +70,7 @@ export default function LoyaltyPage() {
               <p className="text-ink-soft text-[0.9rem] mb-6">
                 Our loyalty programme is currently being updated. Check back soon!
               </p>
-              <a href="/booking" className="btn-primary inline-block" style={{ padding: "10px 28px", fontSize: "0.9rem" }}>
+              <a href="/booking" className="btn-primary inline-block">
                 Book a Session
               </a>
             </div>
@@ -79,7 +79,7 @@ export default function LoyaltyPage() {
           {/* Email lookup */}
           <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm mb-6">
             <label className="block text-sm font-medium mb-2">Enter your email</label>
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <input
                 type="email"
                 value={email}
@@ -163,8 +163,8 @@ export default function LoyaltyPage() {
                 )}
 
                 <div className="mt-5 text-center">
-                  <a href="/booking" className="btn-primary inline-block" style={{ padding: "10px 28px", fontSize: "0.9rem" }}>
-                    Book Next Session
+                  <a href="/booking" className="btn-primary inline-block">
+                    Book a Session
                   </a>
                 </div>
               </div>
@@ -181,7 +181,7 @@ export default function LoyaltyPage() {
                 <p className="text-[0.85rem] text-ink-soft mb-4">
                   You'll automatically get a stamp when you book a paid session online. Make sure to use the same email each time!
                 </p>
-                <a href="/booking" className="btn-primary inline-block" style={{ padding: "10px 28px", fontSize: "0.9rem" }}>
+                <a href="/booking" className="btn-primary inline-block">
                   Book a Session
                 </a>
               </div>

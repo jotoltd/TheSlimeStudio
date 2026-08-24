@@ -66,8 +66,8 @@ export default function Navbar() {
           <img
             src="/images/header_logo.png"
             alt="The Slime Studio"
-            className="w-auto object-contain flex-shrink-0 transition-all duration-300"
-            style={{ height: scrolled ? 48 : 76 }}
+            className="w-auto object-contain flex-shrink-0 transition-all duration-300 md:!h-[60px]"
+            style={{ height: scrolled ? 40 : 48 }}
           />
         </Link>
 

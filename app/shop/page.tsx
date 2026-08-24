@@ -172,9 +172,9 @@ export default function ShopPage() {
           </div>
         </section>
       ) : (
-        <section className="py-[70px] text-center" style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}>
+        <section className="py-[50px] md:py-[70px] text-center px-4" style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}>
           <div className="container">
-            <h1 className="font-display text-[2rem] md:text-[3.2rem] mt-3 mb-3 text-ink">Slime, Kits & Accessories</h1>
+            <h1 className="font-display text-[1.5rem] md:text-[3.2rem] mt-3 mb-3 text-ink">Slime, Kits & Accessories</h1>
             <p className="text-[1.1rem] text-ink/80 max-w-[560px] mx-auto">
               Handmade in small batches in our Norfolk studio. Every slime is
               unique, scented and ready to squish.
@@ -185,7 +185,7 @@ export default function ShopPage() {
 
       {shopLive && (
         /* Filters + Products */
-        <section className="section">
+        <section className="section px-4">
           <div className="container">
             <div className="flex gap-3 flex-wrap justify-center mb-12">
               {filters.map((f) => (
@@ -210,7 +210,7 @@ export default function ShopPage() {
                 No products found in this category.
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
                 {filtered.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}

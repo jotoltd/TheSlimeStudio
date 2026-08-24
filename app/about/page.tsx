@@ -90,7 +90,7 @@ export default function AboutPage() {
       {/* About Section */}
       <section className="relative py-16 md:py-20 overflow-hidden" style={{ backgroundColor: "#ffc4fb" }}>
         {/* Decorative blob top-right */}
-        <div className="absolute top-0 right-0 w-64 h-64 pointer-events-none opacity-90">
+        <div className="hidden md:block absolute top-0 right-0 w-64 h-64 pointer-events-none opacity-90">
           <svg viewBox="0 0 200 200" className="w-full h-full">
             <path
               d="M60 0 C120 0 200 20 200 80 C200 140 150 170 100 160 C50 150 0 120 10 60 C15 30 30 0 60 0 Z"
@@ -130,7 +130,7 @@ export default function AboutPage() {
             {features.map((f) => (
               <div key={f.title} className="flex flex-col items-center">
                 <div
-                  className={`w-32 h-32 md:w-36 md:h-36 rounded-full overflow-hidden bg-gradient-to-br ${f.gradient} border-4 border-white shadow-md mb-5`}
+                  className={`w-24 h-24 md:w-36 md:h-36 rounded-full overflow-hidden bg-gradient-to-br ${f.gradient} border-4 border-white shadow-md mb-5`}
                 >
                   <img src={f.img} alt={f.title} className="w-full h-full object-cover" />
                 </div>
@@ -162,7 +162,7 @@ export default function AboutPage() {
         </div>
 
         {/* Decorative blob bottom-left */}
-        <div className="absolute -bottom-10 -left-10 w-56 h-56 pointer-events-none opacity-90">
+        <div className="hidden md:block absolute -bottom-10 -left-10 w-56 h-56 pointer-events-none opacity-90">
           <svg viewBox="0 0 200 200" className="w-full h-full">
             <path
               d="M40 200 C0 160 -10 100 40 60 C90 20 160 30 180 80 C200 130 160 180 110 195 C85 202 60 200 40 200 Z"
@@ -174,7 +174,7 @@ export default function AboutPage() {
         </div>
 
         {/* Decorative blob bottom-right */}
-        <div className="absolute -bottom-10 -right-10 w-56 h-56 pointer-events-none opacity-90">
+        <div className="hidden md:block absolute -bottom-10 -right-10 w-56 h-56 pointer-events-none opacity-90">
           <svg viewBox="0 0 200 200" className="w-full h-full">
             <path
               d="M160 200 C200 160 210 100 160 60 C110 20 40 30 20 80 C0 130 40 180 90 195 C115 202 140 200 160 200 Z"

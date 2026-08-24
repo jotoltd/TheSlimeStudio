@@ -49,15 +49,15 @@ export default function ProductCard({ product }: { product: Product }) {
           <span className="text-[3.5rem]">{categoryEmojis[product.category] || "🫧"}</span>
         )}
       </div>
-      <div className="p-5">
-        <h3 className="font-display text-lg mb-1">{product.name}</h3>
-        <p className="text-sm text-ink-soft mb-4 line-clamp-2">{product.description}</p>
-        <div className="flex items-center justify-between">
-          <span className="font-display text-lg">£{Number(product.price).toFixed(2)}</span>
+      <div className="p-3 md:p-5">
+        <h3 className="font-display text-sm md:text-lg mb-1 line-clamp-1">{product.name}</h3>
+        <p className="text-xs md:text-sm text-ink-soft mb-3 md:mb-4 line-clamp-2">{product.description}</p>
+        <div className="flex items-center justify-between gap-2">
+          <span className="font-display text-sm md:text-lg">£{Number(product.price).toFixed(2)}</span>
           <button
             disabled={outOfStock}
             onClick={() => addItem(product)}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+            className={`px-3 md:px-4 py-1.5 md:py-2 rounded-full text-xs md:text-sm font-medium transition-all ${
               outOfStock
                 ? "bg-gray-300 text-gray-400 cursor-not-allowed opacity-50"
                 : "bg-[#64d8ec] text-ink hover:bg-[#4cc5db] hover:scale-105"

@@ -22,7 +22,7 @@ export default function HomePage() {
             <img
               src="/images/logo.png"
               alt="The Slime Studio — Make Your Own Slime"
-              className="w-full max-w-[360px] md:max-w-[480px] mx-auto mb-6 md:mb-10 object-contain rounded-full shadow-lg"
+              className="w-full max-w-[240px] md:max-w-[480px] mx-auto mb-6 md:mb-10 object-contain rounded-full shadow-lg"
               style={{ backgroundColor: "#ffffff" }}
             />
             <h1 className="font-display text-[1.5rem] md:text-[2.4rem] leading-[1.15] mb-4 md:mb-5 text-ink">
@@ -169,7 +169,7 @@ export default function HomePage() {
       </section>
 
       {/* Secondary CTA */}
-      <section className="container my-10 md:my-20">
+      <section className="container my-10 md:my-20 px-4">
         <div className="reveal rounded-[24px] md:rounded-[32px] p-8 md:p-16 text-center shadow-lg" style={{ backgroundColor: "#64d8ec" }}>
           <h2 className="font-display text-[1.5rem] md:text-[2.6rem] mb-3 md:mb-3.5 text-white">Ready to Get Squishing?</h2>
           <p className="text-[0.95rem] md:text-[1.1rem] text-white/70 mb-6 md:mb-8 max-w-xl mx-auto">

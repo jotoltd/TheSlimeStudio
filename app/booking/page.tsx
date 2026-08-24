@@ -304,7 +304,7 @@ function BookingPageInner() {
     <>
       <Navbar />
 
-      <section className="py-[50px] md:py-[70px] text-center" style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}>
+      <section className="py-[50px] md:py-[70px] text-center px-4" style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}>
         <div className="container">
           <h1 className="font-display text-[1.5rem] md:text-[3.2rem] mt-3 mb-3 text-ink">Book a Slime-Making Session</h1>
           <p className="text-[1.1rem] md:text-[1.3rem] text-ink/90 mb-2 font-display">Choose Your Session</p>
@@ -323,7 +323,7 @@ function BookingPageInner() {
         </div>
       </section>
 
-      <section className="section">
+      <section className="section px-4">
         <div className="container max-w-2xl">
           {status === "paid" ? (
             <div className="bg-white rounded-3xl p-6 md:p-10 shadow-sm">
@@ -344,30 +344,30 @@ function BookingPageInner() {
                   {bookingId && <span className="text-[0.7rem] text-ink-soft font-mono">Ref: {bookingId.slice(0, 8).toUpperCase()}</span>}
                 </div>
                 <div className="divide-y divide-ink/[0.06]">
-                  <div className="flex items-center justify-between px-5 py-3.5">
-                    <span className="text-[0.85rem] text-ink-soft">Date</span>
-                    <span className="text-[0.9rem] font-medium text-ink">{new Date(date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</span>
+                  <div className="flex items-center justify-between px-4 md:px-5 py-3.5 gap-2">
+                    <span className="text-[0.85rem] text-ink-soft flex-shrink-0">Date</span>
+                    <span className="text-[0.9rem] font-medium text-ink text-right">{new Date(date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</span>
                   </div>
-                  <div className="flex items-center justify-between px-5 py-3.5">
-                    <span className="text-[0.85rem] text-ink-soft">Time</span>
-                    <span className="text-[0.9rem] font-medium text-ink">{timeSlot} — {timeSlot.split(":").map(Number).length === 2 ? (() => { const [h, m] = timeSlot.split(":").map(Number); const end = new Date(); end.setHours(h + 1, m); return `${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}`; })() : ""}</span>
+                  <div className="flex items-center justify-between px-4 md:px-5 py-3.5 gap-2">
+                    <span className="text-[0.85rem] text-ink-soft flex-shrink-0">Time</span>
+                    <span className="text-[0.9rem] font-medium text-ink text-right">{timeSlot} — {timeSlot.split(":").map(Number).length === 2 ? (() => { const [h, m] = timeSlot.split(":").map(Number); const end = new Date(); end.setHours(h + 1, m); return `${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}`; })() : ""}</span>
                   </div>
-                  <div className="flex items-center justify-between px-5 py-3.5">
-                    <span className="text-[0.85rem] text-ink-soft">Slime Makers</span>
+                  <div className="flex items-center justify-between px-4 md:px-5 py-3.5 gap-2">
+                    <span className="text-[0.85rem] text-ink-soft flex-shrink-0">Slime Makers</span>
                     <span className="text-[0.9rem] font-medium text-ink">{people} {people === 1 ? "person" : "people"}</span>
                   </div>
-                  <div className="flex items-center justify-between px-5 py-3.5">
-                    <span className="text-[0.85rem] text-ink-soft">Name</span>
-                    <span className="text-[0.9rem] font-medium text-ink">{name}</span>
+                  <div className="flex items-center justify-between px-4 md:px-5 py-3.5 gap-2">
+                    <span className="text-[0.85rem] text-ink-soft flex-shrink-0">Name</span>
+                    <span className="text-[0.9rem] font-medium text-ink text-right">{name}</span>
                   </div>
                   {phone && (
-                    <div className="flex items-center justify-between px-5 py-3.5">
-                      <span className="text-[0.85rem] text-ink-soft">Phone</span>
+                    <div className="flex items-center justify-between px-4 md:px-5 py-3.5 gap-2">
+                      <span className="text-[0.85rem] text-ink-soft flex-shrink-0">Phone</span>
                       <span className="text-[0.9rem] font-medium text-ink">{phone}</span>
                     </div>
                   )}
-                  <div className="flex items-center justify-between px-5 py-3.5">
-                    <span className="text-[0.85rem] text-ink-soft">Total Paid</span>
+                  <div className="flex items-center justify-between px-4 md:px-5 py-3.5 gap-2">
+                    <span className="text-[0.85rem] text-ink-soft flex-shrink-0">Total Paid</span>
                     <span className="text-[0.9rem] font-display text-ink">£{totalPrice.toFixed(2)}</span>
                   </div>
                 </div>

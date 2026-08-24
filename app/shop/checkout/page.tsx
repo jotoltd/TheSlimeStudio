@@ -106,13 +106,13 @@ export default function CheckoutPage() {
   return (
     <>
       <Navbar />
-      <section className="py-[50px] md:py-[70px] text-center" style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}>
+      <section className="py-[50px] md:py-[70px] text-center px-4" style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}>
         <div className="container">
           <h1 className="font-display text-[1.5rem] md:text-[2.5rem] text-ink">Checkout</h1>
         </div>
       </section>
 
-      <section className="section">
+      <section className="section px-4">
         <div className="container max-w-4xl">
           {cancelled && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 text-center text-[0.9rem] text-red-700">

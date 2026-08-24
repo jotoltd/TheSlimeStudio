@@ -34,7 +34,7 @@ export default function PressPage() {
       <Navbar />
 
       <section
-        className="py-[50px] md:py-[70px] text-center"
+        className="py-[50px] md:py-[70px] text-center px-4"
         style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}
       >
         <div className="container">
@@ -49,7 +49,7 @@ export default function PressPage() {
         </div>
       </section>
 
-      <section className="section">
+      <section className="section px-4">
         <div className="container max-w-3xl">
           <div className="space-y-5">
             {pressFeatures.map((feature, i) => (
