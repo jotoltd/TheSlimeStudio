@@ -307,6 +307,7 @@ function BookingPageInner() {
       <section className="py-[50px] md:py-[70px] text-center" style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}>
         <div className="container">
           <h1 className="font-display text-[1.5rem] md:text-[3.2rem] mt-3 mb-3 text-ink">Book a Slime-Making Session</h1>
+          <p className="text-[1.1rem] md:text-[1.3rem] text-ink/90 mb-2 font-display">Choose Your Session</p>
           <p className="text-[0.95rem] md:text-[1.1rem] text-ink/80 max-w-[560px] mx-auto">
             One-hour sessions, every hour. Up to {slotCapacity} slime makers per slot at
             £{pricePerPerson.toFixed(2)} per person.
@@ -482,7 +483,6 @@ function BookingPageInner() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-5 md:p-8 shadow-sm">
-              <h2 className="font-display text-lg md:text-xl mb-5 md:mb-6 text-center">Choose Your Session</h2>
 
               <div className="mb-6">
                 <label className="block text-sm font-medium mb-2">Date</label>

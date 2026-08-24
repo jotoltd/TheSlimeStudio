@@ -9,232 +9,134 @@ export default function SlimeHamburger({
 }) {
   return (
     <button
-      className="md:hidden relative w-11 h-11 bg-none border-none cursor-pointer p-0 grid place-items-center"
+      className="md:hidden relative w-12 h-12 bg-none border-none cursor-pointer p-0 grid place-items-center"
       onClick={onClick}
       aria-label="Toggle menu"
     >
       <svg
-        width="40"
-        height="40"
-        viewBox="0 0 40 40"
+        width="44"
+        height="44"
+        viewBox="0 0 44 44"
         fill="none"
         className="overflow-visible"
       >
-        <g className="slime-menu-group" data-open={open}>
-          {/* Slime blob — mint body */}
-          <path
-            className="slime-menu-blob"
-            d="M20 6 C24 6 27 8 28 11 C31 11 34 14 34 18 C34 21 32 23 30 24 C31 27 29 30 26 31 C24 33 21 32 20 30 C19 32 16 33 14 31 C11 30 9 27 10 24 C8 23 6 21 6 18 C6 14 9 11 12 11 C13 8 16 6 20 6 Z"
-            fill="#abf7dc"
-            stroke="#64d8ec"
-            strokeWidth="1.5"
-          />
-          {/* Pink slime drip on top */}
-          <path
-            className="slime-menu-drip"
-            d="M20 6 C22 6 23 7 23 9 C23 11 21 12 20 12 C19 12 17 11 17 9 C17 7 18 6 20 6 Z"
-            fill="#ffc4fb"
-            opacity="0.8"
-          />
-          {/* Shine dot */}
-          <circle className="slime-menu-shine" cx="15" cy="13" r="2" fill="white" opacity="0.6" />
+        <g className="sm-grp" data-open={open}>
+          {/* Slime blob — mint with pink drip */}
+          <g className="sm-blob">
+            <path
+              d="M22 8 C27 8 31 11 32 16 C35 17 37 20 36 24 C35 27 33 29 31 30 C32 33 30 36 27 37 C25 38 22 38 22 36 C21 38 18 38 16 37 C13 36 11 33 12 30 C10 29 8 27 8 24 C7 20 9 17 12 16 C13 11 17 8 22 8 Z"
+              fill="#abf7dc"
+              stroke="#64d8ec"
+              strokeWidth="1.5"
+            />
+            <path
+              d="M22 8 C24 8 25 9 25 11 C25 13 23 14 22 14 C21 14 19 13 19 11 C19 9 20 8 22 8 Z"
+              fill="#ffc4fb"
+              opacity="0.85"
+            />
+            <circle cx="16" cy="15" r="2.5" fill="white" opacity="0.5" />
+          </g>
 
-          {/* Three hamburger lines — appear during loop and when open */}
-          <line
-            className="slime-menu-line slime-menu-line-1"
-            x1="11" y1="15" x2="29" y2="15"
-            stroke="#2d2d2d" strokeWidth="2.5" strokeLinecap="round"
-          />
-          <line
-            className="slime-menu-line slime-menu-line-2"
-            x1="11" y1="20" x2="29" y2="20"
-            stroke="#2d2d2d" strokeWidth="2.5" strokeLinecap="round"
-          />
-          <line
-            className="slime-menu-line slime-menu-line-3"
-            x1="11" y1="25" x2="29" y2="25"
-            stroke="#2d2d2d" strokeWidth="2.5" strokeLinecap="round"
-          />
+          {/* Hamburger lines */}
+          <g className="sm-lines">
+            <line x1="12" y1="16" x2="32" y2="16" stroke="#2d2d2d" strokeWidth="3" strokeLinecap="round" className="sm-ln sm-ln-1" />
+            <line x1="12" y1="22" x2="32" y2="22" stroke="#2d2d2d" strokeWidth="3" strokeLinecap="round" className="sm-ln sm-ln-2" />
+            <line x1="12" y1="28" x2="32" y2="28" stroke="#2d2d2d" strokeWidth="3" strokeLinecap="round" className="sm-ln sm-ln-3" />
+          </g>
+
+          {/* X lines (open state) */}
+          <g className="sm-x">
+            <line x1="14" y1="14" x2="30" y2="30" stroke="#2d2d2d" strokeWidth="3" strokeLinecap="round" className="sm-x-1" />
+            <line x1="30" y1="14" x2="14" y2="30" stroke="#2d2d2d" strokeWidth="3" strokeLinecap="round" className="sm-x-2" />
+          </g>
         </g>
       </svg>
 
       <style>{`
-        .slime-menu-group {
-          transform-origin: 20px 20px;
+        .sm-grp { transform-origin: 22px 22px; }
+
+        /* ===== IDLE LOOP (closed): slime → lines → slime, 3.5s ===== */
+        .sm-grp[data-open="false"] .sm-blob {
+          animation: smBlobCycle 3.5s ease-in-out infinite;
+          transform-origin: 22px 22px;
+        }
+        @keyframes smBlobCycle {
+          0%, 30%   { opacity: 1; transform: scale(1) rotate(0deg); }
+          10%       { transform: scale(1.08, 0.92) rotate(-2deg); }
+          20%       { transform: scale(0.94, 1.06) rotate(2deg); }
+          38%       { opacity: 0.8; transform: scale(1.15, 0.7) rotate(0deg); }
+          45%, 65%  { opacity: 0; transform: scale(0.4, 0.3); }
+          72%       { opacity: 0.5; transform: scale(1.1, 0.85) rotate(0deg); }
+          80%, 100% { opacity: 1; transform: scale(1) rotate(0deg); }
         }
 
-        /*
-         * IDLE LOOP (menu closed): 4s cycle
-         * 0-35%:   Slime blob wobbles/morphs
-         * 42%:     Slime splats flat
-         * 50-70%:  Lines visible (hamburger state)
-         * 78%:     Slime re-forms
-         * 88-100%: Back to slime blob
-         */
-        .slime-menu-group[data-open="false"] .slime-menu-blob {
-          animation: blobMorphLoop 4s ease-in-out infinite;
-          transform-origin: 20px 20px;
+        .sm-grp[data-open="false"] .sm-lines {
+          animation: smLinesCycle 3.5s ease-in-out infinite;
+          transform-origin: 22px 22px;
+        }
+        @keyframes smLinesCycle {
+          0%, 40%   { opacity: 0; transform: scale(0.5); }
+          48%       { opacity: 0.4; transform: scale(0.8); }
+          55%, 62%  { opacity: 1; transform: scale(1); }
+          70%       { opacity: 0.4; transform: scale(0.8); }
+          78%, 100% { opacity: 0; transform: scale(0.5); }
         }
 
-        @keyframes blobMorphLoop {
-          0%, 35% {
-            opacity: 1;
-            transform: scale(1, 1);
-            d: path("M20 6 C24 6 27 8 28 11 C31 11 34 14 34 18 C34 21 32 23 30 24 C31 27 29 30 26 31 C24 33 21 32 20 30 C19 32 16 33 14 31 C11 30 9 27 10 24 C8 23 6 21 6 18 C6 14 9 11 12 11 C13 8 16 6 20 6 Z");
-          }
-          15% {
-            transform: scale(1.06, 0.94);
-            d: path("M20 7 C25 7 28 9 29 12 C32 12 35 15 34 19 C34 22 32 24 30 25 C32 28 29 31 26 32 C24 34 21 33 20 31 C19 33 16 34 14 32 C11 31 8 28 10 25 C8 24 5 22 6 19 C6 15 9 12 12 12 C13 9 16 7 20 7 Z");
-          }
-          25% {
-            transform: scale(0.96, 1.04);
-            d: path("M20 5 C23 5 26 7 27 10 C30 10 33 13 33 17 C33 20 31 22 29 23 C30 26 28 29 25 30 C23 32 20 31 20 29 C19 31 16 32 14 30 C11 29 9 26 10 23 C8 22 6 20 7 17 C7 13 10 10 13 10 C14 7 17 5 20 5 Z");
-          }
-          42% {
-            opacity: 1;
-            transform: scale(1.2, 0.6);
-            d: path("M20 10 C26 10 32 11 33 14 C34 16 33 18 32 19 C33 21 33 23 31 24 C29 25 25 25 20 25 C15 25 11 25 9 24 C7 23 7 21 8 19 C7 18 6 16 7 14 C8 11 14 10 20 10 Z");
-          }
-          50%, 70% {
-            opacity: 0;
-            transform: scale(0.3, 0.2);
-          }
-          78% {
-            opacity: 0.5;
-            transform: scale(1.15, 0.8);
-            d: path("M20 8 C24 8 27 10 28 13 C31 13 34 16 33 19 C33 22 31 24 29 25 C30 27 28 30 25 31 C23 33 20 32 20 30 C19 32 16 33 14 31 C11 30 9 27 10 24 C8 23 6 21 7 18 C7 14 10 11 13 12 C14 9 17 8 20 8 Z");
-          }
-          88%, 100% {
-            opacity: 1;
-            transform: scale(1, 1);
-            d: path("M20 6 C24 6 27 8 28 11 C31 11 34 14 34 18 C34 21 32 23 30 24 C31 27 29 30 26 31 C24 33 21 32 20 30 C19 32 16 33 14 31 C11 30 9 27 10 24 C8 23 6 21 6 18 C6 14 9 11 12 11 C13 8 16 6 20 6 Z");
-          }
+        .sm-grp[data-open="false"] .sm-ln-1 { animation: smLn1 3.5s ease-in-out infinite; }
+        .sm-grp[data-open="false"] .sm-ln-2 { animation: smLn2 3.5s ease-in-out infinite; }
+        .sm-grp[data-open="false"] .sm-ln-3 { animation: smLn3 3.5s ease-in-out infinite; }
+        @keyframes smLn1 {
+          0%, 42% { transform: translateY(0); }
+          55%, 62% { transform: translateY(0); }
+          78%, 100% { transform: translateY(0); }
+        }
+        @keyframes smLn2 {
+          0%, 44% { transform: scaleX(0.3); transform-origin: 22px 22px; }
+          55%, 62% { transform: scaleX(1); transform-origin: 22px 22px; }
+          78%, 100% { transform: scaleX(0.3); transform-origin: 22px 22px; }
+        }
+        @keyframes smLn3 {
+          0%, 46% { transform: translateY(0); }
+          55%, 62% { transform: translateY(0); }
+          78%, 100% { transform: translateY(0); }
         }
 
-        .slime-menu-group[data-open="false"] .slime-menu-drip {
-          animation: dripLoop 4s ease-in-out infinite;
-          transform-origin: 20px 9px;
+        .sm-grp[data-open="false"] .sm-x { opacity: 0; }
+
+        /* ===== OPEN STATE: show X, hide slime and lines ===== */
+        .sm-grp[data-open="true"] .sm-blob {
+          animation: smBlobOut 0.3s ease-out forwards;
+        }
+        @keyframes smBlobOut {
+          0%   { opacity: 1; transform: scale(1); }
+          100% { opacity: 0; transform: scale(0.4, 0.3); }
         }
 
-        @keyframes dripLoop {
-          0%, 35% { opacity: 0.8; transform: scale(1, 1); }
-          15% { transform: scale(1.1, 1.2); }
-          25% { transform: scale(0.9, 0.8); }
-          42% { opacity: 0.3; transform: scale(1.3, 0.5); }
-          50%, 70% { opacity: 0; transform: scale(0.2, 0.1); }
-          78% { opacity: 0.4; transform: scale(1.1, 1.1); }
-          88%, 100% { opacity: 0.8; transform: scale(1, 1); }
-        }
-
-        .slime-menu-group[data-open="false"] .slime-menu-shine {
-          animation: shineLoop 4s ease-in-out infinite;
-        }
-
-        @keyframes shineLoop {
-          0%, 35% { opacity: 0.6; }
-          42% { opacity: 0; }
-          50%, 70% { opacity: 0; }
-          78% { opacity: 0.3; }
-          88%, 100% { opacity: 0.6; }
-        }
-
-        .slime-menu-group[data-open="false"] .slime-menu-line-1 {
-          animation: lineLoop1 4s ease-in-out infinite;
-        }
-        .slime-menu-group[data-open="false"] .slime-menu-line-2 {
-          animation: lineLoop2 4s ease-in-out infinite;
-        }
-        .slime-menu-group[data-open="false"] .slime-menu-line-3 {
-          animation: lineLoop3 4s ease-in-out infinite;
-        }
-
-        @keyframes lineLoop1 {
-          0%, 42% { opacity: 0; transform: translateY(0); }
-          50% { opacity: 0.5; transform: translateY(2px); }
-          58%, 68% { opacity: 1; transform: translateY(0); }
-          76% { opacity: 0.5; transform: translateY(2px); }
-          82%, 100% { opacity: 0; transform: translateY(0); }
-        }
-        @keyframes lineLoop2 {
-          0%, 44% { opacity: 0; transform: scaleX(0.3); transform-origin: 20px 20px; }
-          52% { opacity: 0.5; transform: scaleX(0.6); transform-origin: 20px 20px; }
-          60%, 66% { opacity: 1; transform: scaleX(1); transform-origin: 20px 20px; }
-          74% { opacity: 0.5; transform: scaleX(0.6); transform-origin: 20px 20px; }
-          82%, 100% { opacity: 0; transform: scaleX(0.3); transform-origin: 20px 20px; }
-        }
-        @keyframes lineLoop3 {
-          0%, 46% { opacity: 0; transform: translateY(0); }
-          54% { opacity: 0.5; transform: translateY(-2px); }
-          62%, 66% { opacity: 1; transform: translateY(0); }
-          74% { opacity: 0.5; transform: translateY(-2px); }
-          82%, 100% { opacity: 0; transform: translateY(0); }
-        }
-
-        /* === OPEN STATE: slime gone, X lines === */
-        .slime-menu-group[data-open="true"] .slime-menu-blob {
-          animation: blobSplatOut 0.35s ease-out forwards;
-        }
-        @keyframes blobSplatOut {
-          0% { opacity: 1; transform: scale(1); }
-          60% { opacity: 0.4; transform: scale(1.3, 0.6); }
-          100% { opacity: 0; transform: scale(0.3, 0.2); }
-        }
-
-        .slime-menu-group[data-open="true"] .slime-menu-drip {
-          animation: dripOut 0.3s ease-out forwards;
-        }
-        @keyframes dripOut {
-          to { opacity: 0; transform: scale(0.2, 0.1); }
-        }
-
-        .slime-menu-group[data-open="true"] .slime-menu-shine {
+        .sm-grp[data-open="true"] .sm-lines {
           opacity: 0;
-          transition: opacity 0.2s ease;
+          transition: opacity 0.15s ease;
         }
 
-        .slime-menu-group[data-open="true"] .slime-menu-line {
-          opacity: 1;
+        .sm-grp[data-open="true"] .sm-x {
+          animation: smXIn 0.35s ease-out 0.1s both;
+          transform-origin: 22px 22px;
         }
-        .slime-menu-group[data-open="true"] .slime-menu-line-1 {
-          animation: lineToX1 0.3s ease-out 0.1s both;
-        }
-        .slime-menu-group[data-open="true"] .slime-menu-line-2 {
-          animation: lineToX2 0.3s ease-out 0.1s both;
-        }
-        .slime-menu-group[data-open="true"] .slime-menu-line-3 {
-          animation: lineToX3 0.3s ease-out 0.1s both;
-        }
-
-        @keyframes lineToX1 {
-          from { transform: translateY(0) rotate(0deg); opacity: 0; }
-          to { transform: translateY(5px) rotate(45deg); opacity: 1; }
-        }
-        @keyframes lineToX2 {
-          from { opacity: 0; }
-          to { opacity: 0; }
-        }
-        @keyframes lineToX3 {
-          from { transform: translateY(0) rotate(0deg); opacity: 0; }
-          to { transform: translateY(-5px) rotate(-45deg); opacity: 1; }
+        @keyframes smXIn {
+          0%   { opacity: 0; transform: scale(0.5) rotate(-90deg); }
+          100% { opacity: 1; transform: scale(1) rotate(0deg); }
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .slime-menu-group[data-open="false"] .slime-menu-blob,
-          .slime-menu-group[data-open="false"] .slime-menu-drip,
-          .slime-menu-group[data-open="false"] .slime-menu-shine,
-          .slime-menu-group[data-open="false"] .slime-menu-line-1,
-          .slime-menu-group[data-open="false"] .slime-menu-line-2,
-          .slime-menu-group[data-open="false"] .slime-menu-line-3 {
+          .sm-grp[data-open="false"] .sm-blob,
+          .sm-grp[data-open="false"] .sm-lines,
+          .sm-grp[data-open="false"] .sm-ln-1,
+          .sm-grp[data-open="false"] .sm-ln-2,
+          .sm-grp[data-open="false"] .sm-ln-3 {
             animation: none;
           }
-          .slime-menu-group[data-open="false"] .slime-menu-line {
-            opacity: 1;
-          }
-          .slime-menu-group[data-open="false"] .slime-menu-blob,
-          .slime-menu-group[data-open="false"] .slime-menu-drip,
-          .slime-menu-group[data-open="false"] .slime-menu-shine {
-            opacity: 0;
-          }
+          .sm-grp[data-open="false"] .sm-blob { opacity: 0; }
+          .sm-grp[data-open="false"] .sm-lines { opacity: 1; }
+          .sm-grp[data-open="false"] .sm-x { opacity: 0; }
         }
       `}</style>
     </button>
