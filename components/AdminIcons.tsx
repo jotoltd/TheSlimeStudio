@@ -178,6 +178,16 @@ export function GiftIcon({ className, size }: IconProps) {
   );
 }
 
+export function PhotoIcon({ className, size }: IconProps) {
+  return (
+    <svg {...base(size)} className={className}>
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+      <circle cx="8.5" cy="8.5" r="1.5" />
+      <polyline points="21 15 16 10 5 21" />
+    </svg>
+  );
+}
+
 export const iconMap: Record<string, React.FC<IconProps>> = {
   home: HomeIcon,
   dollar: DollarIcon,
@@ -192,4 +202,5 @@ export const iconMap: Record<string, React.FC<IconProps>> = {
   inbox: InboxIcon,
   download: DownloadIcon,
   gift: GiftIcon,
+  photo: PhotoIcon,
 };

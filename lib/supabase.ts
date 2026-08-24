@@ -132,6 +132,15 @@ export type LoyaltyCard = {
 export const STAMPS_PER_REWARD = 10;
 export const PRICE_PER_PERSON = 15;
 
+export type GalleryImage = {
+  id: string;
+  image_url: string;
+  caption: string;
+  sort_order: number;
+  is_visible: boolean;
+  created_at: string;
+};
+
 export type OpeningHour = {
   id: string;
   day_of_week: number; // 0 = Sunday, 1 = Monday, ... 6 = Saturday
