@@ -110,6 +110,7 @@ export type SiteSettings = {
   stamps_per_reward: number;
   launch_date: string;
   stripe_mode?: string;
+  payment_provider?: "stripe" | "sumup";
   updated_at: string;
 };
 

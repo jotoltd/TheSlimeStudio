@@ -11,21 +11,43 @@ import type { ShopOrder } from "@/lib/supabase";
 function SuccessContent() {
   const params = useSearchParams();
   const sessionId = params.get("session_id");
+  const sumupRef = params.get("sumup_ref");
   const [order, setOrder] = useState<ShopOrder | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!sessionId) { setLoading(false); return; }
-    supabase
-      .from("shop_orders")
-      .select("*")
-      .eq("stripe_session_id", sessionId)
-      .single()
-      .then(({ data }) => {
-        if (data) setOrder(data as ShopOrder);
-        setLoading(false);
-      });
-  }, [sessionId]);
+    if (sumupRef) {
+      // SumUp flow: confirm the order was paid
+      fetch("/api/sumup-confirm-shop-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ checkoutRef: sumupRef }),
+      }).then(() => {
+        // Then fetch the order from DB
+        supabase
+          .from("shop_orders")
+          .select("*")
+          .eq("stripe_session_id", sumupRef)
+          .single()
+          .then(({ data }) => {
+            if (data) setOrder(data as ShopOrder);
+            setLoading(false);
+          });
+      }).catch(() => setLoading(false));
+    } else if (sessionId) {
+      supabase
+        .from("shop_orders")
+        .select("*")
+        .eq("stripe_session_id", sessionId)
+        .single()
+        .then(({ data }) => {
+          if (data) setOrder(data as ShopOrder);
+          setLoading(false);
+        });
+    } else {
+      setLoading(false);
+    }
+  }, [sessionId, sumupRef]);
 
   if (loading) {
     return (

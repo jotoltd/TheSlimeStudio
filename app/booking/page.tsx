@@ -39,6 +39,7 @@ function BookingPageInner() {
   const [dateOverrides, setDateOverrides] = useState<DateOverride[]>([]);
   const [globalSlots, setGlobalSlots] = useState<string[]>(DEFAULT_SLOTS);
   const [loyaltyEnabled, setLoyaltyEnabled] = useState(true);
+  const [paymentProvider, setPaymentProvider] = useState<"stripe" | "sumup">("stripe");
 
 
   useEffect(() => {
@@ -58,9 +59,47 @@ function BookingPageInner() {
       if (d.weekly) setOpeningHours(d.weekly);
       if (d.overrides) setDateOverrides(d.overrides);
     }).catch(() => {});
-    supabase.from("site_settings").select("loyalty_enabled").eq("id", 1).single().then(({ data }) => {
-      if (data) setLoyaltyEnabled(!!data.loyalty_enabled);
+    supabase.from("site_settings").select("loyalty_enabled, payment_provider").eq("id", 1).single().then(({ data }) => {
+      if (data) {
+        setLoyaltyEnabled(!!data.loyalty_enabled);
+        if (data.payment_provider) setPaymentProvider(data.payment_provider as "stripe" | "sumup");
+      }
     });
+
+    // Handle SumUp redirect back after payment
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const sumupStatus = params.get("sumup_status");
+      const sumupRef = params.get("ref");
+      if (sumupStatus === "paid" && sumupRef) {
+        fetch("/api/sumup-confirm-booking", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ checkoutRef: sumupRef }),
+        }).then((res) => res.json()).then((data) => {
+          if (data.success) {
+            setBookingId(data.bookingId);
+            setName(data.name || "");
+            setEmail(data.email || "");
+            setDate(data.date || date);
+            setTimeSlot(data.timeSlot || timeSlot);
+            setPeople(data.people || people);
+            setStatus("paid");
+          } else {
+            setErrorMsg(data.error || "Payment verification failed.");
+            setStatus("error");
+          }
+        }).catch(() => {
+          setErrorMsg("Payment verification failed.");
+          setStatus("error");
+        }).finally(() => {
+          const url = new URL(window.location.href);
+          url.searchParams.delete("sumup_status");
+          url.searchParams.delete("ref");
+          window.history.replaceState({}, "", url.toString());
+        });
+      }
+    }
 
     // Handle Stripe 3D Secure redirect: if redirected back with payment_intent param,
     // the payment may have succeeded but onSuccess never fired. Confirm booking directly.
@@ -261,8 +300,36 @@ function BookingPageInner() {
       return;
     }
 
-    // Create payment intent — NO booking in DB yet
+    // Create payment — branch based on provider
     try {
+      if (paymentProvider === "sumup") {
+        // SumUp: redirect to hosted checkout
+        const res = await fetch("/api/sumup-booking-checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name,
+            email,
+            phone,
+            date,
+            timeSlot,
+            people,
+            totalPrice,
+          }),
+        });
+        const data = await res.json();
+        if (data.url) {
+          window.location.href = data.url;
+          return;
+        } else {
+          console.error("SumUp checkout error:", data.error);
+          setStatus("error");
+          setErrorMsg(data.error || "Payment setup failed. Please try again.");
+          return;
+        }
+      }
+
+      // Stripe: inline payment intent
       const res = await fetch("/api/create-payment-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

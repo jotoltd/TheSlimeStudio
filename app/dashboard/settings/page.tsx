@@ -22,6 +22,11 @@ export default function SettingsPage() {
   const [switchingMode, setSwitchingMode] = useState(false);
   const [stripeMsg, setStripeMsg] = useState("");
 
+  // Payment provider
+  const [paymentProvider, setPaymentProvider] = useState<"stripe" | "sumup">("stripe");
+  const [switchingProvider, setSwitchingProvider] = useState(false);
+  const [providerMsg, setProviderMsg] = useState("");
+
   // Booking settings
   const [price, setPrice] = useState("");
   const [savingPrice, setSavingPrice] = useState(false);
@@ -48,6 +53,12 @@ export default function SettingsPage() {
       const data = await res.json();
       if (data.mode) setStripeMode(data.mode);
       setStripeConfigured(data.configured);
+    } catch {}
+
+    try {
+      const res = await fetch("/api/payment-provider");
+      const data = await res.json();
+      if (data.provider) setPaymentProvider(data.provider);
     } catch {}
 
     const { data: bs } = await supabase.from("booking_settings").select("*").eq("id", 1).single();
@@ -105,6 +116,28 @@ export default function SettingsPage() {
       if (data.note) setStripeMsg(data.note);
     } catch {}
     setSwitchingMode(false);
+  }
+
+  async function switchPaymentProvider(newProvider: "stripe" | "sumup") {
+    setSwitchingProvider(true);
+    setProviderMsg("");
+    try {
+      const res = await fetch("/api/payment-provider", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: newProvider }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPaymentProvider(newProvider);
+        setProviderMsg(`Switched to ${newProvider === "sumup" ? "SumUp" : "Stripe"}`);
+      } else {
+        setProviderMsg(data.error || "Failed to switch provider");
+      }
+    } catch {
+      setProviderMsg("Failed to switch provider");
+    }
+    setSwitchingProvider(false);
   }
 
   async function savePrice() {
@@ -293,52 +326,103 @@ export default function SettingsPage() {
 
       {/* Payments tab */}
       {tab === "payments" && (
-        <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm">
-          <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
-            <div>
-              <h2 className="font-display text-[1.1rem] mb-1">Stripe Payment Mode</h2>
-              <p className="text-[0.85rem] text-ink-soft">
-                {stripeConfigured
-                  ? stripeMode === "live"
-                    ? "LIVE — real payments are being processed"
-                    : "TEST — sandbox mode, no real charges are made"
-                  : "Not configured — add Stripe API keys to .env.local to enable payments"}
+        <div className="space-y-6">
+          {/* Payment Provider Selection */}
+          <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm">
+            <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
+              <div>
+                <h2 className="font-display text-[1.1rem] mb-1">Payment Provider</h2>
+                <p className="text-[0.85rem] text-ink-soft">
+                  {paymentProvider === "sumup"
+                    ? "SumUp is active — all payments are processed via SumUp hosted checkout"
+                    : "Stripe is active — all payments are processed via Stripe"}
+                </p>
+              </div>
+              <div className="flex items-center gap-3 flex-wrap">
+                <button
+                  onClick={() => switchPaymentProvider("stripe")}
+                  disabled={switchingProvider}
+                  className={`px-5 py-2.5 rounded-full text-[0.85rem] font-medium transition-all ${
+                    paymentProvider === "stripe"
+                      ? "bg-[#635bff] text-white shadow-sm"
+                      : "bg-ink/5 text-ink-soft hover:bg-ink/10"
+                  }`}
+                >
+                  Stripe
+                </button>
+                <button
+                  onClick={() => switchPaymentProvider("sumup")}
+                  disabled={switchingProvider}
+                  className={`px-5 py-2.5 rounded-full text-[0.85rem] font-medium transition-all ${
+                    paymentProvider === "sumup"
+                      ? "bg-[#1aada6] text-white shadow-sm"
+                      : "bg-ink/5 text-ink-soft hover:bg-ink/10"
+                  }`}
+                >
+                  SumUp
+                </button>
+              </div>
+            </div>
+            {providerMsg && (
+              <div className="bg-sky-blue-light/20 rounded-xl p-4 text-[0.85rem] text-ink-soft">
+                {providerMsg}
+              </div>
+            )}
+            <div className="border-t border-ink/[0.08] pt-4 mt-4">
+              <p className="text-[0.8rem] text-ink-soft">
+                Switching takes effect immediately. Both booking and shop payments use the selected provider.
               </p>
             </div>
-            <div className="flex items-center gap-3 flex-wrap">
-              <button
-                onClick={() => switchStripeMode("test")}
-                disabled={switchingMode}
-                className={`px-5 py-2.5 rounded-full text-[0.85rem] font-medium transition-all ${
-                  stripeMode === "test"
-                    ? "bg-canary-yellow text-ink shadow-sm"
-                    : "bg-ink/5 text-ink-soft hover:bg-ink/10"
-                }`}
-              >
-                Test (Sandbox)
-              </button>
-              <button
-                onClick={() => switchStripeMode("live")}
-                disabled={switchingMode}
-                className={`px-5 py-2.5 rounded-full text-[0.85rem] font-medium transition-all ${
-                  stripeMode === "live"
-                    ? "bg-green-500 text-white shadow-sm"
-                    : "bg-ink/5 text-ink-soft hover:bg-ink/10"
-                }`}
-              >
-                Live
-              </button>
-            </div>
           </div>
-          {stripeMsg && (
-            <div className="bg-sky-blue-light/20 rounded-xl p-4 text-[0.85rem] text-ink-soft">
-              {stripeMsg}
+
+          {/* Stripe Mode (only relevant when Stripe is active) */}
+          <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm">
+            <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
+              <div>
+                <h2 className="font-display text-[1.1rem] mb-1">Stripe Mode {paymentProvider !== "stripe" && <span className="text-ink-soft text-[0.8rem]">(inactive)</span>}</h2>
+                <p className="text-[0.85rem] text-ink-soft">
+                  {stripeConfigured
+                    ? stripeMode === "live"
+                      ? "LIVE — real payments are being processed"
+                      : "TEST — sandbox mode, no real charges are made"
+                    : "Not configured — add Stripe API keys to .env.local to enable payments"}
+                </p>
+              </div>
+              <div className="flex items-center gap-3 flex-wrap">
+                <button
+                  onClick={() => switchStripeMode("test")}
+                  disabled={switchingMode}
+                  className={`px-5 py-2.5 rounded-full text-[0.85rem] font-medium transition-all ${
+                    stripeMode === "test"
+                      ? "bg-canary-yellow text-ink shadow-sm"
+                      : "bg-ink/5 text-ink-soft hover:bg-ink/10"
+                  }`}
+                >
+                  Test (Sandbox)
+                </button>
+                <button
+                  onClick={() => switchStripeMode("live")}
+                  disabled={switchingMode}
+                  className={`px-5 py-2.5 rounded-full text-[0.85rem] font-medium transition-all ${
+                    stripeMode === "live"
+                      ? "bg-green-500 text-white shadow-sm"
+                      : "bg-ink/5 text-ink-soft hover:bg-ink/10"
+                  }`}
+                >
+                  Live
+                </button>
+              </div>
             </div>
-          )}
-          <div className="border-t border-ink/[0.08] pt-4 mt-4">
-            <p className="text-[0.8rem] text-ink-soft">
-              Both booking and subscription payments use the active mode. Switching takes effect immediately.
-            </p>
+            {stripeMsg && (
+              <div className="bg-sky-blue-light/20 rounded-xl p-4 text-[0.85rem] text-ink-soft">
+                {stripeMsg}
+              </div>
+            )}
+            <div className="border-t border-ink/[0.08] pt-4 mt-4">
+              <p className="text-[0.8rem] text-ink-soft">
+                Both booking and subscription payments use the active mode. Switching takes effect immediately.
+              </p>
+            </div>
           </div>
         </div>
       )}

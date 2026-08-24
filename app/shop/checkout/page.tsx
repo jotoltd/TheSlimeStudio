@@ -22,12 +22,17 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [cancelled, setCancelled] = useState(false);
+  const [paymentProvider, setPaymentProvider] = useState<"stripe" | "sumup">("stripe");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("cancelled") === "true") {
       setCancelled(true);
     }
+    // Fetch active payment provider
+    fetch("/api/payment-provider").then(r => r.json()).then(d => {
+      if (d.provider) setPaymentProvider(d.provider);
+    }).catch(() => {});
   }, []);
 
   const shippingCost = shippingMethod === "delivery" ? (subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE) : 0;
@@ -52,7 +57,8 @@ export default function CheckoutPage() {
 
     setLoading(true);
     try {
-      const res = await fetch("/api/shop-checkout", {
+      const endpoint = paymentProvider === "sumup" ? "/api/sumup-shop-checkout" : "/api/shop-checkout";
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
