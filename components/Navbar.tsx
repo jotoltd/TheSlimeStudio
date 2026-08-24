@@ -107,7 +107,7 @@ export default function Navbar() {
               )}
             </button>
           )}
-          <Link href="/booking" className="btn-primary" style={{ padding: "10px 22px", fontSize: "0.9rem" }}>
+          <Link href="/booking" className="btn-primary btn-book-now">
             Book Now
           </Link>
         </div>
@@ -133,7 +133,7 @@ export default function Navbar() {
             </li>
           ))}
           <li>
-            <Link href="/booking" onClick={() => setOpen(false)} className="btn-primary block text-center mt-2" style={{ padding: "10px 22px", fontSize: "0.9rem" }}>
+            <Link href="/booking" onClick={() => setOpen(false)} className="btn-primary btn-book-now block text-center mt-2">
               Book Now
             </Link>
           </li>

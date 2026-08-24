@@ -97,23 +97,24 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 12px 24px;
+    padding: 16px 36px;
     border-radius: 999px;
     background: #ff2d78;
     color: #fff;
     font-family: "Avenir", "Avenir Next", "Poppins", sans-serif;
-    font-size: 0.9rem;
-    font-weight: 600;
+    font-size: 1.05rem;
+    font-weight: 700;
     border: none;
     cursor: pointer;
     box-shadow: 0 8px 24px rgba(255, 45, 120, 0.35);
     transition: transform var(--transition), box-shadow var(--transition), background var(--transition);
+    letter-spacing: 0.02em;
   }
 
   @media (min-width: 768px) {
     .btn-primary {
-      padding: 14px 30px;
-      font-size: 1rem;
+      padding: 18px 44px;
+      font-size: 1.2rem;
     }
   }
 
@@ -125,31 +126,63 @@
 
   .btn-book-now {
     position: relative;
-    animation: bookNowPulse 2s ease-in-out infinite;
+    animation: bookNowPulse 2.5s ease-in-out infinite;
+    z-index: 1;
+  }
+
+  .btn-book-now::before {
+    content: "";
+    position: absolute;
+    inset: -4px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #ff2d78, #ffc4fb, #ff2d78);
+    background-size: 200% 200%;
+    opacity: 0;
+    z-index: -1;
+    animation: bookNowGlow 2.5s ease-in-out infinite;
+    transition: opacity 0.3s ease;
+  }
+
+  @keyframes bookNowGlow {
+    0%, 100% { opacity: 0; background-position: 0% 50%; }
+    50% { opacity: 0.6; background-position: 100% 50%; }
   }
 
   @keyframes bookNowPulse {
     0%, 100% {
-      box-shadow: 0 8px 24px rgba(255, 45, 120, 0.35), 0 0 0 0 rgba(255, 45, 120, 0.4);
-      transform: scale(1);
+      box-shadow: 0 8px 24px rgba(255, 45, 120, 0.35), 0 0 0 0 rgba(255, 45, 120, 0.5);
+      transform: scale(1) skewX(0deg);
+    }
+    30% {
+      box-shadow: 0 12px 32px rgba(255, 45, 120, 0.45), 0 0 0 12px rgba(255, 45, 120, 0);
+      transform: scale(1.05) skewX(0deg);
     }
     50% {
-      box-shadow: 0 12px 32px rgba(255, 45, 120, 0.45), 0 0 0 10px rgba(255, 45, 120, 0);
-      transform: scale(1.04);
+      box-shadow: 0 10px 28px rgba(255, 45, 120, 0.4), 0 0 0 6px rgba(255, 196, 251, 0);
+      transform: scale(1.02) skewX(-1deg);
+    }
+    70% {
+      box-shadow: 0 12px 32px rgba(255, 45, 120, 0.45), 0 0 0 12px rgba(255, 45, 120, 0);
+      transform: scale(1.05) skewX(0deg);
     }
   }
 
   .btn-book-now:hover {
-    animation: bookNowBounce 0.6s ease-in-out infinite;
+    animation: bookNowBounce 0.5s ease-in-out infinite;
+  }
+
+  .btn-book-now:hover::before {
+    opacity: 0.8;
   }
 
   @keyframes bookNowBounce {
-    0%, 100% { transform: translateY(0) scale(1.05); }
-    50% { transform: translateY(-4px) scale(1.05); }
+    0%, 100% { transform: translateY(0) scale(1.06); }
+    50% { transform: translateY(-6px) scale(1.06); }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .btn-book-now {
+    .btn-book-now,
+    .btn-book-now::before {
       animation: none;
     }
     .btn-book-now:hover {
