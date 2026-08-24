@@ -141,6 +141,15 @@ export type GalleryImage = {
   created_at: string;
 };
 
+export type FAQ = {
+  id: string;
+  question: string;
+  answer: string;
+  sort_order: number;
+  is_visible: boolean;
+  created_at: string;
+};
+
 export type OpeningHour = {
   id: string;
   day_of_week: number; // 0 = Sunday, 1 = Monday, ... 6 = Saturday

@@ -1,9 +1,13 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Heart } from "@/components/Heart";
+import { supabase, type FAQ } from "@/lib/supabase";
 
-const faqs = [
+const defaultFaqs = [
   { q: "How much is The Slime Studio experience?", a: "The experience is £15 per slime maker, including everything you need to create your slime and take it home." },
   { q: "Do I need to book?", a: "We recommend booking in advance to make sure we have space for you. Walk-ins are welcome where availability allows." },
   { q: "What ages is The Slime Studio suitable for?", a: "The Slime Studio is for all ages. Whether it's your first time making slime or you're already slime obsessed, everyone can get involved." },
@@ -17,6 +21,21 @@ const faqs = [
 ];
 
 export default function FAQsPage() {
+  const [faqs, setFaqs] = useState<{ q: string; a: string }[]>(defaultFaqs);
+
+  useEffect(() => {
+    supabase
+      .from("faqs")
+      .select("*")
+      .eq("is_visible", true)
+      .order("sort_order", { ascending: true })
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          setFaqs((data as FAQ[]).map((f) => ({ q: f.question, a: f.answer })));
+        }
+      });
+  }, []);
+
   return (
     <>
       <Navbar />

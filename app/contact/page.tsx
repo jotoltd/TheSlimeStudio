@@ -154,7 +154,7 @@ export default function ContactPage() {
           <div className="flex gap-4 justify-center items-center flex-wrap">
             <Link
               href="/booking"
-              className="btn-primary"
+              className="btn-primary btn-book-now"
             >
               Book Now
             </Link>

@@ -37,7 +37,7 @@ export default function HomePage() {
             <div className="flex gap-4 flex-wrap justify-center">
               <Link
                 href="/booking"
-                className="btn-primary"
+                className="btn-primary btn-book-now"
               >
                 Book Now
               </Link>
@@ -101,7 +101,7 @@ export default function HomePage() {
             ))}
           </div>
           <div className="text-center mt-12">
-            <Link href="/booking" className="btn-primary">
+            <Link href="/booking" className="btn-primary btn-book-now">
               Book Your Slot
             </Link>
           </div>
@@ -177,7 +177,7 @@ export default function HomePage() {
             run hourly, 1–10 people, £15 per person.
           </p>
           <div className="flex gap-4 justify-center flex-wrap">
-            <Link href="/booking" className="btn-primary">
+            <Link href="/booking" className="btn-primary btn-book-now">
               Book Now
             </Link>
             <Link href="/parties" className="btn-ghost" style={{ color: "#fff", borderColor: "rgba(255,255,255,0.35)", background: "rgba(255,255,255,0.08)" }}>

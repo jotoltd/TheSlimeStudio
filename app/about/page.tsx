@@ -148,7 +148,7 @@ export default function AboutPage() {
           <div className="flex gap-4 justify-center flex-wrap">
             <a
               href="/booking"
-              className="btn-primary"
+              className="btn-primary btn-book-now"
             >
               Book Now
             </a>
