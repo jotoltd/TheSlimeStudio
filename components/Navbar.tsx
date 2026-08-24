@@ -11,6 +11,7 @@ const allNavLinks = [
   { href: "/about", label: "About" },
   { href: "/parties", label: "Parties" },
   { href: "/shop", label: "Shop" },
+  { href: "/gallery", label: "Gallery" },
   { href: "/loyalty", label: "Loyalty" },
   { href: "/press", label: "Press" },
   { href: "/subscribe", label: "Subscribe" },
