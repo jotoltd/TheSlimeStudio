@@ -39,16 +39,24 @@ export async function POST(req: NextRequest) {
   // Verify with SumUp that the checkout was actually paid
   const key = getSumUpKey();
   try {
-    const res = await fetch(`https://api.sumup.com/v0.1/checkouts/${checkoutRef}`, {
+    // SumUp GET /checkouts/{id} expects the checkout ID, not the reference.
+    // Use the list endpoint with checkout_reference filter to find it.
+    const listRes = await fetch(`https://api.sumup.com/v0.1/checkouts?checkout_reference=${encodeURIComponent(checkoutRef)}`, {
       headers: { Authorization: `Bearer ${key}` },
     });
-    const data = await res.json();
+    const listData = await listRes.json();
 
-    if (!res.ok) {
+    if (!listRes.ok) {
+      console.error("SumUp list checkouts error:", listData);
       return NextResponse.json({ error: "Failed to verify payment with SumUp" }, { status: 500 });
     }
 
-    if (data.status !== "PAID") {
+    const checkout = Array.isArray(listData) && listData.length > 0 ? listData[0] : null;
+    if (!checkout) {
+      return NextResponse.json({ error: "Checkout not found on SumUp" }, { status: 404 });
+    }
+
+    if (checkout.status !== "PAID") {
       return NextResponse.json({ error: "Payment not completed" }, { status: 400 });
     }
 
