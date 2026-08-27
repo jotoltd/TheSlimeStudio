@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         amount: Number(total.toFixed(2)),
         currency: "GBP",
-        merchant_code: process.env.SUMUP_MERCHANT_ID || undefined,
+        merchant_code: (process.env.SUMUP_MERCHANT_ID || "").toUpperCase() || undefined,
         checkout_reference: checkoutRef,
         description: `Slime Studio Order ${orderNumber} - ${itemDesc.join(", ")}`,
         redirect_url: `${origin}/shop/success?sumup_ref=${checkoutRef}`,
@@ -109,8 +109,9 @@ export async function POST(req: NextRequest) {
     const data = await res.json();
 
     if (!res.ok || !data.id) {
-      console.error("SumUp shop checkout error:", data);
-      return NextResponse.json({ error: data.message || "Failed to create SumUp checkout" }, { status: 500 });
+      console.error("SumUp shop checkout error:", JSON.stringify(data));
+      const errMsg = data.message ? `${data.message}${data.param ? ` (${data.param})` : ""}` : "Failed to create SumUp checkout";
+      return NextResponse.json({ error: errMsg }, { status: 500 });
     }
 
     await supabaseAdmin.from("shop_orders").insert({

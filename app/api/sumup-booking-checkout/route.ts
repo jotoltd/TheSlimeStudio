@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         amount: Number(totalPrice.toFixed(2)),
         currency: "GBP",
-        merchant_code: process.env.SUMUP_MERCHANT_ID || undefined,
+        merchant_code: (process.env.SUMUP_MERCHANT_ID || "").toUpperCase() || undefined,
         checkout_reference: checkoutRef,
         description: `Slime Studio Session — ${people} ${people === 1 ? "person" : "people"} — ${date} at ${timeSlot}`,
         redirect_url: `${origin}/booking?sumup_status=paid&ref=${checkoutRef}`,
@@ -126,8 +126,9 @@ export async function POST(req: NextRequest) {
     const data = await res.json();
 
     if (!res.ok || !data.id) {
-      console.error("SumUp checkout error:", data);
-      return NextResponse.json({ error: data.message || "Failed to create SumUp checkout" }, { status: 500 });
+      console.error("SumUp checkout error:", JSON.stringify(data));
+      const errMsg = data.message ? `${data.message}${data.param ? ` (${data.param})` : ""}` : "Failed to create SumUp checkout";
+      return NextResponse.json({ error: errMsg }, { status: 500 });
     }
 
     // Store booking as pending — confirmed after redirect
