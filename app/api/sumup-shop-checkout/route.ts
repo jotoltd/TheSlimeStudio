@@ -102,11 +102,7 @@ export async function POST(req: NextRequest) {
         checkout_reference: checkoutRef,
         description: `Slime Studio Order ${orderNumber} - ${itemDesc.join(", ")}`,
         redirect_url: `${origin}/shop/success?sumup_ref=${checkoutRef}`,
-        return_url: `${origin}/shop/success?sumup_ref=${checkoutRef}`,
-        hosted_checkout: {
-          enabled: true,
-          return_url: `${origin}/shop/success?sumup_ref=${checkoutRef}`,
-        },
+        hosted_checkout: { enabled: true },
       }),
     });
 
@@ -141,7 +137,7 @@ export async function POST(req: NextRequest) {
       notes: notes || null,
     });
 
-    const checkoutUrl = data.hosted_checkout?.url || data.checkout_url || data.url;
+    const checkoutUrl = data.hosted_checkout_url || data.checkout_url || data.url;
     if (!checkoutUrl) {
       console.error("SumUp shop checkout: no URL returned", data);
       return NextResponse.json({ error: "Failed to get checkout URL from SumUp" }, { status: 500 });

@@ -119,11 +119,7 @@ export async function POST(req: NextRequest) {
         checkout_reference: checkoutRef,
         description: `Slime Studio Session — ${people} ${people === 1 ? "person" : "people"} — ${date} at ${timeSlot}`,
         redirect_url: `${origin}/booking?sumup_status=paid&ref=${checkoutRef}`,
-        return_url: `${origin}/booking?sumup_status=paid&ref=${checkoutRef}`,
-        hosted_checkout: {
-          enabled: true,
-          return_url: `${origin}/booking?sumup_status=paid&ref=${checkoutRef}`,
-        },
+        hosted_checkout: { enabled: true },
       }),
     });
 
@@ -148,7 +144,7 @@ export async function POST(req: NextRequest) {
       stripe_session_id: checkoutRef,
     }).select().single();
 
-    const checkoutUrl = data.hosted_checkout?.url || data.checkout_url || data.url;
+    const checkoutUrl = data.hosted_checkout_url || data.checkout_url || data.url;
     if (!checkoutUrl) {
       console.error("SumUp checkout: no URL returned", data);
       return NextResponse.json({ error: "Failed to get checkout URL from SumUp" }, { status: 500 });
