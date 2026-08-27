@@ -7,25 +7,20 @@ import { Heart } from "@/components/Heart";
 import { InstagramIcon } from "@/components/SocialLinks";
 import { supabase } from "@/lib/supabase";
 
-function priceForCount(count: number) {
-  if (count <= 5) return 13.5;
-  if (count <= 10) return 12.5;
-  return 11.5;
+const BASE_PRICE = 100;
+const BASE_CHILDREN = 5;
+const ADDITIONAL_CHILD_PRICE = 12.5;
+const MAX_CHILDREN = 15;
+
+function partyTotal(count: number) {
+  if (count <= BASE_CHILDREN) return BASE_PRICE;
+  return BASE_PRICE + (count - BASE_CHILDREN) * ADDITIONAL_CHILD_PRICE;
 }
 
-const PRICE_TIERS = [
-  { label: "5 Children", price: 13.5, color: "#ff6fae" },
-  { label: "6–10 Children", price: 12.5, color: "#3fc9a0" },
-  { label: "11–15 Children", price: 11.5, color: "#8b5fbf" },
-];
-
-const AGE_GROUPS = [
-  { title: "Aged Up To 7", desc: "Maximum 10 children" },
-  { title: "Aged 8+", desc: "Maximum 15 children" },
-];
+const EXAMPLES = [5, 8, 10, 12, 15];
 
 const INCLUDED = [
-  { img: "/images/slime_mixing.jpg.jpeg", label: "1.5 Hours Private Studio Time" },
+  { img: "/images/slime_mixing.jpg.jpeg", label: "1 Hour Private Studio Time" },
   { img: "/images/slime_studio_pink_slime_pot.jpg.jpeg", label: "Choose Your Slime" },
   { img: "/images/slime_studio_slime_toppings.jpg.jpeg", label: "Pick Your Colour & Scent" },
   { img: "/images/foam_beads.jpg.jpeg", label: "Add Charms & Decorations" },
@@ -92,7 +87,7 @@ export default function PartiesPage() {
           </h1>
           <p className="text-[0.9rem] md:text-[1rem] text-ink/80 leading-relaxed mb-4">
             Celebrate at The Slime Studio with your own private slime-making
-            experience. Our parties include 1.5 hours of private studio time,
+            experience. Our parties include 1 hour of private studio time,
             where every guest gets to choose their type of slime, add their
             own colour and scent, decorate it with charms and create
             something completely their own to take home.
@@ -110,36 +105,83 @@ export default function PartiesPage() {
       {/* Party Prices */}
       <section className="py-14 md:py-16" style={{ backgroundColor: "#fdeef7" }}>
         <div className="container max-w-4xl">
-          <div className="flex items-center justify-center gap-3 mb-10">
+          <div className="flex items-center justify-center gap-3 mb-3">
             <span className="text-ink/40">↝</span>
-            <h2 className="font-display text-[1.4rem] md:text-[1.7rem] text-ink">Party & Trip Prices</h2>
+            <h2 className="font-display text-[1.4rem] md:text-[1.7rem] text-ink">Party Prices</h2>
             <span className="text-ink/40">↜</span>
           </div>
+          <p className="text-center text-[0.9rem] text-ink-soft mb-9">
+            Exclusive hire of the studio, just for you!
+          </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-5 mb-8">
-            {PRICE_TIERS.map((tier) => (
-              <div key={tier.label} className="bg-white rounded-2xl p-7 text-center shadow-sm">
-                <div className="mb-2 flex justify-center"><Heart size={24} color={tier.color} /></div>
-                <h3 className="font-display text-[1rem] uppercase tracking-wide mb-2" style={{ color: tier.color }}>
-                  {tier.label}
-                </h3>
-                <div className="mb-2 flex justify-center"><Heart size={16} color="#ccc" /></div>
-                <div className="font-display text-[1.8rem] text-ink mb-1">£{tier.price.toFixed(2)}</div>
-                <div className="text-[0.75rem] text-ink-soft uppercase tracking-wider">per child</div>
+          {/* Three headline boxes — mirrors the poster */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-5 mb-6">
+            <div className="bg-white rounded-2xl p-7 text-center shadow-sm border-2 border-[#ff6fae]/30">
+              <div className="inline-block rounded-full px-4 py-1 mb-3 text-[0.7rem] font-semibold uppercase tracking-wider text-white" style={{ backgroundColor: "#ff2d78" }}>
+                Minimum
               </div>
-            ))}
+              <div className="font-display text-[2.4rem] leading-none mb-2" style={{ color: "#ff2d78" }}>£100</div>
+              <div className="text-[0.85rem] text-ink-soft leading-snug">
+                Includes up to<br />
+                <span className="font-semibold text-ink">{BASE_CHILDREN} children</span>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-7 text-center shadow-sm border-2 border-[#64d8ec]/40">
+              <div className="inline-block rounded-full px-4 py-1 mb-3 text-[0.7rem] font-semibold uppercase tracking-wider text-white" style={{ backgroundColor: "#2ba7c4" }}>
+                Each Additional Child
+              </div>
+              <div className="font-display text-[2.4rem] leading-none mb-2" style={{ color: "#2ba7c4" }}>£12.50</div>
+              <div className="text-[0.85rem] text-ink-soft leading-snug">
+                Per child<br />
+                <span className="font-semibold text-ink">Maximum {MAX_CHILDREN} children</span>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-7 text-center shadow-sm border-2 border-[#8b5fbf]/30">
+              <div className="mb-3 text-2xl">🕐</div>
+              <div className="font-display text-[2.4rem] leading-none mb-2" style={{ color: "#8b5fbf" }}>1 Hour</div>
+              <div className="text-[0.85rem] text-ink-soft leading-snug">
+                Private<br />
+                <span className="font-semibold text-ink">studio time</span>
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5">
-            {AGE_GROUPS.map((g) => (
-              <div key={g.title} className="bg-white/70 rounded-2xl p-6 flex items-center gap-4 border border-ink/5">
-                <Heart size={24} />
-                <div>
-                  <div className="font-display text-[0.95rem] text-ink uppercase tracking-wide">{g.title}</div>
-                  <div className="text-[0.85rem] text-ink-soft">{g.desc}</div>
+          {/* Worked examples so the pricing is crystal clear */}
+          <div className="bg-white rounded-2xl p-6 md:p-7 shadow-sm mb-5">
+            <h3 className="font-display text-[1rem] text-center mb-1 text-ink">What You&apos;ll Pay</h3>
+            <p className="text-center text-[0.8rem] text-ink-soft mb-5">
+              £100 covers your first {BASE_CHILDREN} children, then just £12.50 for each extra child.
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+              {EXAMPLES.map((count) => (
+                <div key={count} className="rounded-xl px-3 py-4 text-center" style={{ backgroundColor: "#fdeef7" }}>
+                  <div className="text-[0.78rem] text-ink-soft uppercase tracking-wider mb-1">
+                    {count} {count === 1 ? "child" : "children"}
+                  </div>
+                  <div className="font-display text-[1.25rem] text-ink">£{partyTotal(count).toFixed(2)}</div>
                 </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Key info */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5">
+            <div className="bg-white/70 rounded-2xl p-6 flex items-center gap-4 border border-ink/5">
+              <Heart size={24} />
+              <div>
+                <div className="font-display text-[0.95rem] text-ink uppercase tracking-wide">Every Child Creates</div>
+                <div className="text-[0.85rem] text-ink-soft">Makes and takes home their own unique slime</div>
               </div>
-            ))}
+            </div>
+            <div className="bg-white/70 rounded-2xl p-6 flex items-center gap-4 border border-ink/5">
+              <Heart size={24} />
+              <div>
+                <div className="font-display text-[0.95rem] text-ink uppercase tracking-wide">50% Deposit</div>
+                <div className="text-[0.85rem] text-ink-soft">Required to secure your date</div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -240,11 +282,14 @@ export default function PartiesPage() {
                 <input
                   type="number"
                   name="children"
-                  min={5}
-                  max={15}
+                  min={1}
+                  max={MAX_CHILDREN}
                   placeholder="e.g. 8"
                   className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-[#ff2d78]"
                 />
+                <p className="text-[0.78rem] text-ink-soft mt-2">
+                  £100 for up to {BASE_CHILDREN} children, then £12.50 per extra child (max {MAX_CHILDREN}).
+                </p>
               </div>
 
               <div className="mb-6">

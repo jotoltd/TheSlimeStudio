@@ -21,10 +21,11 @@ export default function ContentPage() {
   // Parties content
   const [parties, setParties] = useState({
     hero_title: "Make Their Celebration Extra Slimy!",
-    hero_text: "Celebrate at The Slime Studio with your own private slime-making experience. Our parties include 1.5 hours of private studio time, where every guest gets to choose their type of slime, add their own colour and scent, decorate it with charms and create something completely their own to take home.",
-    price_5: "13.5",
-    price_6_10: "12.5",
-    price_11_15: "11.5",
+    hero_text: "Celebrate at The Slime Studio with your own private slime-making experience. Our parties include 1 hour of private studio time, where every guest gets to choose their type of slime, add their own colour and scent, decorate it with charms and create something completely their own to take home.",
+    base_price: "100",
+    base_children: "5",
+    additional_child_price: "12.5",
+    max_children: "15",
     contact_text: "Got questions? Contact us and we'll help arrange your Slime Studio party.",
   });
 
@@ -52,9 +53,10 @@ export default function ContentPage() {
       setParties({
         hero_title: map.parties_hero_title || parties.hero_title,
         hero_text: map.parties_hero_text || parties.hero_text,
-        price_5: map.parties_price_5 || parties.price_5,
-        price_6_10: map.parties_price_6_10 || parties.price_6_10,
-        price_11_15: map.parties_price_11_15 || parties.price_11_15,
+        base_price: map.parties_base_price || parties.base_price,
+        base_children: map.parties_base_children || parties.base_children,
+        additional_child_price: map.parties_additional_child_price || parties.additional_child_price,
+        max_children: map.parties_max_children || parties.max_children,
         contact_text: map.parties_contact_text || parties.contact_text,
       });
       setAbout({
@@ -117,10 +119,11 @@ export default function ContentPage() {
           <div className="space-y-5">
             <Field label="Hero Title" value={parties.hero_title} onChange={(v) => setParties({ ...parties, hero_title: v })} />
             <Field label="Hero Text" value={parties.hero_text} onChange={(v) => setParties({ ...parties, hero_text: v })} textarea />
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Field label="Price (5 children) £" value={parties.price_5} onChange={(v) => setParties({ ...parties, price_5: v })} />
-              <Field label="Price (6–10) £" value={parties.price_6_10} onChange={(v) => setParties({ ...parties, price_6_10: v })} />
-              <Field label="Price (11–15) £" value={parties.price_11_15} onChange={(v) => setParties({ ...parties, price_11_15: v })} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label="Base Price £ (minimum charge)" value={parties.base_price} onChange={(v) => setParties({ ...parties, base_price: v })} />
+              <Field label="Children Included In Base Price" value={parties.base_children} onChange={(v) => setParties({ ...parties, base_children: v })} />
+              <Field label="Each Additional Child £" value={parties.additional_child_price} onChange={(v) => setParties({ ...parties, additional_child_price: v })} />
+              <Field label="Maximum Children" value={parties.max_children} onChange={(v) => setParties({ ...parties, max_children: v })} />
             </div>
             <Field label="Contact Text" value={parties.contact_text} onChange={(v) => setParties({ ...parties, contact_text: v })} textarea />
           </div>
