@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase, type Booking, type BookingSettings, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, MAX_DAILY_BOOKINGS as DEFAULT_MAX } from "@/lib/supabase";
+import { supabase, type Booking, type BookingSettings, paymentMethodFor, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, MAX_DAILY_BOOKINGS as DEFAULT_MAX } from "@/lib/supabase";
 import PageHeader from "@/components/PageHeader";
+import PaymentMethodBadge from "@/components/PaymentMethodBadge";
 
 type ViewMode = "calendar" | "table";
 
@@ -35,6 +36,7 @@ export default function BookingsAdminPage() {
   const [maxDaily, setMaxDaily] = useState(DEFAULT_MAX);
   const [searchQuery, setSearchQuery] = useState("");
   const [payFilter, setPayFilter] = useState<"all" | "paid" | "unpaid" | "refunded" | "expired">("all");
+  const [methodFilter, setMethodFilter] = useState<"all" | "sumup" | "stripe" | "manual">("all");
   const [partyFilter, setPartyFilter] = useState<"all" | "party" | "regular">("all");
   const [selectedBookings, setSelectedBookings] = useState<Set<string>>(new Set());
   const [bulkMode, setBulkMode] = useState(false);
@@ -236,6 +238,7 @@ export default function BookingsAdminPage() {
     }
     if (partyFilter === "party" && !b.is_party) return false;
     if (partyFilter === "regular" && b.is_party) return false;
+    if (methodFilter !== "all" && paymentMethodFor(b.stripe_session_id) !== methodFilter) return false;
     return true;
   });
 
@@ -316,6 +319,16 @@ export default function BookingsAdminPage() {
             <option value="all">All Types</option>
             <option value="regular">Sessions</option>
             <option value="party">Parties</option>
+          </select>
+          <select
+            value={methodFilter}
+            onChange={(e) => setMethodFilter(e.target.value as typeof methodFilter)}
+            className="px-3 py-2 border-2 border-ink/10 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light bg-white"
+          >
+            <option value="all">All Methods</option>
+            <option value="sumup">SumUp</option>
+            <option value="stripe">Stripe</option>
+            <option value="manual">Manual</option>
           </select>
           <div className="flex rounded-lg overflow-hidden border border-ink/10 ml-auto">
             <button onClick={() => setViewMode("calendar")} className={`px-3 py-2 text-[0.8rem] font-medium transition-colors ${viewMode === "calendar" ? "bg-ink text-white" : "bg-white text-ink hover:bg-ink/5"}`}>Calendar</button>
@@ -507,6 +520,7 @@ export default function BookingsAdminPage() {
                     <th className="pb-3 pr-4 font-semibold cursor-pointer hover:text-ink select-none" onClick={() => toggleSort("people")}>People {sortField === "people" && (sortDir === "asc" ? "↑" : "↓")}</th>
                     <th className="pb-3 pr-4 font-semibold cursor-pointer hover:text-ink select-none" onClick={() => toggleSort("total_price")}>Price {sortField === "total_price" && (sortDir === "asc" ? "↑" : "↓")}</th>
                     <th className="pb-3 pr-4 font-semibold cursor-pointer hover:text-ink select-none" onClick={() => toggleSort("payment_status")}>Payment {sortField === "payment_status" && (sortDir === "asc" ? "↑" : "↓")}</th>
+                    <th className="pb-3 pr-4 font-semibold">Method</th>
                     <th className="pb-3 pr-4 font-semibold cursor-pointer hover:text-ink select-none" onClick={() => toggleSort("name")}>Customer {sortField === "name" && (sortDir === "asc" ? "↑" : "↓")}</th>
                     <th className="pb-3 pr-4 font-semibold cursor-pointer hover:text-ink select-none" onClick={() => toggleSort("created_at")}>Booked {sortField === "created_at" && (sortDir === "asc" ? "↑" : "↓")}</th>
                     <th className="pb-3 pr-4 font-semibold">Attendance</th>
@@ -534,6 +548,9 @@ export default function BookingsAdminPage() {
                           b.payment_status === "refunded" ? "bg-orange-100 text-orange-700" :
                           b.payment_status === "expired" ? "bg-red-100 text-red-700" : "bg-ink/5 text-ink-soft"
                         }`}>{b.payment_status || "unpaid"}</span>
+                      </td>
+                      <td className="py-3.5 pr-4">
+                        <PaymentMethodBadge reference={b.stripe_session_id} />
                       </td>
                       <td className="py-3.5 pr-4">
                         <div className="text-[0.9rem] font-medium text-ink">
@@ -745,10 +762,13 @@ export default function BookingsAdminPage() {
                       <div className="text-[0.8rem] text-ink-soft">{new Date(b.date).toLocaleDateString("en-GB")} at {b.time_slot} · {b.people} people · £{Number(b.total_price).toFixed(2)}</div>
                       <div className="text-[0.75rem] text-ink-soft">{b.email} {b.phone && `· ${b.phone}`}</div>
                     </div>
-                    <span className={`px-2 py-0.5 rounded-full text-[0.7rem] font-medium ${
-                      b.payment_status === "paid" ? "bg-green-100 text-green-700" :
-                      b.payment_status === "refunded" ? "bg-orange-100 text-orange-700" : "bg-ink/5 text-ink-soft"
-                    }`}>{b.payment_status || "unpaid"}</span>
+                    <div className="flex items-center gap-1.5">
+                      <PaymentMethodBadge reference={b.stripe_session_id} />
+                      <span className={`px-2 py-0.5 rounded-full text-[0.7rem] font-medium ${
+                        b.payment_status === "paid" ? "bg-green-100 text-green-700" :
+                        b.payment_status === "refunded" ? "bg-orange-100 text-orange-700" : "bg-ink/5 text-ink-soft"
+                      }`}>{b.payment_status || "unpaid"}</span>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -779,6 +799,7 @@ function BookingCard({ b, onEdit, onCancel, cancelling }: { b: Booking; onEdit: 
         <div className="flex items-center gap-1.5">
           {b.attendance_status === "attended" && <span className="text-[0.65rem] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">Attended</span>}
           {b.attendance_status === "no_show" && <span className="text-[0.65rem] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full">No-show</span>}
+          <PaymentMethodBadge reference={b.stripe_session_id} />
           <span className={`px-2 py-0.5 rounded-full text-[0.7rem] font-medium ${
             b.payment_status === "paid" ? "bg-green-100 text-green-700" :
             b.payment_status === "refunded" ? "bg-orange-100 text-orange-700" :

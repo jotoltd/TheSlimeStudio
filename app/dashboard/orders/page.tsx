@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase, type ShopOrder } from "@/lib/supabase";
 import PageHeader from "@/components/PageHeader";
+import PaymentMethodBadge from "@/components/PaymentMethodBadge";
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<ShopOrder[]>([]);
@@ -91,6 +92,7 @@ export default function OrdersPage() {
                   <th className="pb-3 pr-4">Total</th>
                   <th className="pb-3 pr-4">Delivery</th>
                   <th className="pb-3 pr-4">Status</th>
+                  <th className="pb-3 pr-4">Method</th>
                   <th className="pb-3 pr-4">Date</th>
                   <th className="pb-3">Actions</th>
                 </tr>
@@ -110,6 +112,9 @@ export default function OrdersPage() {
                       <span className={`px-3 py-1 rounded-full text-[0.75rem] font-medium capitalize ${statusColors[o.payment_status] || "bg-gray-100 text-gray-500"}`}>
                         {o.payment_status}
                       </span>
+                    </td>
+                    <td className="py-3 pr-4">
+                      <PaymentMethodBadge reference={o.stripe_session_id} />
                     </td>
                     <td className="py-3 pr-4 text-[0.8rem] text-ink-soft">
                       {new Date(o.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}

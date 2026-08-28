@@ -54,6 +54,23 @@ export type Booking = {
   created_at: string;
 };
 
+export type PaymentMethod = "sumup" | "stripe" | "manual" | "unknown";
+
+export function paymentMethodFor(ref?: string | null): PaymentMethod {
+  if (!ref) return "unknown";
+  if (ref.startsWith("SLM-BOOK-") || ref.startsWith("SLM-SHOP-")) return "sumup";
+  if (ref.startsWith("pi_") || ref.startsWith("cs_")) return "stripe";
+  if (ref.startsWith("manual_")) return "manual";
+  return "unknown";
+}
+
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  sumup: "SumUp",
+  stripe: "Stripe",
+  manual: "Manual",
+  unknown: "—",
+};
+
 export type BookingSettings = {
   id: number;
   price_per_person: number;
