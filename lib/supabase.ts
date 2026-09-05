@@ -128,6 +128,16 @@ export type SiteSettings = {
   launch_date: string;
   stripe_mode?: string;
   payment_provider?: "stripe" | "sumup";
+  fb_pixel_id: string | null;
+  fb_pixel_enabled: boolean;
+  ga_measurement_id: string | null;
+  ga_enabled: boolean;
+  tiktok_pixel_id: string | null;
+  tiktok_pixel_enabled: boolean;
+  google_ads_id: string | null;
+  google_ads_enabled: boolean;
+  snapchat_pixel_id: string | null;
+  snapchat_pixel_enabled: boolean;
   updated_at: string;
 };
 
@@ -143,6 +153,7 @@ export type LoyaltyCard = {
   total_stamps: number;
   rewards_earned: number;
   rewards_redeemed: number;
+  reward_code: string | null;
   created_at: string;
   updated_at: string;
 };

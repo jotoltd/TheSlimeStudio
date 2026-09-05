@@ -25,7 +25,14 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [loyaltyEnabled, setLoyaltyEnabled] = useState(true);
   const [shopLive, setShopLive] = useState(false);
+  const [customerName, setCustomerName] = useState<string | null>(null);
   const { itemCount, openCart } = useCart();
+
+  async function handleLogout() {
+    await fetch("/api/account/logout", { method: "POST" });
+    setCustomerName(null);
+    window.location.href = "/";
+  }
 
   useEffect(() => {
     supabase
@@ -44,6 +51,12 @@ export default function Navbar() {
       .then(({ data }) => {
         if (data) setShopLive(!!data.live);
       });
+    fetch("/api/account/me")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.authenticated) setCustomerName(data.name);
+      })
+      .catch(() => {});
   }, []);
 
   const navLinks = allNavLinks.filter((l) => {
@@ -89,6 +102,47 @@ export default function Navbar() {
         </ul>
 
         <div className="hidden md:flex items-center gap-3">
+          {customerName ? (
+            <>
+              <Link
+                href="/account"
+                className={`flex items-center gap-1.5 font-display text-[0.9rem] px-2.5 py-2 rounded-full transition-all whitespace-nowrap ${
+                  pathname === "/account"
+                    ? "bg-ink/10 text-ink font-semibold"
+                    : "text-ink/70 hover:bg-ink/8 hover:text-ink"
+                }`}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+                {customerName.split(" ")[0]}
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="text-ink/50 hover:text-[#ff2d78] hover:bg-ink/5 rounded-full w-9 h-9 grid place-items-center transition-colors"
+                aria-label="Sign out"
+                title="Sign out"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+              </button>
+            </>
+          ) : (
+            <Link
+              href="/account/login"
+              className={`font-display text-[0.9rem] px-2.5 py-2 rounded-full transition-all whitespace-nowrap ${
+                pathname === "/account/login"
+                  ? "bg-ink/10 text-ink font-semibold"
+                  : "text-ink/70 hover:bg-ink/8 hover:text-ink"
+              }`}
+            >
+              Sign In
+            </Link>
+          )}
           {shopLive && (
             <button
               onClick={openCart}
@@ -132,6 +186,29 @@ export default function Navbar() {
               </Link>
             </li>
           ))}
+          <li>
+            <Link
+              href={customerName ? "/account" : "/account/login"}
+              onClick={() => setOpen(false)}
+              className={`block py-2 font-display text-[1.1rem] px-4 rounded-full transition-all ${
+                pathname === "/account" || pathname === "/account/login"
+                  ? "bg-ink/10 text-ink font-semibold"
+                  : "text-ink/70 hover:bg-ink/8"
+              }`}
+            >
+              {customerName ? `Account (${customerName.split(" ")[0]})` : "Sign In"}
+            </Link>
+          </li>
+          {customerName && (
+            <li>
+              <button
+                onClick={() => { setOpen(false); handleLogout(); }}
+                className="block w-full text-left py-2 font-display text-[1.1rem] px-4 rounded-full transition-all text-ink/70 hover:bg-ink/8 hover:text-[#ff2d78]"
+              >
+                Sign Out
+              </button>
+            </li>
+          )}
           <li>
             <Link href="/booking" onClick={() => setOpen(false)} className="btn-primary btn-book-now block text-center mt-2">
               Book Now

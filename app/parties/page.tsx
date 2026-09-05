@@ -6,18 +6,7 @@ import Footer from "@/components/Footer";
 import { Heart } from "@/components/Heart";
 import { InstagramIcon } from "@/components/SocialLinks";
 import { supabase } from "@/lib/supabase";
-
-const BASE_PRICE = 100;
-const BASE_CHILDREN = 5;
-const ADDITIONAL_CHILD_PRICE = 12.5;
-const MAX_CHILDREN = 15;
-
-function partyTotal(count: number) {
-  if (count <= BASE_CHILDREN) return BASE_PRICE;
-  return BASE_PRICE + (count - BASE_CHILDREN) * ADDITIONAL_CHILD_PRICE;
-}
-
-const EXAMPLES = [5, 8, 10, 12, 15];
+import { useContent } from "@/lib/useContent";
 
 const INCLUDED = [
   { img: "/images/slime_mixing.jpg.jpeg", label: "1 Hour Private Studio Time" },
@@ -27,9 +16,22 @@ const INCLUDED = [
   { img: "/images/purple_finished_slime.jpg.jpeg", label: "Take Your Slime Home" },
 ];
 
+const EXAMPLES = [5, 8, 10, 12, 15];
+
 export default function PartiesPage() {
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
+  const { content: c } = useContent();
+
+  const BASE_PRICE = parseFloat(c.parties_base_price) || 100;
+  const BASE_CHILDREN = parseInt(c.parties_base_children) || 5;
+  const ADDITIONAL_CHILD_PRICE = parseFloat(c.parties_additional_child_price) || 12.5;
+  const MAX_CHILDREN = parseInt(c.parties_max_children) || 15;
+
+  function partyTotal(count: number) {
+    if (count <= BASE_CHILDREN) return BASE_PRICE;
+    return BASE_PRICE + (count - BASE_CHILDREN) * ADDITIONAL_CHILD_PRICE;
+  }
 
   async function handleEnquiry(e: React.FormEvent) {
     e.preventDefault();
@@ -83,21 +85,17 @@ export default function PartiesPage() {
       <section className="text-center py-10 md:py-16 px-4" style={{ backgroundColor: "#ffc4fb" }}>
         <div className="container max-w-2xl">
           <h1 className="font-display text-[1.4rem] md:text-[2.6rem] leading-[1.2] mb-3 text-ink">
-            Make Their Celebration <span style={{ color: "#ff2d78" }}>Extra Slimy!</span> 🥳
+            {c.parties_hero_title}
           </h1>
           <p className="text-[0.9rem] md:text-[1rem] text-ink/80 leading-relaxed mb-4">
-            Celebrate at The Slime Studio with your own private slime-making
-            experience. Our parties include 1 hour of private studio time,
-            where every guest gets to choose their type of slime, add their
-            own colour and scent, decorate it with charms and create
-            something completely their own to take home.
+            {c.parties_hero_text}
           </p>
           <p className="font-display text-[1.05rem] mb-4" style={{ color: "#ff2d78" }}>
-            Fun, creative and just the right amount of messy!
+            {c.parties_tagline}
           </p>
           <div className="inline-flex items-center gap-2 bg-white/50 rounded-full px-4 py-2 text-[0.85rem] text-ink">
             <span>📍</span>
-            <span className="font-medium">Unit A, Feathers Yard, Holt, NR25 6BF</span>
+            <span className="font-medium">{c.contact_address}</span>
           </div>
         </div>
       </section>
@@ -191,7 +189,7 @@ export default function PartiesPage() {
         <div className="container max-w-4xl">
           <div className="flex items-center justify-center gap-3 mb-10">
             <span className="text-ink/40">↝</span>
-            <h2 className="font-display text-[1.4rem] md:text-[1.7rem] text-ink">What&apos;s Included</h2>
+            <h2 className="font-display text-[1.4rem] md:text-[1.7rem] text-ink">{c.parties_included_title}</h2>
             <span className="text-ink/40">↜</span>
           </div>
 
@@ -324,7 +322,7 @@ export default function PartiesPage() {
           <div className="bg-white rounded-[28px] p-8 md:p-10 shadow-sm text-center">
             <h2 className="font-display text-[1.3rem] mb-2 text-ink">Get In Touch</h2>
             <p className="text-ink-soft text-[0.95rem] mb-6">
-              Got questions? Contact us and we&apos;ll help arrange your Slime Studio party.
+              {c.parties_contact_text}
             </p>
             <div className="flex flex-col items-center gap-3 mb-8">
               <a href="https://instagram.com/theslimestudioexperience" target="_blank" rel="noopener noreferrer" className="text-[0.95rem] text-ink hover:text-[#ff2d78] transition-colors inline-flex items-center gap-1.5">

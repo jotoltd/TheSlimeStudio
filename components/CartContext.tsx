@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import type { Product } from "@/lib/supabase";
+import { trackAddToCart } from "@/lib/ad-tracking";
 
 export type CartItem = {
   product: Product;
@@ -58,6 +59,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return [...prev, { product, quantity: Math.min(quantity, product.stock || 99) }];
     });
     setIsCartOpen(true);
+    trackAddToCart(product.price * quantity, "GBP", product.name);
   }
 
   function removeItem(productId: string) {

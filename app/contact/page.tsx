@@ -6,30 +6,32 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Heart } from "@/components/Heart";
 import { supabase } from "@/lib/supabase";
-
-const INFO_CARDS = [
-  {
-    bg: "#ff2d78",
-    icon: "📍",
-    title: "Visit Us",
-    lines: ["The Slime Studio", "Unit A Feathers Yard", "Holt", "NR25 6BF"],
-  },
-  {
-    bg: "#3fc9a0",
-    icon: "🕐",
-    title: "Opening Hours",
-    lines: ["Mon–Sat 10am–4pm", "Sunday closed"],
-  },
-  {
-    bg: "#8b5fbf",
-    icon: "✉️",
-    title: "Email",
-    lines: ["studio@theslimestudio.co.uk"],
-  },
-];
+import { useContent } from "@/lib/useContent";
 
 export default function ContactPage() {
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const { content: c } = useContent();
+
+  const INFO_CARDS = [
+    {
+      bg: "#ff2d78",
+      icon: "📍",
+      title: "Visit Us",
+      lines: c.contact_address.split(","),
+    },
+    {
+      bg: "#3fc9a0",
+      icon: "🕐",
+      title: "Opening Hours",
+      lines: c.contact_hours.split(","),
+    },
+    {
+      bg: "#8b5fbf",
+      icon: "✉️",
+      title: "Email",
+      lines: [c.contact_email],
+    },
+  ];
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

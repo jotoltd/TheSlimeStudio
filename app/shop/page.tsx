@@ -5,6 +5,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ProductCard from "@/components/ProductCard";
 import { supabase, type Product, type ShopSettings } from "@/lib/supabase";
+import { useContent } from "@/lib/useContent";
 
 const filters = [
   { key: "all", label: "All Products" },
@@ -38,6 +39,7 @@ function useCountdown(target: Date) {
 }
 
 export default function ShopPage() {
+  const { content: c } = useContent();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState("all");
@@ -100,24 +102,22 @@ export default function ShopPage() {
               <span className="text-ink/40">↜</span>
             </div>
             <h1 className="font-display text-[1.6rem] md:text-[3.2rem] leading-[1.1] mb-2 text-ink">
-              Something Slimy
+              {c.shop_comingsoon_title}
             </h1>
             <h1 className="font-display text-[1.6rem] md:text-[3.2rem] leading-[1.1] mb-4 md:mb-6" style={{ color: "#E91E8C" }}>
-              Is Coming...
+              {c.shop_comingsoon_title2}
             </h1>
             <div className="mb-6">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="#ff2d78" className="mx-auto"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
             </div>
             <p className="text-[0.9rem] md:text-[1.05rem] text-ink/80 mb-2">
-              We&apos;re busy getting <span className="font-semibold" style={{ color: "#E91E8C" }}>The Slime Studio Shop</span> ready!
+              {c.shop_comingsoon_text1}
             </p>
             <p className="text-[0.9rem] md:text-[1.05rem] text-ink/80 mb-6">
-              Soon you&apos;ll be able to bring the Slime Studio experience home
-              with our range of <span className="font-semibold" style={{ color: "#E91E8C" }}>DIY slime kits, accessories, charms, add-ins and more.</span>
+              {c.shop_comingsoon_text2}
             </p>
             <p className="text-[0.9rem] md:text-[1.05rem] text-ink/80 mb-8 md:mb-10">
-              Perfect for slime lovers, gifts, rainy days or simply when you
-              need a little more slime in your life.
+              {c.shop_comingsoon_text3}
             </p>
 
             <div className="flex items-center justify-center gap-3 mb-6">
@@ -174,10 +174,9 @@ export default function ShopPage() {
       ) : (
         <section className="py-[50px] md:py-[70px] text-center px-4" style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}>
           <div className="container">
-            <h1 className="font-display text-[1.5rem] md:text-[3.2rem] mt-3 mb-3 text-ink">Slime, Kits & Accessories</h1>
+            <h1 className="font-display text-[1.5rem] md:text-[3.2rem] mt-3 mb-3 text-ink">{c.shop_title}</h1>
             <p className="text-[1.1rem] text-ink/80 max-w-[560px] mx-auto">
-              Handmade in small batches in our Norfolk studio. Every slime is
-              unique, scented and ready to squish.
+              {c.shop_subtitle}
             </p>
           </div>
         </section>

@@ -7,6 +7,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { supabase } from "@/lib/supabase";
 import type { ShopOrder } from "@/lib/supabase";
+import { trackPurchase } from "@/lib/ad-tracking";
 
 function SuccessContent() {
   const params = useSearchParams();
@@ -30,7 +31,10 @@ function SuccessContent() {
           .eq("stripe_session_id", sumupRef)
           .single()
           .then(({ data }) => {
-            if (data) setOrder(data as ShopOrder);
+            if (data) {
+              setOrder(data as ShopOrder);
+              trackPurchase(Number((data as ShopOrder).total), "GBP", (data as ShopOrder).id);
+            }
             setLoading(false);
           });
       }).catch(() => setLoading(false));
@@ -41,7 +45,10 @@ function SuccessContent() {
         .eq("stripe_session_id", sessionId)
         .single()
         .then(({ data }) => {
-          if (data) setOrder(data as ShopOrder);
+          if (data) {
+            setOrder(data as ShopOrder);
+            trackPurchase(Number((data as ShopOrder).total), "GBP", (data as ShopOrder).id);
+          }
           setLoading(false);
         });
     } else {

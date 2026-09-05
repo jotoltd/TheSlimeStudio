@@ -5,9 +5,11 @@ import { useSearchParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { supabase, type SubscriptionSettings } from "@/lib/supabase";
+import { useContent } from "@/lib/useContent";
 
 function SubscribePageInner() {
   const searchParams = useSearchParams();
+  const { content: c } = useContent();
   const [settings, setSettings] = useState<SubscriptionSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ name: "", email: "", phone: "", address: "", postcode: "" });
@@ -96,14 +98,13 @@ function SubscribePageInner() {
         <Navbar />
         <section className="py-[70px] text-center" style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}>
           <div className="container">
-            <h1 className="font-display text-[2rem] md:text-[3.2rem] mt-3 mb-3 text-ink">Slime Subscription Box</h1>
+            <h1 className="font-display text-[2rem] md:text-[3.2rem] mt-3 mb-3 text-ink">{c.subscribe_disabled_title}</h1>
           </div>
         </section>
         <section className="section text-center">
           <div className="container max-w-xl">
             <p className="text-ink-soft text-lg">
-              Our monthly slime subscription box isn&apos;t open for sign-ups
-              just yet — check back soon or follow us for the launch!
+              {c.subscribe_disabled_text}
             </p>
           </div>
         </section>
@@ -118,9 +119,9 @@ function SubscribePageInner() {
 
       <section className="py-[50px] md:py-[70px] text-center px-4" style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}>
         <div className="container">
-          <h1 className="font-display text-[1.5rem] md:text-[3.2rem] mt-3 mb-3 text-ink">{settings.box_name}</h1>
+          <h1 className="font-display text-[1.5rem] md:text-[3.2rem] mt-3 mb-3 text-ink">{settings.box_name || c.subscribe_title}</h1>
           <p className="text-[0.95rem] md:text-[1.1rem] text-ink/80 max-w-[560px] mx-auto">
-            A brand new themed slime, delivered to your door every month.
+            {c.subscribe_subtitle}
           </p>
         </div>
       </section>

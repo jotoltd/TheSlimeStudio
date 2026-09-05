@@ -1,12 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSumUpKey } from "@/lib/payment";
-import { supabaseAdmin, STAMPS_PER_REWARD } from "@/lib/supabase";
-import { getResend, EMAIL_FROM, CONTACT_EMAIL, logEmail } from "@/lib/email";
+import { verifySumUpPayment } from "@/lib/payment";
+import { supabaseAdmin } from "@/lib/supabase";
+import {
+  createPaidBooking,
+  sendCustomerConfirmation,
+  sendAdminNotification,
+  awardLoyaltyStamp,
+  type BookingDetails,
+} from "@/lib/create-booking";
+import { redeemRewardCode } from "@/lib/loyalty-rewards";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
-  const { checkoutRef } = await req.json() as { checkoutRef: string };
+  const body = await req.json() as {
+    checkoutRef: string;
+    name?: string;
+    email?: string;
+    date?: string;
+    timeSlot?: string;
+    people?: number;
+    totalPrice?: number;
+    phone?: string;
+    discountCode?: string;
+  };
+
+  const { checkoutRef } = body;
 
   if (!checkoutRef) {
     return NextResponse.json({ error: "Missing checkout reference" }, { status: 400 });
@@ -19,11 +38,8 @@ export async function POST(req: NextRequest) {
     .eq("stripe_session_id", checkoutRef)
     .single();
 
-  if (!booking) {
-    return NextResponse.json({ error: "Booking not found" }, { status: 404 });
-  }
-
-  if (booking.payment_status === "paid") {
+  // If booking already exists and is paid, return success (idempotent)
+  if (booking && booking.payment_status === "paid") {
     return NextResponse.json({
       success: true,
       bookingId: booking.id,
@@ -36,132 +52,123 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // Verify with SumUp that the checkout was actually paid
-  const key = getSumUpKey();
+  // Verify with SumUp that the checkout was actually paid. This checks the live
+  // checkout first and falls back to settled transaction history, so a late or
+  // retried confirmation still succeeds after SumUp purges the checkout object.
   try {
-    // SumUp GET /checkouts/{id} expects the checkout ID, not the reference.
-    // Use the list endpoint with checkout_reference filter to find it.
-    const listRes = await fetch(`https://api.sumup.com/v0.1/checkouts?checkout_reference=${encodeURIComponent(checkoutRef)}`, {
-      headers: { Authorization: `Bearer ${key}` },
-    });
-    const listData = await listRes.json();
+    const verification = await verifySumUpPayment(checkoutRef);
 
-    if (!listRes.ok) {
-      console.error("SumUp list checkouts error:", listData);
-      return NextResponse.json({ error: "Failed to verify payment with SumUp" }, { status: 500 });
-    }
-
-    const checkout = Array.isArray(listData) && listData.length > 0 ? listData[0] : null;
-    if (!checkout) {
-      return NextResponse.json({ error: "Checkout not found on SumUp" }, { status: 404 });
-    }
-
-    if (checkout.status !== "PAID") {
+    if (!verification.paid) {
+      if (verification.notFound) {
+        return NextResponse.json({ error: "Checkout not found on SumUp" }, { status: 404 });
+      }
       return NextResponse.json({ error: "Payment not completed" }, { status: 400 });
     }
 
-    // Mark booking as paid
-    const { data: updated, error } = await supabaseAdmin
-      .from("bookings")
-      .update({ payment_status: "paid" })
-      .eq("id", booking.id)
-      .select()
-      .single();
-
-    if (error || !updated) {
-      return NextResponse.json({ error: "Failed to update booking" }, { status: 500 });
-    }
-
-    // Send admin notification email
-    try {
-      const r = getResend();
-      if (r) {
-        await r.emails.send({
-          from: EMAIL_FROM,
-          to: CONTACT_EMAIL,
-          subject: `New Booking — ${booking.name} on ${booking.date} at ${booking.time_slot}`,
-          html: `
-            <h2>New Booking Received</h2>
-            <p><strong>Name:</strong> ${booking.name}</p>
-            <p><strong>Email:</strong> ${booking.email}</p>
-            <p><strong>Phone:</strong> ${booking.phone || "Not provided"}</p>
-            <p><strong>Date:</strong> ${booking.date}</p>
-            <p><strong>Time:</strong> ${booking.time_slot}</p>
-            <p><strong>People:</strong> ${booking.people}</p>
-            <p><strong>Total:</strong> £${Number(booking.total_price).toFixed(2)}</p>
-            <p><strong>Payment:</strong> Paid (SumUp)</p>
-          `,
-        });
-        await logEmail(CONTACT_EMAIL, `New Booking — ${booking.name}`, "admin_notification", "sent");
-      }
-    } catch (e) {
-      console.error("Failed to send admin notification:", e);
-    }
-
-    // Award loyalty stamp
-    try {
-      const { data: siteSettings } = await supabaseAdmin
-        .from("site_settings")
-        .select("loyalty_enabled, stamps_per_reward")
-        .eq("id", 1)
+    // If booking exists but is pending, mark it as paid directly
+    if (booking) {
+      const { data: updated, error } = await supabaseAdmin
+        .from("bookings")
+        .update({ payment_status: "paid" })
+        .eq("id", booking.id)
+        .select()
         .single();
 
-      if (siteSettings?.loyalty_enabled) {
-        const stampsPerReward = siteSettings.stamps_per_reward || STAMPS_PER_REWARD;
-        const { data: existingCard } = await supabaseAdmin
-          .from("loyalty_cards")
-          .select("id, stamps, total_stamps, rewards_earned")
-          .eq("email", booking.email.toLowerCase())
-          .single();
-
-        if (existingCard) {
-          const newStamps = existingCard.stamps + 1;
-          const newTotal = existingCard.total_stamps + 1;
-          let newRewards = existingCard.rewards_earned;
-          let stampCount = newStamps;
-
-          if (newStamps >= stampsPerReward) {
-            newRewards += 1;
-            stampCount = newStamps - stampsPerReward;
-          }
-
-          await supabaseAdmin
-            .from("loyalty_cards")
-            .update({
-              stamps: stampCount,
-              total_stamps: newTotal,
-              rewards_earned: newRewards,
-              name: booking.name,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", existingCard.id);
-        } else {
-          await supabaseAdmin.from("loyalty_cards").insert({
-            email: booking.email.toLowerCase(),
-            name: booking.name,
-            stamps: 1,
-            total_stamps: 1,
-            rewards_earned: 0,
-            rewards_redeemed: 0,
-          });
-        }
+      if (error || !updated) {
+        return NextResponse.json({ error: "Failed to update booking" }, { status: 500 });
       }
-    } catch (e) {
-      console.error("Failed to award loyalty stamp:", e);
+
+      // Use createPaidBooking's side-effect logic by calling it with the existing booking's details.
+      // It will detect the existing booking (now paid) and return early — but we still need
+      // to send notifications and award loyalty. So we call it with the booking details.
+      // Since the booking already exists and is now paid, createPaidBooking will find it
+      // and return { created: false } without sending duplicate emails.
+      // Instead, send notifications directly here.
+      await sendNotificationsAndLoyalty(booking);
+
+      return NextResponse.json({
+        success: true,
+        bookingId: updated.id,
+        name: updated.name,
+        email: updated.email,
+        date: updated.date,
+        timeSlot: updated.time_slot,
+        people: updated.people,
+        totalPrice: updated.total_price,
+      });
+    }
+
+    // Booking not found — try to create it from fallback details provided by the client
+    // or from the SumUp checkout amount
+    const fallbackDetails: BookingDetails = {
+      paymentRef: checkoutRef,
+      name: body.name || "Unknown",
+      email: body.email || "",
+      phone: body.phone || null,
+      date: body.date || "",
+      timeSlot: body.timeSlot || "",
+      people: body.people || 1,
+      totalPrice: body.totalPrice ?? verification.amount ?? 0,
+      isParty: false,
+      discountCode: body.discountCode || null,
+    };
+
+    if (!fallbackDetails.email || !fallbackDetails.date || !fallbackDetails.timeSlot) {
+      console.error(`[sumup-confirm] Booking ${checkoutRef} not found and no fallback details provided`);
+      return NextResponse.json({
+        error: "Booking not found and insufficient details to create it",
+      }, { status: 404 });
+    }
+
+    const result = await createPaidBooking(fallbackDetails);
+
+    if (result.bookingId) {
+      if (result.created) {
+        console.warn(`[sumup-confirm] Recovered booking ${result.bookingId} for ${checkoutRef} — pending booking was missing.`);
+      }
+      return NextResponse.json({
+        success: true,
+        bookingId: result.bookingId,
+        name: fallbackDetails.name,
+        email: fallbackDetails.email,
+        date: fallbackDetails.date,
+        timeSlot: fallbackDetails.timeSlot,
+        people: fallbackDetails.people,
+        totalPrice: fallbackDetails.totalPrice,
+        overCapacity: result.overCapacity,
+      });
     }
 
     return NextResponse.json({
-      success: true,
-      bookingId: updated.id,
-      name: updated.name,
-      email: updated.email,
-      date: updated.date,
-      timeSlot: updated.time_slot,
-      people: updated.people,
-      totalPrice: updated.total_price,
-    });
+      error: result.error || "Failed to create booking",
+    }, { status: 500 });
   } catch (e) {
     console.error("SumUp confirm booking error:", e);
     return NextResponse.json({ error: "Failed to confirm booking" }, { status: 500 });
+  }
+}
+
+async function sendNotificationsAndLoyalty(booking: {
+  name: string; email: string; phone?: string | null;
+  date: string; time_slot: string; people: number; total_price: number;
+  discount_code?: string | null;
+}) {
+  const details: BookingDetails = {
+    paymentRef: "",
+    name: booking.name,
+    email: booking.email,
+    phone: booking.phone,
+    date: booking.date,
+    timeSlot: booking.time_slot,
+    people: booking.people,
+    totalPrice: booking.total_price,
+    isParty: false,
+    discountCode: booking.discount_code,
+  };
+  await sendCustomerConfirmation(details).catch(() => {});
+  await sendAdminNotification(details, false).catch(() => {});
+  await awardLoyaltyStamp(booking.name, booking.email).catch(() => {});
+  if (booking.discount_code && booking.discount_code.toUpperCase().startsWith("FREE-")) {
+    await redeemRewardCode(booking.discount_code, booking.email).catch(() => {});
   }
 }

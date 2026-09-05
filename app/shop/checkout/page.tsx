@@ -5,6 +5,7 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useCart } from "@/components/CartContext";
+import { trackInitiateCheckout } from "@/lib/ad-tracking";
 
 const DELIVERY_FEE = 3.95;
 const FREE_DELIVERY_THRESHOLD = 30;
@@ -23,6 +24,10 @@ export default function CheckoutPage() {
   const [error, setError] = useState("");
   const [cancelled, setCancelled] = useState(false);
   const [paymentProvider, setPaymentProvider] = useState<"stripe" | "sumup">("stripe");
+  const [discountCode, setDiscountCode] = useState("");
+  const [appliedDiscount, setAppliedDiscount] = useState<{ code: string; discountAmount: number; finalAmount: number } | null>(null);
+  const [discountChecking, setDiscountChecking] = useState(false);
+  const [discountError, setDiscountError] = useState("");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -36,7 +41,38 @@ export default function CheckoutPage() {
   }, []);
 
   const shippingCost = shippingMethod === "delivery" ? (subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE) : 0;
-  const total = subtotal + shippingCost;
+  const preDiscountTotal = subtotal + shippingCost;
+  const total = appliedDiscount ? appliedDiscount.finalAmount + shippingCost : preDiscountTotal;
+  const discountAmount = appliedDiscount ? appliedDiscount.discountAmount : 0;
+
+  async function applyDiscount() {
+    if (!discountCode.trim()) return;
+    setDiscountChecking(true);
+    setDiscountError("");
+    try {
+      const res = await fetch("/api/discount/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: discountCode, scope: "shop", amount: subtotal }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        setAppliedDiscount({ code: data.code, discountAmount: data.discountAmount, finalAmount: data.finalAmount });
+      } else {
+        setAppliedDiscount(null);
+        setDiscountError(data.error || "Invalid code.");
+      }
+    } catch {
+      setDiscountError("Could not validate code. Please try again.");
+    }
+    setDiscountChecking(false);
+  }
+
+  function removeDiscount() {
+    setAppliedDiscount(null);
+    setDiscountCode("");
+    setDiscountError("");
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -56,6 +92,7 @@ export default function CheckoutPage() {
     }
 
     setLoading(true);
+    trackInitiateCheckout(total);
     try {
       const endpoint = paymentProvider === "sumup" ? "/api/sumup-shop-checkout" : "/api/shop-checkout";
       const res = await fetch(endpoint, {
@@ -77,6 +114,7 @@ export default function CheckoutPage() {
           shippingCity: city,
           shippingPostcode: postcode,
           notes,
+          discountCode: appliedDiscount?.code,
         }),
       });
       const data = await res.json();
@@ -233,10 +271,46 @@ export default function CheckoutPage() {
                     <span className="text-ink-soft">Shipping</span>
                     <span>{shippingCost === 0 ? "Free" : `£${shippingCost.toFixed(2)}`}</span>
                   </div>
+                  {appliedDiscount && (
+                    <div className="flex justify-between text-[0.9rem] text-green-600">
+                      <span>Discount ({appliedDiscount.code})</span>
+                      <span>−£{discountAmount.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between font-display text-[1.1rem] pt-2 border-t border-ink/10">
                     <span>Total</span>
                     <span>£{total.toFixed(2)}</span>
                   </div>
+                </div>
+
+                {/* Discount code input */}
+                <div className="mt-4">
+                  {appliedDiscount ? (
+                    <div className="flex items-center justify-between bg-green-50 border-2 border-green-200 rounded-xl p-3">
+                      <span className="text-[0.85rem] font-medium text-green-700">Code "{appliedDiscount.code}" applied</span>
+                      <button type="button" onClick={removeDiscount} className="text-[0.8rem] text-ink-soft hover:text-[#ff2d78]">Remove</button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={discountCode}
+                        onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                        onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), applyDiscount())}
+                        placeholder="Discount code"
+                        className="flex-1 px-3 py-2 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light uppercase"
+                      />
+                      <button
+                        type="button"
+                        onClick={applyDiscount}
+                        disabled={discountChecking || !discountCode.trim()}
+                        className="px-4 py-2 rounded-xl bg-ink/5 text-ink text-sm font-medium hover:bg-ink/10 disabled:opacity-60"
+                      >
+                        {discountChecking ? "..." : "Apply"}
+                      </button>
+                    </div>
+                  )}
+                  {discountError && <p className="text-[0.8rem] text-[#ff2d78] mt-1.5">{discountError}</p>}
                 </div>
 
                 {error && <p className="text-red-600 text-[0.85rem] mt-4">{error}</p>}

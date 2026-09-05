@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase, type BookingSettings, type SiteSettings, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, MAX_DAILY_BOOKINGS as DEFAULT_MAX, STAMPS_PER_REWARD as DEFAULT_STAMPS } from "@/lib/supabase";
 
 export default function SettingsPage() {
-  const [tab, setTab] = useState<"site" | "bookings" | "payments" | "loyalty">("site");
+  const [tab, setTab] = useState<"site" | "bookings" | "payments" | "loyalty" | "ads">("site");
 
   // Site settings
   const [siteSettings, setSiteSettings] = useState<SiteSettings | null>(null);
@@ -37,6 +37,21 @@ export default function SettingsPage() {
   const [savingSlots, setSavingSlots] = useState(false);
   const [slotsMsg, setSlotsMsg] = useState("");
 
+  // Ad & marketing tracking
+  const [fbPixelId, setFbPixelId] = useState("");
+  const [fbPixelEnabled, setFbPixelEnabled] = useState(false);
+  const [gaMeasurementId, setGaMeasurementId] = useState("");
+  const [gaEnabled, setGaEnabled] = useState(false);
+  const [tiktokPixelId, setTiktokPixelId] = useState("");
+  const [tiktokPixelEnabled, setTiktokPixelEnabled] = useState(false);
+  const [googleAdsId, setGoogleAdsId] = useState("");
+  const [googleAdsEnabled, setGoogleAdsEnabled] = useState(false);
+  const [snapchatPixelId, setSnapchatPixelId] = useState("");
+  const [snapchatPixelEnabled, setSnapchatPixelEnabled] = useState(false);
+  const [savingAds, setSavingAds] = useState(false);
+  const [adsMsg, setAdsMsg] = useState("");
+  const [openGuide, setOpenGuide] = useState<string | null>(null);
+
   useEffect(() => { loadAll(); }, []);
 
   async function loadAll() {
@@ -46,6 +61,16 @@ export default function SettingsPage() {
       setSiteSettings(s);
       setMaintDate(new Date(s.launch_date).toISOString().slice(0, 16));
       if (s.stamps_per_reward) setStampsPerReward(s.stamps_per_reward);
+      setFbPixelId(s.fb_pixel_id || "");
+      setFbPixelEnabled(!!s.fb_pixel_enabled);
+      setGaMeasurementId(s.ga_measurement_id || "");
+      setGaEnabled(!!s.ga_enabled);
+      setTiktokPixelId(s.tiktok_pixel_id || "");
+      setTiktokPixelEnabled(!!s.tiktok_pixel_enabled);
+      setGoogleAdsId(s.google_ads_id || "");
+      setGoogleAdsEnabled(!!s.google_ads_enabled);
+      setSnapchatPixelId(s.snapchat_pixel_id || "");
+      setSnapchatPixelEnabled(!!s.snapchat_pixel_enabled);
     }
 
     try {
@@ -150,6 +175,25 @@ export default function SettingsPage() {
     else setPriceMsg({ type: "ok", text: "Price updated successfully!" });
   }
 
+  async function saveAds() {
+    setSavingAds(true); setAdsMsg("");
+    const { error } = await supabase.from("site_settings").update({
+      fb_pixel_id: fbPixelId || null,
+      fb_pixel_enabled: fbPixelEnabled,
+      ga_measurement_id: gaMeasurementId || null,
+      ga_enabled: gaEnabled,
+      tiktok_pixel_id: tiktokPixelId || null,
+      tiktok_pixel_enabled: tiktokPixelEnabled,
+      google_ads_id: googleAdsId || null,
+      google_ads_enabled: googleAdsEnabled,
+      snapchat_pixel_id: snapchatPixelId || null,
+      snapchat_pixel_enabled: snapchatPixelEnabled,
+    }).eq("id", 1);
+    setSavingAds(false);
+    if (error) setAdsMsg("Failed: " + error.message);
+    else setAdsMsg("Marketing settings saved!");
+  }
+
   async function saveSlotConfig() {
     if (slotCapacity < 1) { setSlotsMsg("Max people per slot must be at least 1"); return; }
     if (maxDaily < 1) { setSlotsMsg("Max daily bookings must be at least 1"); return; }
@@ -170,6 +214,7 @@ export default function SettingsPage() {
     { key: "bookings" as const, icon: "📅", label: "Bookings" },
     { key: "loyalty" as const, icon: "⭐", label: "Loyalty" },
     { key: "payments" as const, icon: "💳", label: "Payments" },
+    { key: "ads" as const, icon: "📊", label: "Marketing" },
   ];
 
   return (
@@ -503,6 +548,205 @@ export default function SettingsPage() {
             >
               Go to Loyalty Dashboard →
             </a>
+          </div>
+        </div>
+      )}
+
+      {/* Marketing & Ads tab */}
+      {tab === "ads" && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm">
+            <h2 className="font-display text-[1.1rem] mb-1">Marketing & Ad Tracking</h2>
+            <p className="text-[0.85rem] text-ink-soft mb-6">Connect ad platform pixels to track conversions and retarget visitors. Pixels only load when enabled.</p>
+            <div className="space-y-6">
+              {/* Facebook Pixel */}
+              <div className="border-2 border-ink/10 rounded-xl p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div>
+                      <span className="font-medium text-[0.95rem]">Facebook / Meta Pixel</span>
+                      <p className="text-[0.8rem] text-ink-soft mt-0.5">Track Meta ad conversions and build audiences</p>
+                    </div>
+                    <button type="button" onClick={() => setOpenGuide(openGuide === "fb" ? null : "fb")} className="w-5 h-5 rounded-full bg-ink/10 text-ink/50 text-xs font-bold flex items-center justify-center hover:bg-ink/20 transition-colors">?</button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setFbPixelEnabled(!fbPixelEnabled)}
+                    className={`relative w-12 h-7 rounded-full transition-colors ${fbPixelEnabled ? "bg-green-500" : "bg-ink/20"}`}
+                  >
+                    <span className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition-transform ${fbPixelEnabled ? "translate-x-5" : ""}`} />
+                  </button>
+                </div>
+                {openGuide === "fb" && (
+                  <div className="mb-3 bg-sky-blue-light/5 border border-sky-blue-light/20 rounded-lg p-3 text-[0.8rem] text-ink-soft space-y-1">
+                    <p><strong>Where to find your Meta Pixel ID:</strong></p>
+                    <p>1. Go to <a href="https://www.facebook.com/events_manager" target="_blank" rel="noopener noreferrer" className="text-sky-blue-light underline">Meta Events Manager</a></p>
+                    <p>2. Navigate to <strong>Data Sources</strong> → <strong>Web</strong></p>
+                    <p>3. Select your pixel (or create one via <strong>Connect Data Sources</strong> → <strong>Web</strong>)</p>
+                    <p>4. Click <strong>Settings</strong> tab — your Pixel ID is the 15–16 digit number at the top</p>
+                  </div>
+                )}
+                <input
+                  type="text" value={fbPixelId}
+                  onChange={(e) => setFbPixelId(e.target.value)}
+                  placeholder="e.g. 123456789012345"
+                  className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light font-mono"
+                />
+              </div>
+
+              {/* Google Analytics */}
+              <div className="border-2 border-ink/10 rounded-xl p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div>
+                      <span className="font-medium text-[0.95rem]">Google Analytics 4</span>
+                      <p className="text-[0.8rem] text-ink-soft mt-0.5">Measurement ID (G-XXXXXXXXXX)</p>
+                    </div>
+                    <button type="button" onClick={() => setOpenGuide(openGuide === "ga" ? null : "ga")} className="w-5 h-5 rounded-full bg-ink/10 text-ink/50 text-xs font-bold flex items-center justify-center hover:bg-ink/20 transition-colors">?</button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setGaEnabled(!gaEnabled)}
+                    className={`relative w-12 h-7 rounded-full transition-colors ${gaEnabled ? "bg-green-500" : "bg-ink/20"}`}
+                  >
+                    <span className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition-transform ${gaEnabled ? "translate-x-5" : ""}`} />
+                  </button>
+                </div>
+                {openGuide === "ga" && (
+                  <div className="mb-3 bg-sky-blue-light/5 border border-sky-blue-light/20 rounded-lg p-3 text-[0.8rem] text-ink-soft space-y-1">
+                    <p><strong>Where to find your GA4 Measurement ID:</strong></p>
+                    <p>1. Go to <a href="https://analytics.google.com" target="_blank" rel="noopener noreferrer" className="text-sky-blue-light underline">Google Analytics</a></p>
+                    <p>2. Click <strong>Admin</strong> (gear icon, bottom left)</p>
+                    <p>3. Under <strong>Property</strong>, click <strong>Data Streams</strong></p>
+                    <p>4. Click your web stream (or create one)</p>
+                    <p>5. Your <strong>Measurement ID</strong> is shown at the top right (format: G-XXXXXXXXXX)</p>
+                  </div>
+                )}
+                <input
+                  type="text" value={gaMeasurementId}
+                  onChange={(e) => setGaMeasurementId(e.target.value)}
+                  placeholder="G-XXXXXXXXXX"
+                  className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light font-mono"
+                />
+              </div>
+
+              {/* TikTok Pixel */}
+              <div className="border-2 border-ink/10 rounded-xl p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div>
+                      <span className="font-medium text-[0.95rem]">TikTok Pixel</span>
+                      <p className="text-[0.8rem] text-ink-soft mt-0.5">Track TikTok ad conversions</p>
+                    </div>
+                    <button type="button" onClick={() => setOpenGuide(openGuide === "tiktok" ? null : "tiktok")} className="w-5 h-5 rounded-full bg-ink/10 text-ink/50 text-xs font-bold flex items-center justify-center hover:bg-ink/20 transition-colors">?</button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setTiktokPixelEnabled(!tiktokPixelEnabled)}
+                    className={`relative w-12 h-7 rounded-full transition-colors ${tiktokPixelEnabled ? "bg-green-500" : "bg-ink/20"}`}
+                  >
+                    <span className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition-transform ${tiktokPixelEnabled ? "translate-x-5" : ""}`} />
+                  </button>
+                </div>
+                {openGuide === "tiktok" && (
+                  <div className="mb-3 bg-sky-blue-light/5 border border-sky-blue-light/20 rounded-lg p-3 text-[0.8rem] text-ink-soft space-y-1">
+                    <p><strong>Where to find your TikTok Pixel ID:</strong></p>
+                    <p>1. Go to <a href="https://ads.tiktok.com" target="_blank" rel="noopener noreferrer" className="text-sky-blue-light underline">TikTok Ads Manager</a></p>
+                    <p>2. Click <strong>Assets</strong> → <strong>Events</strong> in the sidebar</p>
+                    <p>3. Click <strong>Web Events</strong> and select <strong>+ Create Pixel</strong> (or select existing)</p>
+                    <p>4. Choose <strong>Manual Install</strong> — your Pixel ID is shown (format: C4XXXXXXXXXXXXXX)</p>
+                  </div>
+                )}
+                <input
+                  type="text" value={tiktokPixelId}
+                  onChange={(e) => setTiktokPixelId(e.target.value)}
+                  placeholder="e.g. C4XXXXXXXXXXXXXX"
+                  className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light font-mono"
+                />
+              </div>
+
+              {/* Google Ads */}
+              <div className="border-2 border-ink/10 rounded-xl p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div>
+                      <span className="font-medium text-[0.95rem]">Google Ads</span>
+                      <p className="text-[0.8rem] text-ink-soft mt-0.5">Conversion ID (AW-XXXXXXXXX)</p>
+                    </div>
+                    <button type="button" onClick={() => setOpenGuide(openGuide === "gads" ? null : "gads")} className="w-5 h-5 rounded-full bg-ink/10 text-ink/50 text-xs font-bold flex items-center justify-center hover:bg-ink/20 transition-colors">?</button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setGoogleAdsEnabled(!googleAdsEnabled)}
+                    className={`relative w-12 h-7 rounded-full transition-colors ${googleAdsEnabled ? "bg-green-500" : "bg-ink/20"}`}
+                  >
+                    <span className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition-transform ${googleAdsEnabled ? "translate-x-5" : ""}`} />
+                  </button>
+                </div>
+                {openGuide === "gads" && (
+                  <div className="mb-3 bg-sky-blue-light/5 border border-sky-blue-light/20 rounded-lg p-3 text-[0.8rem] text-ink-soft space-y-1">
+                    <p><strong>Where to find your Google Ads Conversion ID:</strong></p>
+                    <p>1. Go to <a href="https://ads.google.com" target="_blank" rel="noopener noreferrer" className="text-sky-blue-light underline">Google Ads</a></p>
+                    <p>2. Click <strong>Goals</strong> → <strong>Conversions</strong> in the top menu</p>
+                    <p>3. Click <strong>+ New conversion action</strong> → <strong>Website</strong></p>
+                    <p>4. After setup, click <strong>Tag setup</strong> → <strong>Use Google Tag Manager</strong></p>
+                    <p>5. Your <strong>Conversion ID</strong> is shown (format: AW-XXXXXXXXX)</p>
+                  </div>
+                )}
+                <input
+                  type="text" value={googleAdsId}
+                  onChange={(e) => setGoogleAdsId(e.target.value)}
+                  placeholder="AW-XXXXXXXXX"
+                  className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light font-mono"
+                />
+              </div>
+
+              {/* Snapchat Pixel */}
+              <div className="border-2 border-ink/10 rounded-xl p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div>
+                      <span className="font-medium text-[0.95rem]">Snapchat Pixel</span>
+                      <p className="text-[0.8rem] text-ink-soft mt-0.5">Track Snapchat ad conversions</p>
+                    </div>
+                    <button type="button" onClick={() => setOpenGuide(openGuide === "snap" ? null : "snap")} className="w-5 h-5 rounded-full bg-ink/10 text-ink/50 text-xs font-bold flex items-center justify-center hover:bg-ink/20 transition-colors">?</button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSnapchatPixelEnabled(!snapchatPixelEnabled)}
+                    className={`relative w-12 h-7 rounded-full transition-colors ${snapchatPixelEnabled ? "bg-green-500" : "bg-ink/20"}`}
+                  >
+                    <span className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition-transform ${snapchatPixelEnabled ? "translate-x-5" : ""}`} />
+                  </button>
+                </div>
+                {openGuide === "snap" && (
+                  <div className="mb-3 bg-sky-blue-light/5 border border-sky-blue-light/20 rounded-lg p-3 text-[0.8rem] text-ink-soft space-y-1">
+                    <p><strong>Where to find your Snapchat Pixel ID:</strong></p>
+                    <p>1. Go to <a href="https://ads.snapchat.com" target="_blank" rel="noopener noreferrer" className="text-sky-blue-light underline">Snapchat Ads Manager</a></p>
+                    <p>2. Click <strong>Events Manager</strong> in the sidebar</p>
+                    <p>3. Select <strong>Create Pixel</strong> (or select existing)</p>
+                    <p>4. Choose <strong>Manual Install</strong> — your Pixel ID is the UUID shown (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)</p>
+                  </div>
+                )}
+                <input
+                  type="text" value={snapchatPixelId}
+                  onChange={(e) => setSnapchatPixelId(e.target.value)}
+                  placeholder="e.g. xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                  className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light font-mono"
+                />
+              </div>
+            </div>
+            <div className="mt-6 flex items-center gap-4">
+              <button onClick={saveAds} disabled={savingAds} className="px-6 py-2.5 rounded-full bg-sky-blue-light text-ink text-[0.9rem] font-medium disabled:opacity-60 hover:-translate-y-0.5 hover:shadow-sm transition-all">
+                {savingAds ? "Saving..." : "Save"}
+              </button>
+              {adsMsg && <p className={`text-[0.85rem] ${adsMsg.includes("saved") ? "text-green-600" : "text-red-600"}`}>{adsMsg}</p>}
+            </div>
+          </div>
+          <div className="bg-sky-blue-light/5 border border-sky-blue-light/20 rounded-xl p-4">
+            <p className="text-[0.8rem] text-ink-soft">
+              <strong>How it works:</strong> When enabled, tracking pixels are injected into the page on every page load. Conversion events (Purchase, AddToCart, InitiateCheckout) are automatically fired when customers complete bookings or shop orders. PageView is tracked automatically on navigation.
+            </p>
           </div>
         </div>
       )}

@@ -17,7 +17,7 @@ export function verifyPassword(password: string, stored: string): boolean {
 }
 
 export function createToken(payload: Record<string, unknown>): string {
-  const data = Buffer.from(JSON.stringify({ ...payload, iat: Date.now() })).toString("base64url");
+  const data = Buffer.from(JSON.stringify({ ...payload, type: "admin", iat: Date.now() })).toString("base64url");
   const sig = createHmac("sha256", AUTH_SECRET).update(data).digest("base64url");
   return `${data}.${sig}`;
 }
@@ -31,6 +31,7 @@ export function verifyToken(token: string): Record<string, unknown> | null {
     const expectedBuf = Buffer.from(expectedSig);
     if (sigBuf.length !== expectedBuf.length || !timingSafeEqual(sigBuf, expectedBuf)) return null;
     const payload = JSON.parse(Buffer.from(data, "base64url").toString());
+    if (payload.type === "customer") return null;
     if (payload.exp && Date.now() > payload.exp) return null;
     return payload;
   } catch {

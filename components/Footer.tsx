@@ -4,10 +4,12 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import SocialLinks from "@/components/SocialLinks";
 import { supabase } from "@/lib/supabase";
+import { useContent } from "@/lib/useContent";
 
 export default function Footer() {
   const [loyaltyEnabled, setLoyaltyEnabled] = useState(true);
   const [shopLive, setShopLive] = useState(false);
+  const { content: c } = useContent();
 
   useEffect(() => {
     supabase
@@ -41,9 +43,7 @@ export default function Footer() {
               />
             </div>
             <p className="text-[0.9rem] leading-relaxed text-ink-soft">
-              Experience the magic of hands-on creativity. We bring kids and
-              adults alike into the world of vibrant, tactile slime-making in
-              Norfolk.
+              {c.footer_about}
             </p>
           </div>
 
@@ -73,15 +73,14 @@ export default function Footer() {
           <div>
             <h4 className="font-display text-[1rem] mb-4 text-ink">Find Us</h4>
             <ul className="space-y-2.5">
-              <li className="text-[0.9rem] text-ink-soft">Unit A, Feathers Yard</li>
-              <li className="text-[0.9rem] text-ink-soft">Holt, NR25 6BF</li>
-              <li><a href="mailto:studio@theslimestudio.co.uk" className="text-[0.9rem] hover:text-ink transition-colors">studio@theslimestudio.co.uk</a></li>
+              <li className="text-[0.9rem] text-ink-soft">{c.contact_address}</li>
+              <li><a href={`mailto:${c.contact_email}`} className="text-[0.9rem] hover:text-ink transition-colors">{c.contact_email}</a></li>
             </ul>
           </div>
         </div>
 
         <div className="flex flex-wrap justify-between items-center gap-3 pt-6 text-[0.85rem] text-ink-soft">
-          <p>© 2026 The Slime Studio. All rights reserved.</p>
+          <p>{c.footer_copyright}</p>
           <div className="flex gap-4 items-center">
             <Link href="/admin" className="text-[0.8rem] text-ink-soft/60 hover:text-ink transition-colors">Admin</Link>
             <SocialLinks size={18} />

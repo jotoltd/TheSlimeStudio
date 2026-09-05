@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getStripeAsync, getStripeModeAsync, getStripeKeysForMode } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase";
 import { sendOrderConfirmationEmail } from "@/lib/email";
+import { createPaidBooking } from "@/lib/create-booking";
 
 export const runtime = "nodejs";
 
@@ -153,6 +154,7 @@ export async function POST(req: NextRequest) {
             people?: string;
             totalPrice?: string;
             phone?: string;
+            discountCode?: string;
           };
         };
 
@@ -167,9 +169,32 @@ export async function POST(req: NextRequest) {
           break;
         }
 
-        // New flow: booking creation is handled by /api/confirm-booking
-        // (called from client onSuccess or 3DS redirect handler)
-        // Do NOT create booking here — that causes race condition duplicates
+        // Safety net for the new flow.
+        //
+        // Normally /api/confirm-booking creates the booking from the browser once
+        // payment succeeds. If the customer closes the tab, loses signal, or the
+        // browser suspends the page before that request lands, the payment would
+        // succeed with no booking ever being recorded. createPaidBooking is
+        // idempotent (keyed on the payment intent id and backed by a unique index)
+        // so running it here cannot create a duplicate.
+        const md = intent.metadata;
+        if (md?.email && md?.date && md?.timeSlot) {
+          const result = await createPaidBooking({
+            paymentRef: intent.id,
+            name: md.name || "",
+            email: md.email,
+            phone: md.phone || null,
+            date: md.date,
+            timeSlot: md.timeSlot,
+            people: parseInt(md.people || "1", 10),
+            totalPrice: md.totalPrice ? parseFloat(md.totalPrice) : intent.amount / 100,
+            isParty: md.type === "party",
+            discountCode: md.discountCode || null,
+          });
+          if (result.created) {
+            console.warn(`[stripe-webhook] Recovered booking ${result.bookingId} for ${intent.id} — client never confirmed it.`);
+          }
+        }
         break;
       }
 

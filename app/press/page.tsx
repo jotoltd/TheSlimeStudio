@@ -1,5 +1,8 @@
+"use client";
+
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { useContent } from "@/lib/useContent";
 
 const pressFeatures = [
   {
@@ -29,6 +32,8 @@ const pressFeatures = [
 ];
 
 export default function PressPage() {
+  const { content: c } = useContent();
+
   return (
     <>
       <Navbar />
@@ -39,12 +44,10 @@ export default function PressPage() {
       >
         <div className="container">
           <h1 className="font-display text-[1.5rem] md:text-[3.2rem] mt-3 mb-3 text-ink">
-            Press &amp; Features
+            {c.press_title}
           </h1>
           <p className="text-[0.95rem] md:text-[1.1rem] text-ink/80 max-w-[560px] mx-auto">
-            The Slime Studio has been featured across Norfolk&apos;s leading
-            publications and visitor guides. Here&apos;s where we&apos;ve been
-            spotted.
+            {c.press_text}
           </p>
         </div>
       </section>

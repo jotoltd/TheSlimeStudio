@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
     shippingCity,
     shippingPostcode,
     notes,
+    discountCode,
   } = body as {
     items: { product_id: string; name: string; price: number; quantity: number; image_url: string | null }[];
     customerName: string;
@@ -29,6 +30,7 @@ export async function POST(req: NextRequest) {
     shippingCity?: string;
     shippingPostcode?: string;
     notes?: string;
+    discountCode?: string;
   };
 
   if (!items || items.length === 0) {
@@ -77,6 +79,31 @@ export async function POST(req: NextRequest) {
   }
 
   const total = subtotal + shippingCost;
+
+  // Apply discount if code provided
+  let discountAmount = 0;
+  let finalTotal = total;
+  if (discountCode) {
+    const { data: discount } = await supabaseAdmin
+      .from("discount_codes")
+      .select("*")
+      .eq("code", discountCode.trim().toUpperCase())
+      .maybeSingle();
+    if (discount && discount.active && (!discount.expires_at || new Date(discount.expires_at) > new Date()) && (discount.max_uses === null || discount.used_count < discount.max_uses)) {
+      if (discount.scope === "both" || discount.scope === "shop") {
+        if (discount.min_spend === 0 || subtotal >= Number(discount.min_spend)) {
+          if (discount.discount_type === "percentage") {
+            discountAmount = (subtotal * Number(discount.value)) / 100;
+          } else {
+            discountAmount = Number(discount.value);
+          }
+          discountAmount = Math.min(discountAmount, subtotal);
+          finalTotal = Math.max(0, total - discountAmount);
+        }
+      }
+    }
+  }
+
   const orderNumber = `SLM-${Date.now().toString(36).toUpperCase()}`;
 
   if (!isSumUpConfigured()) {
@@ -96,7 +123,7 @@ export async function POST(req: NextRequest) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        amount: Number(total.toFixed(2)),
+        amount: Number(finalTotal.toFixed(2)),
         currency: "GBP",
         merchant_code: (process.env.SUMUP_MERCHANT_ID || "").toUpperCase() || undefined,
         checkout_reference: checkoutRef,
@@ -132,10 +159,12 @@ export async function POST(req: NextRequest) {
       })),
       subtotal,
       shipping_cost: shippingCost,
-      total,
+      total: finalTotal,
       payment_status: "pending",
       stripe_session_id: checkoutRef,
       notes: notes || null,
+      discount_code: discountCode || null,
+      discount_amount: discountAmount,
     });
 
     const checkoutUrl = data.hosted_checkout_url || data.checkout_url || data.url;

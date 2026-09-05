@@ -6,6 +6,8 @@ import Footer from "@/components/Footer";
 import Calendar from "@/components/Calendar";
 import { supabase, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, PRICE_PER_PERSON, MAX_DAILY_BOOKINGS as DEFAULT_MAX } from "@/lib/supabase";
 import type { BookingSettings, OpeningHour, DateOverride } from "@/lib/supabase";
+import { useContent } from "@/lib/useContent";
+import { trackPurchase, trackInitiateCheckout } from "@/lib/ad-tracking";
 
 const InlinePayment = lazy(() => import("@/components/InlinePayment"));
 
@@ -16,6 +18,7 @@ function todayISO() {
 }
 
 function BookingPageInner() {
+  const { content: c } = useContent();
   const [date, setDate] = useState(todayISO());
   const [timeSlot, setTimeSlot] = useState<string>("");
   const [people, setPeople] = useState(1);
@@ -40,9 +43,48 @@ function BookingPageInner() {
   const [globalSlots, setGlobalSlots] = useState<string[]>(DEFAULT_SLOTS);
   const [loyaltyEnabled, setLoyaltyEnabled] = useState(true);
   const [paymentProvider, setPaymentProvider] = useState<"stripe" | "sumup">("stripe");
+  const [customerSignedIn, setCustomerSignedIn] = useState(false);
+  const [discountCode, setDiscountCode] = useState("");
+  const [appliedDiscount, setAppliedDiscount] = useState<{ code: string; discountAmount: number; finalAmount: number } | null>(null);
+  const [discountChecking, setDiscountChecking] = useState(false);
+  const [discountError, setDiscountError] = useState("");
+  const [termsAgreed, setTermsAgreed] = useState(false);
+  const [termsPreAgreed, setTermsPreAgreed] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+  const [showDiscountField, setShowDiscountField] = useState(false);
+  const [showWhatToExpect, setShowWhatToExpect] = useState(false);
 
 
   useEffect(() => {
+    // Auto-apply referral code from tracking link
+    if (typeof window !== "undefined") {
+      const refCode = localStorage.getItem("refCode");
+      if (refCode) {
+        setDiscountCode(refCode);
+        setShowDiscountField(true);
+        localStorage.removeItem("refCode");
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    // Prefill form if customer is signed in
+    fetch("/api/account/me")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.authenticated) {
+          setCustomerSignedIn(true);
+          setName(data.name || "");
+          setEmail(data.email || "");
+          setPhone(data.phone || "");
+          if (data.termsAgreed) {
+            setTermsAgreed(true);
+            setTermsPreAgreed(true);
+          }
+        }
+      })
+      .catch(() => {});
+
     supabase.from("booking_settings").select("*").eq("id", 1).single().then(({ data }) => {
       if (data) {
         const s = data as BookingSettings;
@@ -72,10 +114,22 @@ function BookingPageInner() {
       const sumupStatus = params.get("sumup_status");
       const sumupRef = params.get("ref");
       if (sumupStatus === "paid" && sumupRef) {
+        const stored = localStorage.getItem("sumupBookingDetails");
+        const fallback = stored ? JSON.parse(stored) : {};
         fetch("/api/sumup-confirm-booking", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ checkoutRef: sumupRef }),
+          body: JSON.stringify({
+            checkoutRef: sumupRef,
+            name: fallback.name,
+            email: fallback.email,
+            phone: fallback.phone,
+            date: fallback.date,
+            timeSlot: fallback.timeSlot,
+            people: fallback.people,
+            totalPrice: fallback.totalPrice,
+            discountCode: fallback.discountCode,
+          }),
         }).then((res) => res.json()).then((data) => {
           if (data.success) {
             setBookingId(data.bookingId);
@@ -85,6 +139,7 @@ function BookingPageInner() {
             setTimeSlot(data.timeSlot || timeSlot);
             setPeople(data.people || people);
             setStatus("paid");
+            trackPurchase(Number(data.totalPrice || 0));
           } else {
             setErrorMsg(data.error || "Payment verification failed.");
             setStatus("error");
@@ -93,6 +148,7 @@ function BookingPageInner() {
           setErrorMsg("Payment verification failed.");
           setStatus("error");
         }).finally(() => {
+          localStorage.removeItem("sumupBookingDetails");
           const url = new URL(window.location.href);
           url.searchParams.delete("sumup_status");
           url.searchParams.delete("ref");
@@ -110,35 +166,20 @@ function BookingPageInner() {
       if (piId && redirectStatus === "succeeded") {
         // Call confirm-booking with just the paymentIntentId — the API can read
         // booking details from Stripe metadata
-        let redirectError = false;
         fetch("/api/confirm-booking", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ paymentIntentId: piId, fromRedirect: true }),
         }).then((res) => res.json()).then((data) => {
-          if (data.success) {
-            // Send confirmation email
-            fetch("/api/booking-confirmation", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                name: data.name || "",
-                email: data.email || "",
-                date: data.date || "",
-                timeSlot: data.timeSlot || "",
-                people: data.people || 1,
-                totalPrice: data.totalPrice || 0,
-                isParty: false,
-              }),
-            }).catch(() => {});
-          } else if (data.overCapacity) {
-            redirectError = true;
-            setErrorMsg(data.error || "This slot is fully booked. Please contact us for a refund.");
-            setStatus("error");
+          if (data.bookingId) setBookingId(data.bookingId);
+          if (data.overCapacity) {
+            setErrorMsg("Your payment went through and your booking is saved, but this slot is now over capacity. We'll be in touch shortly to confirm or arrange an alternative.");
           }
-        }).catch(() => {}).finally(() => {
-          if (redirectError) return; // Don't show success if error was set
+        }).catch(() => {
+          // The Stripe webhook creates the booking if this request never lands.
+        }).finally(() => {
           setStatus("paid");
+          trackPurchase(finalPrice);
           // Clean up URL
           const url = new URL(window.location.href);
           url.searchParams.delete("payment_intent");
@@ -236,6 +277,36 @@ function BookingPageInner() {
 
   const maxPeopleForSlot = timeSlot ? remaining[timeSlot] ?? slotCapacity : slotCapacity;
   const totalPrice = useMemo(() => people * pricePerPerson, [people, pricePerPerson]);
+  const finalPrice = appliedDiscount ? appliedDiscount.finalAmount : totalPrice;
+
+  async function applyDiscount() {
+    if (!discountCode.trim()) return;
+    setDiscountChecking(true);
+    setDiscountError("");
+    try {
+      const res = await fetch("/api/discount/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: discountCode, scope: "booking", amount: totalPrice }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        setAppliedDiscount({ code: data.code, discountAmount: data.discountAmount, finalAmount: data.finalAmount });
+      } else {
+        setAppliedDiscount(null);
+        setDiscountError(data.error || "Invalid code.");
+      }
+    } catch {
+      setDiscountError("Could not validate code. Please try again.");
+    }
+    setDiscountChecking(false);
+  }
+
+  function removeDiscount() {
+    setAppliedDiscount(null);
+    setDiscountCode("");
+    setDiscountError("");
+  }
 
   function selectSlot(slot: string) {
     setTimeSlot(slot);
@@ -261,6 +332,11 @@ function BookingPageInner() {
       return;
     }
 
+    if (!termsAgreed) {
+      setErrorMsg("You must agree to the Participation Terms & Consent to make a booking.");
+      return;
+    }
+
     // Don't allow booking in the past
     if (isSlotInPast(timeSlot, date)) {
       setErrorMsg("Cannot book a session in the past. Please choose a future time slot.");
@@ -268,6 +344,12 @@ function BookingPageInner() {
     }
 
     setStatus("sending");
+
+    // Record terms agreement for logged-in customers who haven't agreed yet
+    if (customerSignedIn && !termsPreAgreed) {
+      fetch("/api/account/agree-terms", { method: "POST" }).catch(() => {});
+      setTermsPreAgreed(true);
+    }
 
     // Check total bookings for this date (daily cap) — only paid bookings count
     const { data: dailyBookings } = await supabase
@@ -314,11 +396,18 @@ function BookingPageInner() {
             date,
             timeSlot,
             people,
-            totalPrice,
+            totalPrice: finalPrice,
+            discountCode: appliedDiscount?.code,
           }),
         });
         const data = await res.json();
         if (data.url) {
+          localStorage.setItem("sumupBookingDetails", JSON.stringify({
+            checkoutRef: data.checkoutRef,
+            name, email, phone, date, timeSlot, people,
+            totalPrice: finalPrice,
+            discountCode: appliedDiscount?.code,
+          }));
           window.location.href = data.url;
           return;
         } else {
@@ -340,14 +429,22 @@ function BookingPageInner() {
           date,
           timeSlot,
           people,
-          totalPrice,
+          totalPrice: finalPrice,
           isParty: false,
+          discountCode: appliedDiscount?.code,
         }),
       });
       const data = await res.json();
+      if (data.free) {
+        setBookingId(data.bookingId || "");
+        setStatus("paid");
+        trackPurchase(0);
+        return;
+      }
       if (data.clientSecret) {
         setClientSecret(data.clientSecret);
         setPaymentIntentId(data.paymentIntentId);
+        trackInitiateCheckout(finalPrice);
         const modeRes = await fetch("/api/stripe-mode");
         const modeData = await modeRes.json();
         setPublishableKey(modeData.publishableKey || "");
@@ -373,11 +470,10 @@ function BookingPageInner() {
 
       <section className="py-[50px] md:py-[70px] text-center px-4" style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}>
         <div className="container">
-          <h1 className="font-display text-[1.5rem] md:text-[3.2rem] mt-3 mb-3 text-ink">Book a Slime-Making Session</h1>
-          <p className="text-[1.1rem] md:text-[1.3rem] text-ink/90 mb-2 font-display">Choose Your Session</p>
+          <h1 className="font-display text-[1.5rem] md:text-[3.2rem] mt-3 mb-3 text-ink">{c.booking_title}</h1>
+          <p className="text-[1.1rem] md:text-[1.3rem] text-ink/90 mb-2 font-display">{c.booking_subtitle}</p>
           <p className="text-[0.95rem] md:text-[1.1rem] text-ink/80 max-w-[560px] mx-auto">
-            One-hour sessions, every hour. Up to {slotCapacity} slime makers per slot at
-            £{pricePerPerson.toFixed(2)} per person.
+            {c.booking_info}
           </p>
           <div className="mt-4 inline-flex items-center gap-2 bg-white/50 rounded-full px-4 py-2 text-[0.85rem] text-ink">
             <span>📍</span>
@@ -385,7 +481,7 @@ function BookingPageInner() {
           </div>
           <div className="mt-2 inline-flex items-center gap-2 bg-white/50 rounded-full px-4 py-2 text-[0.85rem] text-ink">
             <span>🚶</span>
-            <span className="font-medium">Walk-ins also welcome, subject to space</span>
+            <span className="font-medium">{c.booking_walkins}</span>
           </div>
         </div>
       </section>
@@ -435,7 +531,7 @@ function BookingPageInner() {
                   )}
                   <div className="flex items-center justify-between px-4 md:px-5 py-3.5 gap-2">
                     <span className="text-[0.85rem] text-ink-soft flex-shrink-0">Total Paid</span>
-                    <span className="text-[0.9rem] font-display text-ink">£{totalPrice.toFixed(2)}</span>
+                    <span className="text-[0.9rem] font-display text-ink">£{finalPrice.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -466,6 +562,19 @@ function BookingPageInner() {
                   </div>
                 </div>
               )}
+
+              {/* Account creation offer */}
+              {!customerSignedIn && (
+                <div className="mt-4 bg-sky-blue-light/15 rounded-xl px-5 py-4">
+                  <div className="text-[0.9rem] font-medium text-ink mb-1">Create an account to manage your bookings</div>
+                  <div className="text-[0.8rem] text-ink-soft mb-3">
+                    Sign up with the same email to track bookings, earn loyalty stamps, and get rewards — all in one place.
+                  </div>
+                  <a href={`/account/login?email=${encodeURIComponent(email)}`} className="btn-primary inline-block text-sm">
+                    Create Account / Sign In
+                  </a>
+                </div>
+              )}
             </div>
           ) : status === "cancelled" ? (
             <div className="bg-white rounded-3xl p-6 md:p-10 shadow-sm text-center">
@@ -482,13 +591,13 @@ function BookingPageInner() {
             <div className="bg-white rounded-3xl p-5 md:p-8 shadow-sm">
               <h2 className="font-display text-lg md:text-xl mb-2 text-center">Complete Your Payment</h2>
               <p className="text-sm text-ink-soft text-center mb-5">
-                <strong className="text-ink">{people} {people === 1 ? "person" : "people"}</strong> · {new Date(date + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} at <strong className="text-ink">{timeSlot}</strong> · <strong className="text-ink">£{totalPrice.toFixed(2)}</strong>
+                <strong className="text-ink">{people} {people === 1 ? "person" : "people"}</strong> · {new Date(date + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} at <strong className="text-ink">{timeSlot}</strong> · <strong className="text-ink">£{finalPrice.toFixed(2)}</strong>
               </p>
               <Suspense fallback={<div className="py-8 text-center text-ink-soft text-sm">Loading payment form...</div>}>
                 <InlinePayment
                   clientSecret={clientSecret}
                   publishableKey={publishableKey}
-                  amount={totalPrice}
+                  amount={finalPrice}
                   onSuccess={() => {
                     // Payment succeeded — NOW create the booking in the database
                     // Retry up to 3 times in case of network issues
@@ -505,37 +614,36 @@ function BookingPageInner() {
                             date,
                             timeSlot,
                             people,
-                            totalPrice,
+                            totalPrice: finalPrice,
                             isParty: false,
+                            discountCode: appliedDiscount?.code,
                           }),
                         });
                         const data = await res.json();
                         if (res.ok && data.success) {
-                          // Booking confirmed — send email
+                          // Booking recorded server-side, which also sends the
+                          // confirmation and admin emails.
                           if (data.bookingId) setBookingId(data.bookingId);
-                          fetch("/api/booking-confirmation", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ name, email, date, timeSlot, people, totalPrice, isParty: false }),
-                          }).catch(() => {});
+                          if (data.overCapacity) {
+                            setErrorMsg("Your payment went through and your booking is saved, but this slot is now over capacity. We'll be in touch shortly to confirm or arrange an alternative.");
+                          }
                           setStatus("paid");
-                        } else if (data.overCapacity) {
-                          // Slot is over capacity — don't retry, show error
-                          setStatus("error");
-                          setErrorMsg(data.error || "This slot is fully booked. Please contact us for a refund.");
+                          trackPurchase(finalPrice);
                         } else if (attempt < 2) {
                           // Retry after short delay
                           setTimeout(() => confirmBooking(attempt + 1), 1000);
                         } else {
-                          // Webhook will handle it as fallback, but show a reassuring message
+                          // The Stripe webhook creates the booking as a fallback.
                           setStatus("paid");
+                          trackPurchase(finalPrice);
                         }
                       } catch {
                         if (attempt < 2) {
                           setTimeout(() => confirmBooking(attempt + 1), 1000);
                         } else {
-                          // Webhook fallback should create the booking
+                          // The Stripe webhook creates the booking as a fallback.
                           setStatus("paid");
+                          trackPurchase(finalPrice);
                         }
                       }
                     }
@@ -659,9 +767,99 @@ function BookingPageInner() {
                 />
               </div>
 
+              {/* Discount code */}
+              <div className="mb-4">
+                {appliedDiscount ? (
+                  <div className="flex items-center justify-between bg-green-50 border-2 border-green-200 rounded-xl p-3">
+                    <div>
+                      <span className="text-[0.85rem] font-medium text-green-700">Code "{appliedDiscount.code}" applied</span>
+                      <span className="text-[0.8rem] text-green-600 ml-2">−£{appliedDiscount.discountAmount.toFixed(2)}</span>
+                    </div>
+                    <button type="button" onClick={removeDiscount} className="text-[0.8rem] text-ink-soft hover:text-[#ff2d78]">Remove</button>
+                  </div>
+                ) : showDiscountField ? (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={discountCode}
+                      onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), applyDiscount())}
+                      placeholder="Discount code"
+                      className="flex-1 px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light uppercase"
+                    />
+                    <button
+                      type="button"
+                      onClick={applyDiscount}
+                      disabled={discountChecking || !discountCode.trim()}
+                      className="px-4 py-2.5 rounded-xl bg-ink/5 text-ink text-sm font-medium hover:bg-ink/10 disabled:opacity-60"
+                    >
+                      {discountChecking ? "..." : "Apply"}
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowDiscountField(true)}
+                    className="text-[0.8rem] text-sky-blue-light hover:underline"
+                  >
+                    Have a discount code?
+                  </button>
+                )}
+                {discountError && (
+                  <p className="text-[0.8rem] text-[#ff2d78] mt-1.5">{discountError}</p>
+                )}
+              </div>
+
               <div className="flex items-center justify-between bg-sky-blue-light/20 rounded-xl p-4 md:p-5 mb-6">
-                <span className="text-xs md:text-sm text-ink-soft">Total ({people} × £{pricePerPerson.toFixed(2)})</span>
-                <span className="font-display text-xl md:text-2xl">£{totalPrice.toFixed(2)}</span>
+                <div className="text-xs md:text-sm text-ink-soft">
+                  <div>Total ({people} × £{pricePerPerson.toFixed(2)})</div>
+                  {appliedDiscount && (
+                    <div className="text-green-600 text-[0.75rem]">Discount −£{appliedDiscount.discountAmount.toFixed(2)}</div>
+                  )}
+                </div>
+                <span className="font-display text-xl md:text-2xl">£{finalPrice.toFixed(2)}</span>
+              </div>
+
+              {/* Terms & Consent */}
+              <div className="mb-6">
+                <button
+                  type="button"
+                  onClick={() => setShowTerms(!showTerms)}
+                  className="text-[0.85rem] text-sky-blue-light hover:underline mb-2"
+                >
+                  {showTerms ? "Hide" : "Read"} Participation Terms & Consent
+                </button>
+                {showTerms && (
+                  <div className="bg-ink/[0.03] border border-ink/10 rounded-xl p-4 mb-3 text-[0.8rem] text-ink-soft leading-relaxed max-h-64 overflow-y-auto">
+                    <p className="font-medium text-ink mb-2">Slime Making – Participation Terms & Consent</p>
+                    <p className="mb-2">By booking and/or participating in a slime-making session at The Slime Studio, I confirm that I have read and agree to the following:</p>
+                    <ul className="list-disc pl-4 space-y-1.5 mb-3">
+                      <li>I understand that slime making is a hands-on activity involving craft materials and ingredients, including glue, activator, colours, scents, charms and decorative materials.</li>
+                      <li>The items and materials used during slime making are not suitable for children under 3 years of age. Some items, including charms and decorations, may present a choking hazard to young children.</li>
+                      <li>I agree that I, and any children in my care, will follow instructions given by The Slime Studio staff during the session.</li>
+                      <li>Children remain the responsibility of their accompanying parent, guardian or responsible adult and must be appropriately supervised throughout their visit.</li>
+                      <li>I am responsible for making The Slime Studio aware of any relevant allergies, sensitivities or reactions to ingredients, fragrances or craft materials before taking part.</li>
+                      <li>Slime, charms and all slime-making ingredients and materials are not edible and must not be eaten or placed in or near the mouth or eyes.</li>
+                      <li>I understand that slime making can be messy. The Slime Studio cannot accept responsibility for staining or damage to clothing or personal belongings, so suitable clothing should be worn.</li>
+                    </ul>
+                    <p className="font-medium text-ink mb-1">Taking Your Slime Home</p>
+                    <p className="mb-2">Once slime, charms or other items made or supplied during a session have left The Slime Studio premises, their use, storage and supervision are the responsibility of the customer and/or the child's parent or guardian. The Slime Studio does not accept responsibility for how slime, charms or other items are played with or used once they have left the premises. Children should be appropriately supervised when playing with their slime and charms, particularly where small parts are present.</p>
+                  </div>
+                )}
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={termsAgreed}
+                    onChange={(e) => setTermsAgreed(e.target.checked)}
+                    className="accent-[#ff2d78] w-5 h-5 mt-0.5 flex-shrink-0"
+                  />
+                  <span className="text-[0.8rem] text-ink-soft leading-relaxed">
+                    I confirm that I am aged 18 or over and have read and agree to The Slime Studio Participation Terms & Consent. Where I am booking for or accompanying children, I confirm that I am authorised to accept these terms on their behalf.
+                    {termsPreAgreed && (
+                      <span className="block text-[0.75rem] text-green-600 mt-1">Previously agreed — you won't need to re-agree on future bookings.</span>
+                    )}
+                  </span>
+                </label>
               </div>
 
               {errorMsg && (
@@ -675,11 +873,51 @@ function BookingPageInner() {
                   {status === "sending" && (
                     <span className="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
                   )}
-                  {status === "sending" ? "Processing..." : `Continue to Payment — £${totalPrice.toFixed(2)}`}
+                  {status === "sending" ? "Processing..." : `Continue to Payment — £${finalPrice.toFixed(2)}`}
                 </button>
               </div>
             </form>
           )}
+        </div>
+      </section>
+
+      {/* What to Expect */}
+      <section className="py-8 md:py-10 px-4" style={{ backgroundColor: "#f9f5f0" }}>
+        <div className="container max-w-2xl">
+          <div className="bg-white rounded-2xl p-5 md:p-7 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setShowWhatToExpect(!showWhatToExpect)}
+              className="w-full flex items-center justify-between text-left"
+            >
+              <h2 className="font-display text-[1.1rem] md:text-[1.3rem] text-ink">What to Expect</h2>
+              <span className="text-ink-soft text-[1.2rem] transition-transform" style={{ transform: showWhatToExpect ? "rotate(180deg)" : "" }}>⌄</span>
+            </button>
+            {showWhatToExpect && (
+              <div className="mt-4 space-y-3 text-[0.85rem] md:text-[0.9rem] text-ink-soft leading-relaxed">
+                <div className="flex gap-3">
+                  <span className="text-[1.1rem] flex-shrink-0">🕐</span>
+                  <p>Each session lasts <strong className="text-ink">1 hour</strong>. Please arrive 5 minutes before your slot so we can get you set up and ready to squish!</p>
+                </div>
+                <div className="flex gap-3">
+                  <span className="text-[1.1rem] flex-shrink-0">🎨</span>
+                  <p>Choose your slime type, pick your colours, add scents and decorations — everything is included in the price. Your creation is yours to take home.</p>
+                </div>
+                <div className="flex gap-3">
+                  <span className="text-[1.1rem] flex-shrink-0">👕</span>
+                  <p>Slime-making can get a little messy! We provide aprons, but we recommend wearing clothes you don't mind getting a bit sticky.</p>
+                </div>
+                <div className="flex gap-3">
+                  <span className="text-[1.1rem] flex-shrink-0">👶</span>
+                  <p>Suitable for all ages — toddlers to grandparents. Children under 5 may need a grown-up to help them.</p>
+                </div>
+                <div className="flex gap-3">
+                  <span className="text-[1.1rem] flex-shrink-0">📍</span>
+                  <p>We're at <strong className="text-ink">Unit A, Feathers Yard, Holt, NR25 6BF</strong>. Walk-ins are welcome too, subject to availability.</p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </section>
 

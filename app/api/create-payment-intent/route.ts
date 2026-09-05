@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripeAsync, getStripeModeAsync } from "@/lib/stripe";
-import { supabaseAdmin } from "@/lib/supabase";
+import { supabaseAdmin, STAMPS_PER_REWARD } from "@/lib/supabase";
+import { generateRewardCode, redeemRewardCode } from "@/lib/loyalty-rewards";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { name, email, date, timeSlot, people, totalPrice, isParty } = body as {
+  const { name, email, date, timeSlot, people, totalPrice, isParty, discountCode } = body as {
     name: string;
     email: string;
     date: string;
@@ -14,9 +15,10 @@ export async function POST(req: NextRequest) {
     people: number;
     totalPrice: number;
     isParty?: boolean;
+    discountCode?: string;
   };
 
-  if (!name || !email || !totalPrice || !date || !timeSlot) {
+  if (!name || !email || totalPrice == null || !date || !timeSlot) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
@@ -110,6 +112,124 @@ export async function POST(req: NextRequest) {
 
   const mode = await getStripeModeAsync();
 
+  // Free booking after discount — create booking directly, no payment needed
+  if (totalPrice === 0) {
+    const { data: booking, error: bookingError } = await supabaseAdmin
+      .from("bookings")
+      .insert({
+        name,
+        email,
+        phone: body.phone || null,
+        date,
+        time_slot: timeSlot,
+        people,
+        total_price: 0,
+        payment_status: "paid",
+        stripe_session_id: `free_${Date.now()}`,
+        is_party: false,
+        discount_code: discountCode || null,
+      })
+      .select("id")
+      .single();
+
+    if (bookingError) {
+      return NextResponse.json({ error: "Failed to create booking: " + bookingError.message }, { status: 500 });
+    }
+
+    // Send confirmation email
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/booking-confirmation`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, date, timeSlot, people, totalPrice: 0, isParty: false }),
+      });
+    } catch {}
+
+    // Award loyalty stamp (if loyalty programme is enabled)
+    try {
+      const { data: siteSettings } = await supabaseAdmin
+        .from("site_settings")
+        .select("loyalty_enabled, stamps_per_reward")
+        .eq("id", 1)
+        .single();
+
+      if (siteSettings?.loyalty_enabled) {
+        const stampsPerReward = siteSettings.stamps_per_reward || STAMPS_PER_REWARD;
+        const { data: existingCard } = await supabaseAdmin
+          .from("loyalty_cards")
+          .select("id, stamps, total_stamps, rewards_earned, reward_code")
+          .eq("email", email.toLowerCase())
+          .single();
+
+        if (existingCard) {
+          const newStamps = existingCard.stamps + 1;
+          const newTotal = existingCard.total_stamps + 1;
+          let newRewards = existingCard.rewards_earned;
+          let stampCount = newStamps;
+          let earnedNewReward = false;
+
+          if (newStamps >= stampsPerReward) {
+            newRewards += 1;
+            stampCount = newStamps - stampsPerReward;
+            earnedNewReward = true;
+          }
+
+          await supabaseAdmin
+            .from("loyalty_cards")
+            .update({
+              stamps: stampCount,
+              total_stamps: newTotal,
+              rewards_earned: newRewards,
+              name,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", existingCard.id);
+
+          if (earnedNewReward && !existingCard.reward_code) {
+            await generateRewardCode(existingCard.id, email, name);
+          }
+        } else {
+          await supabaseAdmin.from("loyalty_cards").insert({
+            email: email.toLowerCase(),
+            name,
+            stamps: 1,
+            total_stamps: 1,
+            rewards_earned: 0,
+            rewards_redeemed: 0,
+          });
+        }
+      }
+    } catch (e) {
+      console.error("Failed to award loyalty stamp:", e);
+    }
+
+    // Redeem loyalty reward if a FREE- code was used
+    if (discountCode && discountCode.toUpperCase().startsWith("FREE-")) {
+      await redeemRewardCode(discountCode, email);
+    }
+
+    // Mark discount code as used
+    if (discountCode) {
+      try {
+        const { data: disc } = await supabaseAdmin
+          .from("discount_codes")
+          .select("id, used_count")
+          .eq("code", discountCode)
+          .single();
+        if (disc) {
+          await supabaseAdmin
+            .from("discount_codes")
+            .update({ used_count: (disc.used_count || 0) + 1 })
+            .eq("id", disc.id);
+        }
+      } catch (e) {
+        console.error("Failed to increment discount usage:", e);
+      }
+    }
+
+    return NextResponse.json({ free: true, bookingId: booking?.id });
+  }
+
   try {
     const intent = await stripe.paymentIntents.create({
       amount: Math.round(totalPrice * 100),
@@ -125,6 +245,7 @@ export async function POST(req: NextRequest) {
         people: String(people),
         totalPrice: String(totalPrice),
         phone: body.phone || "",
+        discountCode: discountCode || "",
       },
       receipt_email: email,
       description: isParty

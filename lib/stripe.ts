@@ -35,16 +35,31 @@ export async function getStripeModeAsync(): Promise<StripeMode> {
   }
 }
 
+// A Stripe secret key always starts with sk_ (standard) or rk_ (restricted).
+// Guard against a misconfigured env var holding a placeholder or its own name,
+// which otherwise surfaces as a confusing "Invalid API Key provided" error.
+function sanitiseSecretKey(raw: string | undefined, envName: string): string {
+  const key = (raw || "").trim();
+  if (!key) return "";
+  if (!key.startsWith("sk_") && !key.startsWith("rk_")) {
+    console.error(
+      `[stripe] ${envName} is set but is not a valid Stripe secret key (expected it to start with "sk_" or "rk_"). Treating Stripe as unconfigured.`
+    );
+    return "";
+  }
+  return key;
+}
+
 export function getStripeKeysForMode(mode: StripeMode) {
   if (mode === "live") {
     return {
-      secretKey: process.env.STRIPE_LIVE_SECRET_KEY || "",
+      secretKey: sanitiseSecretKey(process.env.STRIPE_LIVE_SECRET_KEY, "STRIPE_LIVE_SECRET_KEY"),
       publishableKey: process.env.NEXT_PUBLIC_STRIPE_LIVE_PUBLISHABLE_KEY || "",
       webhookSecret: process.env.STRIPE_LIVE_WEBHOOK_SECRET || "",
     };
   }
   return {
-    secretKey: process.env.STRIPE_TEST_SECRET_KEY || "",
+    secretKey: sanitiseSecretKey(process.env.STRIPE_TEST_SECRET_KEY, "STRIPE_TEST_SECRET_KEY"),
     publishableKey: process.env.NEXT_PUBLIC_STRIPE_TEST_PUBLISHABLE_KEY || "",
     webhookSecret: process.env.STRIPE_TEST_WEBHOOK_SECRET || "",
   };

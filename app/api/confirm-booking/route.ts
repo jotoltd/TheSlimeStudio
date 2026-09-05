@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripeAsync } from "@/lib/stripe";
-import { supabaseAdmin, STAMPS_PER_REWARD } from "@/lib/supabase";
-import { getResend, EMAIL_FROM, CONTACT_EMAIL, logEmail } from "@/lib/email";
+import { createPaidBooking } from "@/lib/create-booking";
 
 export const runtime = "nodejs";
 
@@ -50,156 +49,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Payment amount mismatch" }, { status: 400 });
   }
 
-  // Idempotency: check if booking already exists for this payment intent
-  const { data: existing } = await supabaseAdmin
-    .from("bookings")
-    .select("id")
-    .eq("stripe_session_id", paymentIntentId);
-
-  if (existing && existing.length > 0) {
-    return NextResponse.json({ success: true, bookingId: existing[0].id, name, email, date, timeSlot, people, totalPrice });
-  }
-
-  // Server-side capacity check (final guard against over-booking)
-  const { data: settings } = await supabaseAdmin
-    .from("booking_settings")
-    .select("slot_capacity, max_daily_bookings")
-    .eq("id", 1)
-    .single();
-  const slotCap = settings?.slot_capacity || 5;
-  const maxDaily = settings?.max_daily_bookings || 5;
-
-  const { data: slotBookings } = await supabaseAdmin
-    .from("bookings")
-    .select("people")
-    .eq("date", date)
-    .eq("time_slot", timeSlot)
-    .eq("payment_status", "paid");
-  const slotUsed = (slotBookings || []).reduce((sum: number, b: { people: number }) => sum + b.people, 0);
-  if (slotUsed + people > slotCap) {
-    return NextResponse.json({
-      error: `Slot is at capacity (${slotCap}). Your payment was taken but the slot is full — please contact us for a refund or alternative date.`,
-      overCapacity: true,
-    }, { status: 409 });
-  }
-
-  const { data: dailyBookings } = await supabaseAdmin
-    .from("bookings")
-    .select("people")
-    .eq("date", date)
-    .eq("payment_status", "paid");
-  const dailyUsed = (dailyBookings || []).reduce((sum: number, b: { people: number }) => sum + b.people, 0);
-  if (dailyUsed + people > maxDaily) {
-    return NextResponse.json({
-      error: `Daily capacity reached. Your payment was taken but the day is full — please contact us for a refund or alternative date.`,
-      overCapacity: true,
-    }, { status: 409 });
-  }
-
-  // Insert the booking as paid
-  const { data, error } = await supabaseAdmin.from("bookings").insert({
-    date,
-    time_slot: timeSlot,
-    people,
-    total_price: totalPrice,
+  // The payment has already been captured, so the booking is always recorded —
+  // capacity problems are flagged for the admin rather than dropping the booking.
+  const result = await createPaidBooking({
+    paymentRef: paymentIntentId,
     name,
     email,
-    phone: phone || null,
-    is_party: isParty || false,
-    payment_status: "paid",
-    stripe_session_id: paymentIntentId,
-  }).select().single();
+    phone,
+    date,
+    timeSlot,
+    people,
+    totalPrice,
+    isParty,
+    discountCode: body.discountCode || intent.metadata?.discountCode || null,
+  });
 
-  if (error || !data) {
-    // Race condition: webhook may have created it between our check and insert
-    // Try one more time to find it
-    const { data: retry } = await supabaseAdmin
-      .from("bookings")
-      .select("id")
-      .eq("stripe_session_id", paymentIntentId);
-    if (retry && retry.length > 0) {
-      return NextResponse.json({ success: true, bookingId: retry[0].id, name, email, date, timeSlot, people, totalPrice });
-    }
-    return NextResponse.json({ error: "Failed to create booking" }, { status: 500 });
+  if (!result.bookingId) {
+    return NextResponse.json({ error: result.error || "Failed to create booking" }, { status: 500 });
   }
 
-  // Send admin notification email
-  try {
-    const r = getResend();
-    if (r) {
-      await r.emails.send({
-        from: EMAIL_FROM,
-        to: CONTACT_EMAIL,
-        subject: `New Booking — ${name} on ${date} at ${timeSlot}`,
-        html: `
-          <h2>New Booking Received</h2>
-          <p><strong>Name:</strong> ${name}</p>
-          <p><strong>Email:</strong> ${email}</p>
-          <p><strong>Phone:</strong> ${phone || "Not provided"}</p>
-          <p><strong>Date:</strong> ${date}</p>
-          <p><strong>Time:</strong> ${timeSlot}</p>
-          <p><strong>People:</strong> ${people}</p>
-          <p><strong>Total:</strong> £${Number(totalPrice).toFixed(2)}</p>
-          <p><strong>Payment:</strong> Paid</p>
-        `,
-      });
-      await logEmail(CONTACT_EMAIL, `New Booking — ${name}`, "admin_notification", "sent");
-    }
-  } catch (e) {
-    console.error("Failed to send admin notification:", e);
-  }
-
-  // Award loyalty stamp (if loyalty programme is enabled)
-  try {
-    const { data: siteSettings } = await supabaseAdmin
-      .from("site_settings")
-      .select("loyalty_enabled, stamps_per_reward")
-      .eq("id", 1)
-      .single();
-
-    if (siteSettings?.loyalty_enabled) {
-      const stampsPerReward = siteSettings.stamps_per_reward || STAMPS_PER_REWARD;
-      const { data: existingCard } = await supabaseAdmin
-        .from("loyalty_cards")
-        .select("id, stamps, total_stamps, rewards_earned")
-        .eq("email", email.toLowerCase())
-        .single();
-
-      if (existingCard) {
-        const newStamps = existingCard.stamps + 1;
-        const newTotal = existingCard.total_stamps + 1;
-        let newRewards = existingCard.rewards_earned;
-        let stampCount = newStamps;
-
-        if (newStamps >= stampsPerReward) {
-          newRewards += 1;
-          stampCount = newStamps - stampsPerReward;
-        }
-
-        await supabaseAdmin
-          .from("loyalty_cards")
-          .update({
-            stamps: stampCount,
-            total_stamps: newTotal,
-            rewards_earned: newRewards,
-            name,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", existingCard.id);
-      } else {
-        await supabaseAdmin.from("loyalty_cards").insert({
-          email: email.toLowerCase(),
-          name,
-          stamps: 1,
-          total_stamps: 1,
-          rewards_earned: 0,
-          rewards_redeemed: 0,
-        });
-      }
-    }
-  } catch (e) {
-    console.error("Failed to award loyalty stamp:", e);
-  }
-
-  return NextResponse.json({ success: true, bookingId: data.id, name, email, date, timeSlot, people, totalPrice });
+  return NextResponse.json({
+    success: true,
+    bookingId: result.bookingId,
+    overCapacity: result.overCapacity,
+    name, email, date, timeSlot, people, totalPrice,
+  });
 }

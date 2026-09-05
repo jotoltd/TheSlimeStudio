@@ -7,7 +7,7 @@ import { ToastProvider } from "@/components/Toast";
 import {
   HomeIcon, DollarIcon, CalendarIcon, ClockIcon, ShoppingBagIcon,
   PackageIcon, MailIcon, UsersIcon, SettingsIcon, FileTextIcon,
-  InboxIcon, DownloadIcon, GiftIcon, PhotoIcon,
+  InboxIcon, DownloadIcon, GiftIcon, PhotoIcon, TagIcon,
 } from "@/components/AdminIcons";
 
 const navSections = [
@@ -31,7 +31,9 @@ const navSections = [
       { href: "/dashboard/shop", label: "Shop", Icon: ShoppingBagIcon },
       { href: "/dashboard/orders", label: "Orders", Icon: PackageIcon },
       { href: "/dashboard/subscribers", label: "Subscribers", Icon: UsersIcon },
+      { href: "/dashboard/customers", label: "Customers", Icon: UsersIcon },
       { href: "/dashboard/loyalty", label: "Loyalty", Icon: GiftIcon },
+      { href: "/dashboard/discount-codes", label: "Discount Codes", Icon: TagIcon },
       { href: "/dashboard/gallery", label: "Gallery", Icon: PhotoIcon },
       { href: "/dashboard/enquiries", label: "Enquiries", Icon: MailIcon },
     ],

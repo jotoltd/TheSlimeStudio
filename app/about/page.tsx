@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { useContent } from "@/lib/useContent";
 
 const carouselImages = [
   { src: "/images/slime_studio_pink_slime_experience.jpg.jpeg", alt: "Child making pink slime at The Slime Studio in Holt" },
@@ -11,29 +12,30 @@ const carouselImages = [
   { src: "/images/slime_mixing.jpg.jpeg", alt: "Children mixing slime together at The Slime Studio" },
 ];
 
-const features = [
-  {
-    img: "/images/pink_slime_action.jpg.jpeg",
-    gradient: "from-[#64d8ec] to-[#abf7dc]",
-    title: "Create It Your Way",
-    desc: "Pick your colours, mix, stretch and customise with a huge range of fun extras.",
-  },
-  {
-    img: "/images/slime_studio_teal_slime.jpg.jpeg",
-    gradient: "from-[#ffc4fb] to-[#E0B0FF]",
-    title: "Everyone Welcome",
-    desc: "Whether you're obsessed with slime or trying it for the first time, everyone is welcome.",
-  },
-  {
-    img: "/images/purple_finished_slime.jpg.jpeg",
-    gradient: "from-[#CBC3E3] to-[#abf7dc]",
-    title: "Take It Home",
-    desc: "Your finished slime is yours to take home and enjoy.",
-  },
-];
-
 export default function AboutPage() {
   const [slide, setSlide] = useState(0);
+  const { content: c } = useContent();
+
+  const features = [
+    {
+      img: "/images/pink_slime_action.jpg.jpeg",
+      gradient: "from-[#64d8ec] to-[#abf7dc]",
+      title: c.about_feature1_title,
+      desc: c.about_feature1_desc,
+    },
+    {
+      img: "/images/slime_studio_teal_slime.jpg.jpeg",
+      gradient: "from-[#ffc4fb] to-[#E0B0FF]",
+      title: c.about_feature2_title,
+      desc: c.about_feature2_desc,
+    },
+    {
+      img: "/images/purple_finished_slime.jpg.jpeg",
+      gradient: "from-[#CBC3E3] to-[#abf7dc]",
+      title: c.about_feature3_title,
+      desc: c.about_feature3_desc,
+    },
+  ];
 
   function prevSlide() {
     setSlide((s) => (s - 1 + carouselImages.length) % carouselImages.length);
@@ -110,20 +112,14 @@ export default function AboutPage() {
             <span className="text-ink/40">↜</span>
           </div>
           <h1 className="font-display text-[1.6rem] md:text-[2.8rem] leading-[1.15] mb-6 text-ink">
-            The Slime Studio
+            {c.about_title}
           </h1>
           <p className="text-[0.95rem] md:text-[1.05rem] text-ink/80 mb-4 leading-relaxed">
-            The Slime Studio is a colourful, hands-on experience where you can
-            mix, stretch and create your very own slime.
-          </p>
-          <p className="text-[0.95rem] md:text-[1.05rem] text-ink/80 mb-4 leading-relaxed">
-            Choose your colours, experiment with textures and add your
-            favourite extras to make something completely your own — then
-            take your creation home with you.
+            {c.about_text}
           </p>
           <div className="inline-flex items-center gap-2 bg-white/50 rounded-full px-4 py-2 text-[0.85rem] text-ink mb-10 md:mb-14">
             <span>📍</span>
-            <span className="font-medium">Unit A, Feathers Yard, Holt, NR25 6BF</span>
+            <span className="font-medium">{c.contact_address}</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 md:gap-8 mb-10 md:mb-16 text-left sm:text-center">
@@ -143,7 +139,7 @@ export default function AboutPage() {
           </div>
 
           <p className="font-display text-[1.1rem] md:text-[1.6rem] text-ink mb-6 italic">
-            Ready to make your own?
+            {c.about_cta}
           </p>
           <div className="flex gap-4 justify-center flex-wrap">
             <a

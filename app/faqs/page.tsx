@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Heart } from "@/components/Heart";
 import { supabase, type FAQ } from "@/lib/supabase";
+import { useContent } from "@/lib/useContent";
 
 const defaultFaqs = [
   { q: "How much is The Slime Studio experience?", a: "The experience is £15 per slime maker, including everything you need to create your slime and take it home." },
@@ -21,6 +22,7 @@ const defaultFaqs = [
 ];
 
 export default function FAQsPage() {
+  const { content: c } = useContent();
   const [faqs, setFaqs] = useState<{ q: string; a: string }[]>(defaultFaqs);
 
   useEffect(() => {
@@ -44,11 +46,11 @@ export default function FAQsPage() {
       <section className="pt-16 pb-14 md:pt-20 md:pb-16 text-center px-4" style={{ backgroundColor: "#ffc4fb" }}>
         <div className="container">
           <h1 className="font-display text-[1.5rem] md:text-[3.4rem] text-ink mb-3 uppercase">
-            Frequently Asked Questions
+            {c.faq_title}
           </h1>
           <div className="mb-4 flex justify-center"><Heart size={28} /></div>
           <p className="text-[1rem] text-ink/75 max-w-[560px] mx-auto leading-relaxed">
-            Everything you need to know about our sessions, products and studio.
+            {c.faq_subtitle}
           </p>
         </div>
       </section>
@@ -79,7 +81,7 @@ export default function FAQsPage() {
       <section className="py-12 text-center" style={{ backgroundColor: "#ffc4fb" }}>
         <div className="container">
           <h2 className="font-display text-[1.2rem] md:text-[1.5rem] text-ink mb-6 uppercase">
-            Still Got Questions?
+            {c.faq_cta_title}
           </h2>
           <div className="flex gap-4 justify-center items-center flex-wrap">
             <Link

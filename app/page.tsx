@@ -1,10 +1,17 @@
+"use client";
+
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import RefCapture from "@/components/RefCapture";
+import { useContent } from "@/lib/useContent";
 
 export default function HomePage() {
+  const { content: c } = useContent();
+
   return (
     <>
+      <RefCapture />
       <Navbar />
 
       {/* Hero */}
@@ -26,13 +33,10 @@ export default function HomePage() {
               style={{ backgroundColor: "#ffffff" }}
             />
             <h1 className="font-display text-[1.5rem] md:text-[2.4rem] leading-[1.15] mb-4 md:mb-5 text-ink">
-              Get Ready To Make Some Slime!
+              {c.hero_title}
             </h1>
             <p className="text-[0.95rem] md:text-[1.05rem] text-ink/80 mb-6 md:mb-8 max-w-[480px] mx-auto leading-relaxed">
-              Welcome to The Slime Studio — a colourful, hands-on experience
-              where you can mix, stretch and create your very own slime.
-              Choose your colours, add your favourite extras and make a slime
-              that&apos;s completely yours to take home.
+              {c.hero_text}
             </p>
             <div className="flex gap-4 flex-wrap justify-center">
               <Link
@@ -56,16 +60,14 @@ export default function HomePage() {
       <section className="section text-center">
         <div className="container max-w-2xl">
           <h2 className="font-display text-[1.8rem] md:text-[2.6rem] mt-4 mb-4 text-ink">
-            The Slime Studio
+            {c.intro_title}
           </h2>
           <p className="text-[1.1rem] text-ink-soft">
-            A hands-on creative space in Holt, Norfolk, where families come to
-            squish, stretch and create their own slime. Every session is
-            playful, sensory and totally squish-worthy — no experience needed.
+            {c.intro_text}
           </p>
           <div className="mt-5 inline-flex items-center gap-2 bg-white/70 rounded-full px-5 py-2.5 text-[0.9rem] text-ink">
             <span className="text-base">📍</span>
-            <span className="font-medium">Unit A, Feathers Yard, Holt, NR25 6BF</span>
+            <span className="font-medium">{c.contact_address}</span>
           </div>
         </div>
       </section>
@@ -75,18 +77,18 @@ export default function HomePage() {
         <div className="container">
           <div className="text-center mb-12 reveal">
             <h2 className="font-display text-[1.8rem] md:text-[2.8rem] mt-4 mb-3 text-ink">
-              How It Works
+              {c.how_it_works_title}
             </h2>
             <p className="text-[1.05rem] text-ink-soft max-w-[620px] mx-auto">
-              Booking your slime-making session takes less than a minute.
+              {c.how_it_works_text}
             </p>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
             {[
-              { img: "/images/slime_studio_slime_toppings.jpg.jpeg", title: "Pick a Slot", desc: "Choose a date and hour that suits you" },
-              { img: "/images/slime_mixing.jpg.jpeg", title: "Mix & Create", desc: "Colours, scents and textures — all included" },
-              { img: "/images/pink_slime_action.jpg.jpeg", title: "Squish & Play", desc: "An hour of hands-on sensory fun" },
-              { img: "/images/purple_finished_slime.jpg.jpeg", title: "Take It Home", desc: "Pack up your creation to keep" },
+              { img: "/images/slime_studio_slime_toppings.jpg.jpeg", title: c.how_it_works_step1_title, desc: c.how_it_works_step1_desc },
+              { img: "/images/slime_mixing.jpg.jpeg", title: c.how_it_works_step2_title, desc: c.how_it_works_step2_desc },
+              { img: "/images/pink_slime_action.jpg.jpeg", title: c.how_it_works_step3_title, desc: c.how_it_works_step3_desc },
+              { img: "/images/purple_finished_slime.jpg.jpeg", title: c.how_it_works_step4_title, desc: c.how_it_works_step4_desc },
             ].map((step) => (
               <div
                 key={step.title}
@@ -113,14 +115,14 @@ export default function HomePage() {
         <div className="container">
           <div className="text-center mb-12 reveal">
             <h2 className="font-display text-[1.8rem] md:text-[2.8rem] mt-4 max-w-3xl mx-auto text-ink">
-              Families love making memories at The Slime Studio
+              {c.why_choose_title}
             </h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-6 max-w-3xl mx-auto">
             {[
-              { icon: "👨‍👩‍👧", title: "Family-Friendly", desc: "Fun for all ages, from toddlers to grandparents" },
-              { icon: "🎓", title: "Expert Guidance", desc: "Our team helps every step of the way" },
-              { icon: "✨", title: "All Included", desc: "Everything you need is provided on arrival" },
+              { icon: "👨‍👩‍👧", title: c.why_choose_item1_title, desc: c.why_choose_item1_desc },
+              { icon: "🎓", title: c.why_choose_item2_title, desc: c.why_choose_item2_desc },
+              { icon: "✨", title: c.why_choose_item3_title, desc: c.why_choose_item3_desc },
             ].map((item) => (
               <div key={item.title} className="reveal bg-white rounded-[16px] md:rounded-[20px] p-5 md:p-8 shadow-sm text-center">
                 <div className="text-[1.8rem] md:text-[2.5rem] mb-2 md:mb-3">{item.icon}</div>
@@ -137,11 +139,10 @@ export default function HomePage() {
         <div className="container">
           <div className="text-center mb-12 reveal">
             <h2 className="font-display text-[1.8rem] md:text-[2.8rem] mt-4 mb-3 text-ink">
-              A Peek Inside The Slime Studio
+              {c.gallery_title}
             </h2>
             <p className="text-[1.05rem] text-ink-soft max-w-[620px] mx-auto">
-              Follow our journey from Holt, Norfolk — slime creations, sessions
-              and studio moments.
+              {c.gallery_text}
             </p>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-2 md:gap-4">
@@ -171,10 +172,9 @@ export default function HomePage() {
       {/* Secondary CTA */}
       <section className="container my-10 md:my-20 px-4">
         <div className="reveal rounded-[24px] md:rounded-[32px] p-8 md:p-16 text-center shadow-lg" style={{ backgroundColor: "#64d8ec" }}>
-          <h2 className="font-display text-[1.5rem] md:text-[2.6rem] mb-3 md:mb-3.5 text-white">Ready to Get Squishing?</h2>
+          <h2 className="font-display text-[1.5rem] md:text-[2.6rem] mb-3 md:mb-3.5 text-white">{c.cta_title}</h2>
           <p className="text-[0.95rem] md:text-[1.1rem] text-white/70 mb-6 md:mb-8 max-w-xl mx-auto">
-            Spots fill up fast — secure your slime-making slot today. Sessions
-            run hourly, 1–10 people, £15 per person.
+            {c.cta_text}
           </p>
           <div className="flex gap-4 justify-center flex-wrap">
             <Link href="/booking" className="btn-primary btn-book-now">

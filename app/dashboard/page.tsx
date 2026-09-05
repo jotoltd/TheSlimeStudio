@@ -15,6 +15,8 @@ export default function DashboardPage() {
   const [revenueToday, setRevenueToday] = useState(0);
   const [revenueWeek, setRevenueWeek] = useState(0);
   const [revenueMonth, setRevenueMonth] = useState(0);
+  const [customerCount, setCustomerCount] = useState(0);
+  const [totalRevenue, setTotalRevenue] = useState(0);
 
   useEffect(() => {
     loadData();
@@ -59,6 +61,16 @@ export default function DashboardPage() {
       setRevenueWeek(allBookings.filter((b) => b.date >= weekStartStr && b.payment_status === "paid").reduce((sum, b) => sum + Number(b.total_price), 0));
       setRevenueMonth(allBookings.filter((b) => b.date >= monthStartStr && b.payment_status === "paid").reduce((sum, b) => sum + Number(b.total_price), 0));
     }
+
+    const { count: custCount } = await supabase.from("customers").select("*", { count: "exact", head: true });
+    setCustomerCount(custCount || 0);
+
+    const { data: paidBookings } = await supabase
+      .from("bookings")
+      .select("total_price")
+      .eq("payment_status", "paid");
+    const allRevenue = (paidBookings || []).reduce((sum: number, b: { total_price: number }) => sum + Number(b.total_price), 0);
+    setTotalRevenue(allRevenue);
 
     setLoadingData(false);
   }
@@ -133,22 +145,22 @@ export default function DashboardPage() {
           <div className="font-display text-[1.6rem] md:text-[1.8rem]">{loadingData ? "--" : bookingCount}</div>
           <div className="text-[0.8rem] text-ink-soft mt-0.5">Bookings</div>
         </Link>
-        <Link href="/dashboard/shop" className="bg-white rounded-[20px] p-5 md:p-6 shadow-sm hover:-translate-y-1 hover:shadow-md transition-all group">
+        <Link href="/dashboard/customers" className="bg-white rounded-[20px] p-5 md:p-6 shadow-sm hover:-translate-y-1 hover:shadow-md transition-all group">
           <div className="flex items-center justify-between mb-3">
-            <div className="w-10 h-10 rounded-xl bg-bright-lavender/15 grid place-items-center text-lg">🛍️</div>
+            <div className="w-10 h-10 rounded-xl bg-bright-lavender/15 grid place-items-center text-lg">�</div>
             <span className="text-[0.7rem] text-ink-soft uppercase tracking-wider">Total</span>
           </div>
-          <div className="font-display text-[1.6rem] md:text-[1.8rem]">{loadingData ? "--" : products.length}</div>
-          <div className="text-[0.8rem] text-ink-soft mt-0.5">Products</div>
+          <div className="font-display text-[1.6rem] md:text-[1.8rem]">{loadingData ? "--" : customerCount}</div>
+          <div className="text-[0.8rem] text-ink-soft mt-0.5">Customers</div>
         </Link>
-        <Link href="/dashboard/enquiries" className="bg-white rounded-[20px] p-5 md:p-6 shadow-sm hover:-translate-y-1 hover:shadow-md transition-all group">
+        <div className="bg-white rounded-[20px] p-5 md:p-6 shadow-sm">
           <div className="flex items-center justify-between mb-3">
-            <div className="w-10 h-10 rounded-xl bg-canary-yellow/20 grid place-items-center text-lg">✉️</div>
-            <span className="text-[0.7rem] text-ink-soft uppercase tracking-wider">Total</span>
+            <div className="w-10 h-10 rounded-xl bg-green-100 grid place-items-center text-lg">💰</div>
+            <span className="text-[0.7rem] text-ink-soft uppercase tracking-wider">All Time</span>
           </div>
-          <div className="font-display text-[1.6rem] md:text-[1.8rem]">{loadingData ? "--" : enquiryCount}</div>
-          <div className="text-[0.8rem] text-ink-soft mt-0.5">Enquiries</div>
-        </Link>
+          <div className="font-display text-[1.6rem] md:text-[1.8rem]">{loadingData ? "--" : `£${totalRevenue.toFixed(0)}`}</div>
+          <div className="text-[0.8rem] text-ink-soft mt-0.5">Total Revenue</div>
+        </div>
         <Link href="/dashboard/shop" className="bg-white rounded-[20px] p-5 md:p-6 shadow-sm hover:-translate-y-1 hover:shadow-md transition-all group">
           <div className="flex items-center justify-between mb-3">
             <div className={`w-10 h-10 rounded-xl grid place-items-center text-lg ${lowStock.length > 0 ? "bg-red-100" : "bg-green-100"}`}>📦</div>

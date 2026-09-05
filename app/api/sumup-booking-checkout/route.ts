@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomBytes } from "crypto";
 import { getSumUpKey, isSumUpConfigured } from "@/lib/payment";
 import { supabaseAdmin } from "@/lib/supabase";
 
@@ -6,7 +7,7 @@ export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { name, email, date, timeSlot, people, totalPrice, phone } = body as {
+  const { name, email, date, timeSlot, people, totalPrice, phone, discountCode } = body as {
     name: string;
     email: string;
     date: string;
@@ -14,9 +15,10 @@ export async function POST(req: NextRequest) {
     people: number;
     totalPrice: number;
     phone?: string;
+    discountCode?: string;
   };
 
-  if (!name || !email || !totalPrice || !date || !timeSlot) {
+  if (!name || !email || totalPrice == null || !date || !timeSlot) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
@@ -104,7 +106,11 @@ export async function POST(req: NextRequest) {
   const origin = req.nextUrl.origin;
 
   try {
-    const checkoutRef = `SLM-BOOK-${Date.now().toString(36).toUpperCase()}`;
+    // Include random entropy: a timestamp alone collides if two customers start
+    // a checkout in the same millisecond, and the reference is our idempotency key.
+    const checkoutRef = `SLM-BOOK-${Date.now().toString(36).toUpperCase()}${randomBytes(3)
+      .toString("hex")
+      .toUpperCase()}`;
 
     const res = await fetch("https://api.sumup.com/v0.1/checkouts", {
       method: "POST",
@@ -131,8 +137,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: errMsg }, { status: 500 });
     }
 
-    // Store booking as pending — confirmed after redirect
-    const { data: booking } = await supabaseAdmin.from("bookings").insert({
+    // Store booking as pending — confirmed after redirect.
+    // This MUST succeed before we hand the customer a payment URL, otherwise we
+    // can take money with no record of who it belongs to.
+    const { data: booking, error: insertError } = await supabaseAdmin.from("bookings").insert({
       date,
       time_slot: timeSlot,
       people,
@@ -143,7 +151,20 @@ export async function POST(req: NextRequest) {
       is_party: false,
       payment_status: "pending",
       stripe_session_id: checkoutRef,
+      discount_code: discountCode || null,
+      discount_amount: 0,
     }).select().single();
+
+    if (insertError || !booking) {
+      console.error(
+        `[sumup-booking-checkout] Failed to store pending booking for ${checkoutRef}; aborting before payment.`,
+        insertError
+      );
+      return NextResponse.json(
+        { error: "Could not reserve your booking. Please try again — you have not been charged." },
+        { status: 500 }
+      );
+    }
 
     const checkoutUrl = data.hosted_checkout_url || data.checkout_url || data.url;
     if (!checkoutUrl) {
@@ -155,7 +176,7 @@ export async function POST(req: NextRequest) {
       url: checkoutUrl,
       checkoutId: data.id,
       checkoutRef,
-      bookingId: booking?.id,
+      bookingId: booking.id,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
