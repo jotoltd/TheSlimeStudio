@@ -33,6 +33,7 @@ const navSections = [
       { href: "/dashboard/subscribers", label: "Subscribers", Icon: UsersIcon },
       { href: "/dashboard/customers", label: "Customers", Icon: UsersIcon },
       { href: "/dashboard/loyalty", label: "Loyalty", Icon: GiftIcon },
+      { href: "/dashboard/gift-cards", label: "Gift Cards", Icon: GiftIcon },
       { href: "/dashboard/discount-codes", label: "Discount Codes", Icon: TagIcon },
       { href: "/dashboard/gallery", label: "Gallery", Icon: PhotoIcon },
       { href: "/dashboard/enquiries", label: "Enquiries", Icon: MailIcon },
