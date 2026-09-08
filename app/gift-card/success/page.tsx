@@ -97,6 +97,9 @@ export default function GiftCardSuccessPage() {
           >
             Copy Gift Card Code
           </button>
+          <a href="/gift-card/balance" className="block text-center text-sky-blue-light text-sm hover:underline">
+            Check Balance
+          </a>
           <a href="/" className="block text-center text-ink-soft text-sm hover:underline">
             Return to Home
           </a>
