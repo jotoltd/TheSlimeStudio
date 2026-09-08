@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
 const PRESET_AMOUNTS = [10, 25, 50, 75, 100];
@@ -163,6 +164,16 @@ export default function GiftCardPage() {
               {amount > 500 && (
                 <p className="text-red-600 text-xs mt-1">Maximum amount is £500</p>
               )}
+            </div>
+
+            <div className="text-center mt-6">
+              <Link href="/shop" className="btn-primary inline-block">Continue Shopping</Link>
+            </div>
+
+            <div className="text-center mt-4">
+              <Link href="/gift-card/balance" className="text-sky-blue-light hover:underline text-sm">
+                Check Gift Card Balance
+              </Link>
             </div>
 
             {/* Purchaser Details */}
