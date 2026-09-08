@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
       case "checkout.session.completed": {
         const session = event.data.object as {
           id: string;
-          metadata?: { bookingId?: string; subscriberId?: string; type?: string; order_number?: string };
+          metadata?: { bookingId?: string; subscriberId?: string; type?: string; order_number?: string; gift_card_code?: string };
           payment_status: string;
         };
 
@@ -85,6 +85,32 @@ export async function POST(req: NextRequest) {
                   .from("products")
                   .update({ stock: newStock })
                   .eq("id", item.product_id);
+              }
+            }
+
+            // Redeem gift card if provided
+            if (session.metadata?.gift_card_code) {
+              try {
+                const { data: giftCard } = await supabaseAdmin
+                  .from("gift_cards")
+                  .select("balance")
+                  .eq("code", session.metadata.gift_card_code.trim().toUpperCase())
+                  .single();
+
+                if (giftCard && giftCard.balance > 0) {
+                  const redeemAmount = Math.min(giftCard.balance, order.total);
+                  await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/gift-card-redeem`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      code: session.metadata.gift_card_code.trim().toUpperCase(),
+                      amount: redeemAmount,
+                      shopOrderId: order.id,
+                    }),
+                  });
+                }
+              } catch (e) {
+                console.error("Failed to redeem gift card in webhook:", e);
               }
             }
 

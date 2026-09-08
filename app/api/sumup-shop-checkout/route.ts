@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
     shippingPostcode,
     notes,
     discountCode,
+    giftCardCode,
   } = body as {
     items: { product_id: string; name: string; price: number; quantity: number; image_url: string | null }[];
     customerName: string;
@@ -31,6 +32,7 @@ export async function POST(req: NextRequest) {
     shippingPostcode?: string;
     notes?: string;
     discountCode?: string;
+    giftCardCode?: string;
   };
 
   if (!items || items.length === 0) {
@@ -165,6 +167,7 @@ export async function POST(req: NextRequest) {
       notes: notes || null,
       discount_code: discountCode || null,
       discount_amount: discountAmount,
+      gift_card_code: giftCardCode || null,
     });
 
     const checkoutUrl = data.hosted_checkout_url || data.checkout_url || data.url;

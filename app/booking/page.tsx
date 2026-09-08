@@ -53,6 +53,10 @@ function BookingPageInner() {
   const [showTerms, setShowTerms] = useState(false);
   const [showDiscountField, setShowDiscountField] = useState(false);
   const [showWhatToExpect, setShowWhatToExpect] = useState(false);
+  const [giftCardCode, setGiftCardCode] = useState("");
+  const [giftCardBalance, setGiftCardBalance] = useState<number | null>(null);
+  const [giftCardChecking, setGiftCardChecking] = useState(false);
+  const [giftCardError, setGiftCardError] = useState("");
 
 
   useEffect(() => {
@@ -308,6 +312,31 @@ function BookingPageInner() {
     setDiscountError("");
   }
 
+  async function validateGiftCard() {
+    if (!giftCardCode.trim()) return;
+    setGiftCardChecking(true);
+    setGiftCardError("");
+    try {
+      const res = await fetch(`/api/gift-card-redeem?code=${encodeURIComponent(giftCardCode.trim())}`);
+      const data = await res.json();
+      if (data.valid) {
+        setGiftCardBalance(data.balance);
+      } else {
+        setGiftCardBalance(null);
+        setGiftCardError(data.error || "Invalid gift card code.");
+      }
+    } catch {
+      setGiftCardError("Could not validate gift card. Please try again.");
+    }
+    setGiftCardChecking(false);
+  }
+
+  function removeGiftCard() {
+    setGiftCardCode("");
+    setGiftCardBalance(null);
+    setGiftCardError("");
+  }
+
   function selectSlot(slot: string) {
     setTimeSlot(slot);
     const rem = remaining[slot] ?? slotCapacity;
@@ -398,6 +427,7 @@ function BookingPageInner() {
             people,
             totalPrice: finalPrice,
             discountCode: appliedDiscount?.code,
+            giftCardCode: giftCardBalance !== null ? giftCardCode : null,
           }),
         });
         const data = await res.json();
@@ -407,6 +437,7 @@ function BookingPageInner() {
             name, email, phone, date, timeSlot, people,
             totalPrice: finalPrice,
             discountCode: appliedDiscount?.code,
+            giftCardCode: giftCardBalance !== null ? giftCardCode : null,
           }));
           window.location.href = data.url;
           return;
@@ -432,6 +463,7 @@ function BookingPageInner() {
           totalPrice: finalPrice,
           isParty: false,
           discountCode: appliedDiscount?.code,
+          giftCardCode: giftCardBalance !== null ? giftCardCode : null,
         }),
       });
       const data = await res.json();
@@ -617,6 +649,7 @@ function BookingPageInner() {
                             totalPrice: finalPrice,
                             isParty: false,
                             discountCode: appliedDiscount?.code,
+                            giftCardCode: giftCardBalance !== null ? giftCardCode : null,
                           }),
                         });
                         const data = await res.json();
@@ -807,6 +840,41 @@ function BookingPageInner() {
                 )}
                 {discountError && (
                   <p className="text-[0.8rem] text-[#ff2d78] mt-1.5">{discountError}</p>
+                )}
+              </div>
+
+              {/* Gift card */}
+              <div className="mb-4">
+                {giftCardBalance !== null ? (
+                  <div className="flex items-center justify-between bg-purple-50 border-2 border-purple-200 rounded-xl p-3">
+                    <div>
+                      <span className="text-[0.85rem] font-medium text-purple-700">Gift card applied</span>
+                      <span className="text-[0.8rem] text-purple-600 ml-2">£{giftCardBalance.toFixed(2)} available</span>
+                    </div>
+                    <button type="button" onClick={removeGiftCard} className="text-[0.8rem] text-ink-soft hover:text-[#ff2d78]">Remove</button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={giftCardCode}
+                      onChange={(e) => setGiftCardCode(e.target.value.toUpperCase())}
+                      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), validateGiftCard())}
+                      placeholder="Gift card code (optional)"
+                      className="flex-1 px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light uppercase"
+                    />
+                    <button
+                      type="button"
+                      onClick={validateGiftCard}
+                      disabled={giftCardChecking || !giftCardCode.trim()}
+                      className="px-4 py-2.5 rounded-xl bg-ink/5 text-ink text-sm font-medium hover:bg-ink/10 disabled:opacity-60"
+                    >
+                      {giftCardChecking ? "..." : "Apply"}
+                    </button>
+                  </div>
+                )}
+                {giftCardError && (
+                  <p className="text-[0.8rem] text-[#ff2d78] mt-1.5">{giftCardError}</p>
                 )}
               </div>
 

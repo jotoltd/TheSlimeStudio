@@ -69,6 +69,32 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Redeem gift card if provided
+    if (order.gift_card_code) {
+      try {
+        const { data: giftCard } = await supabaseAdmin
+          .from("gift_cards")
+          .select("balance")
+          .eq("code", order.gift_card_code.trim().toUpperCase())
+          .single();
+
+        if (giftCard && giftCard.balance > 0) {
+          const redeemAmount = Math.min(giftCard.balance, order.total);
+          await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/gift-card-redeem`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              code: order.gift_card_code.trim().toUpperCase(),
+              amount: redeemAmount,
+              shopOrderId: order.id,
+            }),
+          });
+        }
+      } catch (e) {
+        console.error("Failed to redeem gift card:", e);
+      }
+    }
+
     // Send confirmation email
     await sendOrderConfirmationEmail({
       orderNumber: order.order_number,

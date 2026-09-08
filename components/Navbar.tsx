@@ -12,6 +12,7 @@ const allNavLinks = [
   { href: "/about", label: "About" },
   { href: "/parties", label: "Parties" },
   { href: "/shop", label: "Shop" },
+  { href: "/gift-card", label: "Gift Cards" },
   { href: "/gallery", label: "Gallery" },
   { href: "/loyalty", label: "Loyalty" },
   { href: "/subscribe", label: "Subscribe" },

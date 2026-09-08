@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
     totalPrice?: number;
     phone?: string;
     discountCode?: string;
+    giftCardCode?: string;
   };
 
   const { checkoutRef } = body;
@@ -126,6 +127,33 @@ export async function POST(req: NextRequest) {
       if (result.created) {
         console.warn(`[sumup-confirm] Recovered booking ${result.bookingId} for ${checkoutRef} — pending booking was missing.`);
       }
+
+      // Redeem gift card if provided
+      if (body.giftCardCode && result.bookingId) {
+        try {
+          const { data: giftCard } = await supabaseAdmin
+            .from("gift_cards")
+            .select("balance")
+            .eq("code", body.giftCardCode.trim().toUpperCase())
+            .single();
+
+          if (giftCard && giftCard.balance > 0) {
+            const redeemAmount = Math.min(giftCard.balance, fallbackDetails.totalPrice);
+            await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/gift-card-redeem`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                code: body.giftCardCode.trim().toUpperCase(),
+                amount: redeemAmount,
+                bookingId: result.bookingId,
+              }),
+            });
+          }
+        } catch (e) {
+          console.error("Failed to redeem gift card:", e);
+        }
+      }
+
       return NextResponse.json({
         success: true,
         bookingId: result.bookingId,

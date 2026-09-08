@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { name, email, date, timeSlot, people, totalPrice, isParty, discountCode } = body as {
+  const { name, email, date, timeSlot, people, totalPrice, isParty, discountCode, giftCardCode } = body as {
     name: string;
     email: string;
     date: string;
@@ -16,6 +16,7 @@ export async function POST(req: NextRequest) {
     totalPrice: number;
     isParty?: boolean;
     discountCode?: string;
+    giftCardCode?: string;
   };
 
   if (!name || !email || totalPrice == null || !date || !timeSlot) {
@@ -246,6 +247,7 @@ export async function POST(req: NextRequest) {
         totalPrice: String(totalPrice),
         phone: body.phone || "",
         discountCode: discountCode || "",
+        giftCardCode: giftCardCode || "",
       },
       receipt_email: email,
       description: isParty

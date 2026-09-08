@@ -28,6 +28,10 @@ export default function CheckoutPage() {
   const [appliedDiscount, setAppliedDiscount] = useState<{ code: string; discountAmount: number; finalAmount: number } | null>(null);
   const [discountChecking, setDiscountChecking] = useState(false);
   const [discountError, setDiscountError] = useState("");
+  const [giftCardCode, setGiftCardCode] = useState("");
+  const [giftCardBalance, setGiftCardBalance] = useState<number | null>(null);
+  const [giftCardChecking, setGiftCardChecking] = useState(false);
+  const [giftCardError, setGiftCardError] = useState("");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -74,6 +78,31 @@ export default function CheckoutPage() {
     setDiscountError("");
   }
 
+  async function validateGiftCard() {
+    if (!giftCardCode.trim()) return;
+    setGiftCardChecking(true);
+    setGiftCardError("");
+    try {
+      const res = await fetch(`/api/gift-card-redeem?code=${encodeURIComponent(giftCardCode.trim())}`);
+      const data = await res.json();
+      if (data.valid) {
+        setGiftCardBalance(data.balance);
+      } else {
+        setGiftCardBalance(null);
+        setGiftCardError(data.error || "Invalid gift card code.");
+      }
+    } catch {
+      setGiftCardError("Could not validate gift card. Please try again.");
+    }
+    setGiftCardChecking(false);
+  }
+
+  function removeGiftCard() {
+    setGiftCardCode("");
+    setGiftCardBalance(null);
+    setGiftCardError("");
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -115,6 +144,7 @@ export default function CheckoutPage() {
           shippingPostcode: postcode,
           notes,
           discountCode: appliedDiscount?.code,
+          giftCardCode: giftCardBalance !== null ? giftCardCode : null,
         }),
       });
       const data = await res.json();
@@ -311,6 +341,36 @@ export default function CheckoutPage() {
                     </div>
                   )}
                   {discountError && <p className="text-[0.8rem] text-[#ff2d78] mt-1.5">{discountError}</p>}
+                </div>
+
+                {/* Gift card input */}
+                <div className="mt-3">
+                  {giftCardBalance !== null ? (
+                    <div className="flex items-center justify-between bg-purple-50 border-2 border-purple-200 rounded-xl p-3">
+                      <span className="text-[0.85rem] font-medium text-purple-700">Gift card applied — £{giftCardBalance.toFixed(2)} available</span>
+                      <button type="button" onClick={removeGiftCard} className="text-[0.8rem] text-ink-soft hover:text-[#ff2d78]">Remove</button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={giftCardCode}
+                        onChange={(e) => setGiftCardCode(e.target.value.toUpperCase())}
+                        onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), validateGiftCard())}
+                        placeholder="Gift card code (optional)"
+                        className="flex-1 px-3 py-2 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light uppercase"
+                      />
+                      <button
+                        type="button"
+                        onClick={validateGiftCard}
+                        disabled={giftCardChecking || !giftCardCode.trim()}
+                        className="px-4 py-2 rounded-xl bg-ink/5 text-ink text-sm font-medium hover:bg-ink/10 disabled:opacity-60"
+                      >
+                        {giftCardChecking ? "..." : "Apply"}
+                      </button>
+                    </div>
+                  )}
+                  {giftCardError && <p className="text-[0.8rem] text-[#ff2d78] mt-1.5">{giftCardError}</p>}
                 </div>
 
                 {error && <p className="text-red-600 text-[0.85rem] mt-4">{error}</p>}

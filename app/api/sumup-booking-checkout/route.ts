@@ -7,15 +7,26 @@ export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { name, email, date, timeSlot, people, totalPrice, phone, discountCode } = body as {
+  const {
+    name,
+    email,
+    phone,
+    date,
+    timeSlot,
+    people,
+    totalPrice,
+    discountCode,
+    giftCardCode,
+  } = body as {
     name: string;
     email: string;
+    phone?: string;
     date: string;
     timeSlot: string;
     people: number;
     totalPrice: number;
-    phone?: string;
     discountCode?: string;
+    giftCardCode?: string;
   };
 
   if (!name || !email || totalPrice == null || !date || !timeSlot) {

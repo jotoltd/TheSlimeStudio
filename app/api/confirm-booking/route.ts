@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripeAsync } from "@/lib/stripe";
 import { createPaidBooking } from "@/lib/create-booking";
+import { supabaseAdmin } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { paymentIntentId, fromRedirect } = body;
+  const { paymentIntentId, fromRedirect, giftCardCode } = body;
   let { name, email, date, timeSlot, people, totalPrice, phone, isParty } = body;
 
   if (!paymentIntentId) {
@@ -66,6 +67,34 @@ export async function POST(req: NextRequest) {
 
   if (!result.bookingId) {
     return NextResponse.json({ error: result.error || "Failed to create booking" }, { status: 500 });
+  }
+
+  // Redeem gift card if provided
+  if (giftCardCode && result.bookingId) {
+    try {
+      // Calculate gift card amount (up to the total price)
+      const { data: giftCard } = await supabaseAdmin
+        .from("gift_cards")
+        .select("balance")
+        .eq("code", giftCardCode.trim().toUpperCase())
+        .single();
+
+      if (giftCard && giftCard.balance > 0) {
+        const redeemAmount = Math.min(giftCard.balance, totalPrice);
+        await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/gift-card-redeem`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            code: giftCardCode.trim().toUpperCase(),
+            amount: redeemAmount,
+            bookingId: result.bookingId,
+          }),
+        });
+      }
+    } catch (e) {
+      console.error("Failed to redeem gift card:", e);
+      // Don't fail the booking if gift card redemption fails
+    }
   }
 
   return NextResponse.json({
