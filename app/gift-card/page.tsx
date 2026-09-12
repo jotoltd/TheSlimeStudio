@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 
 const PRESET_AMOUNTS = [10, 15, 25, 50, 75, 100];
 
@@ -109,8 +111,10 @@ export default function GiftCardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-blue-light/20 via-white to-bright-lavender/20 py-12 px-4">
-      <div className="max-w-2xl mx-auto">
+    <>
+      <Navbar />
+      <div className="min-h-screen bg-gradient-to-br from-sky-blue-light/20 via-white to-bright-lavender/20 py-12 px-4">
+        <div className="max-w-2xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="font-display text-4xl text-ink mb-3">Gift Cards</h1>
           <p className="text-ink-soft text-lg">
@@ -274,11 +278,13 @@ export default function GiftCardPage() {
             </button>
 
             <p className="text-xs text-ink-soft text-center">
-              Gift cards are valid for 1 year from purchase. Cannot be refunded or exchanged for cash.
+              Gift cards are valid for 3 months from the date of purchase. Cannot be refunded or exchanged for cash.
             </p>
           </form>
         </div>
+        </div>
       </div>
-    </div>
+      <Footer />
+    </>
   );
 }
