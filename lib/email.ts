@@ -95,6 +95,100 @@ export function cancellationHtml(opts: {
   `);
 }
 
+export function eventBookingConfirmationHtml(opts: {
+  name: string;
+  eventTitle: string;
+  date: string;
+  startTime: string;
+  durationMinutes: number;
+  quantity: number;
+  totalPrice: number;
+  pricingModel: string;
+}): string {
+  const dateStr = opts.date ? new Date(opts.date).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : "";
+  return emailWrapper(`
+    <h1 style="color: #ff2d78; font-size: 1.5rem; margin-bottom: 16px;">Event Booking Confirmed!</h1>
+    <p style="color: #333; font-size: 1rem; line-height: 1.6;">
+      Hi ${opts.name},
+    </p>
+    <p style="color: #333; font-size: 1rem; line-height: 1.6;">
+      Your booking for <strong>${opts.eventTitle}</strong> at The Slime Studio is confirmed! We can't wait to see you.
+    </p>
+    <div style="background: #fdeef7; border-radius: 12px; padding: 16px; margin: 16px 0;">
+      <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Event:</strong> ${opts.eventTitle}</p>
+      <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Date:</strong> ${dateStr}</p>
+      <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Time:</strong> ${opts.startTime}</p>
+      <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Duration:</strong> ${opts.durationMinutes} minutes</p>
+      <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>${opts.pricingModel === "per_person" ? "People" : "Tickets"}:</strong> ${opts.quantity}</p>
+      <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Total:</strong> &pound;${opts.totalPrice.toFixed(2)}</p>
+    </div>
+    <p style="color: #333; font-size: 1rem; line-height: 1.6;">
+      Please arrive 5 minutes before the event starts. Everything you need is provided!
+    </p>
+    <p style="color: #333; font-size: 1rem; line-height: 1.6;">
+      Need to make changes? Contact us at <a href="mailto:${CONTACT_EMAIL}" style="color: #ff2d78;">${CONTACT_EMAIL}</a>.
+    </p>
+  `);
+}
+
+export async function sendEventBookingEmails(opts: {
+  name: string;
+  email: string;
+  eventTitle: string;
+  date: string;
+  startTime: string;
+  durationMinutes: number;
+  quantity: number;
+  totalPrice: number;
+  pricingModel: string;
+}) {
+  const resend = getResend();
+  if (!resend) {
+    console.log("Resend not configured, skipping event booking email for", opts.email);
+    return;
+  }
+
+  const html = eventBookingConfirmationHtml(opts);
+  const subject = `Event Booking Confirmed — ${opts.eventTitle} — The Slime Studio`;
+
+  try {
+    await resend.emails.send({
+      from: EMAIL_FROM,
+      to: opts.email,
+      subject,
+      html,
+    });
+    await logEmail(opts.email, subject, "event_booking_confirmation", "sent");
+  } catch (e) {
+    console.error("Failed to send event booking email:", e);
+    await logEmail(opts.email, subject, "event_booking_confirmation", "failed");
+  }
+
+  // Send admin notification
+  try {
+    await resend.emails.send({
+      from: EMAIL_FROM,
+      to: CONTACT_EMAIL,
+      subject: `New Event Booking — ${opts.eventTitle}`,
+      html: emailWrapper(`
+        <h1 style="color: #ff2d78; font-size: 1.5rem; margin-bottom: 16px;">New Event Booking</h1>
+        <div style="background: #fdeef7; border-radius: 12px; padding: 16px; margin: 16px 0;">
+          <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Event:</strong> ${opts.eventTitle}</p>
+          <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Date:</strong> ${opts.date}</p>
+          <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Time:</strong> ${opts.startTime}</p>
+          <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Customer:</strong> ${opts.name}</p>
+          <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Email:</strong> ${opts.email}</p>
+          <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>${opts.pricingModel === "per_person" ? "People" : "Tickets"}:</strong> ${opts.quantity}</p>
+          <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Total:</strong> &pound;${opts.totalPrice.toFixed(2)}</p>
+        </div>
+      `),
+    });
+    await logEmail(CONTACT_EMAIL, `New Event Booking — ${opts.eventTitle}`, "event_booking_admin", "sent");
+  } catch (e) {
+    console.error("Failed to send admin event booking email:", e);
+  }
+}
+
 export function orderConfirmationHtml(opts: {
   orderNumber: string;
   name: string;

@@ -25,12 +25,14 @@ export default function Calendar({
   min,
   disableDays = [],
   blockedDates = [],
+  eventDates = [],
 }: {
   value: string;
   onChange: (iso: string) => void;
   min?: string;
   disableDays?: number[];
   blockedDates?: string[];
+  eventDates?: string[];
 }) {
   const [open, setOpen] = useState(false);
   const selected = fromISO(value);
@@ -154,23 +156,30 @@ export default function Calendar({
               const disabled = isDisabled(day);
               const sel = isSelected(day);
               const today = isToday(day);
+              const iso = toISO(new Date(viewYear, viewMonth, day));
+              const hasEvent = eventDates.includes(iso);
               return (
                 <button
                   key={i}
                   type="button"
                   disabled={disabled}
                   onClick={() => selectDay(day)}
-                  className={`h-9 rounded-lg text-sm transition-colors ${
+                  className={`h-9 rounded-lg text-sm transition-colors relative ${
                     disabled
                       ? "text-ink/20 cursor-not-allowed"
                       : sel
                       ? "bg-[#ff2d78] text-white font-semibold"
                       : today
                       ? "bg-[#ff2d78]/10 text-[#ff2d78] font-semibold hover:bg-[#ff2d78]/20"
+                      : hasEvent
+                      ? "bg-purple-100 text-purple-700 font-medium hover:bg-purple-200"
                       : "text-ink hover:bg-ink/5"
                   }`}
                 >
                   {day}
+                  {hasEvent && !sel && (
+                    <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-purple-500" />
+                  )}
                 </button>
               );
             })}

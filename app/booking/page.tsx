@@ -34,6 +34,7 @@ function BookingPageInner() {
   const [paymentIntentId, setPaymentIntentId] = useState("");
   const [bookingId, setBookingId] = useState("");
   const [blockedDates, setBlockedDates] = useState<string[]>([]);
+  const [eventDates, setEventDates] = useState<string[]>([]);
   const [pricePerPerson, setPricePerPerson] = useState(PRICE_PER_PERSON);
   const [timeSlots, setTimeSlots] = useState<string[]>(DEFAULT_SLOTS);
   const [slotCapacity, setSlotCapacity] = useState(DEFAULT_CAP);
@@ -100,6 +101,18 @@ function BookingPageInner() {
     });
     fetch("/api/blocked-dates").then(r => r.json()).then(d => {
       if (d.blockedDates) setBlockedDates(d.blockedDates.map((b: { date: string }) => b.date));
+    }).catch(() => {});
+    // Fetch upcoming event dates to highlight on calendar
+    fetch("/api/events").then(r => r.json()).then(d => {
+      if (d.events) {
+        const dates = new Set<string>();
+        d.events.forEach((e: any) => {
+          (e.instances || []).forEach((inst: any) => {
+            if (inst.status === "open") dates.add(inst.date);
+          });
+        });
+        setEventDates(Array.from(dates));
+      }
     }).catch(() => {});
     fetch("/api/opening-hours", { cache: "no-store" }).then(r => r.json()).then(d => {
       if (d.weekly) setOpeningHours(d.weekly);
@@ -698,7 +711,13 @@ function BookingPageInner() {
                   // Don't block dates that have an 'open' override
                   const ov = dateOverrides.find((o) => o.date === bd);
                   return !(ov && ov.is_open);
-                }), ...getClosedDates()]} />
+                }), ...getClosedDates()]} eventDates={eventDates} />
+                {eventDates.length > 0 && (
+                  <p className="text-[0.75rem] text-ink-soft mt-2 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-purple-500 inline-block" />
+                    Special event day — <a href="/events" className="text-sky-blue-light hover:underline">view events</a>
+                  </p>
+                )}
               </div>
 
               <div className="mb-6">

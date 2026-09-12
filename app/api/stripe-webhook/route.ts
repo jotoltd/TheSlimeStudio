@@ -50,6 +50,43 @@ export async function POST(req: NextRequest) {
             .from("special_event_bookings")
             .update({ payment_status: "paid" })
             .eq("id", session.metadata.event_booking_id);
+
+          // Send confirmation email
+          try {
+            const { data: booking } = await supabaseAdmin
+              .from("special_event_bookings")
+              .select("name, email, quantity, total_price, event_id, instance_id")
+              .eq("id", session.metadata.event_booking_id)
+              .single();
+            if (booking) {
+              const { data: event } = await supabaseAdmin
+                .from("special_events")
+                .select("title, duration_minutes, pricing_model")
+                .eq("id", booking.event_id)
+                .single();
+              const { data: instance } = await supabaseAdmin
+                .from("special_event_instances")
+                .select("date, start_time")
+                .eq("id", booking.instance_id)
+                .single();
+              if (event && instance) {
+                const { sendEventBookingEmails } = await import("@/lib/email");
+                await sendEventBookingEmails({
+                  name: booking.name,
+                  email: booking.email,
+                  eventTitle: event.title,
+                  date: instance.date,
+                  startTime: instance.start_time,
+                  durationMinutes: event.duration_minutes,
+                  quantity: booking.quantity,
+                  totalPrice: booking.total_price,
+                  pricingModel: event.pricing_model,
+                });
+              }
+            }
+          } catch (e) {
+            console.error("Failed to send event booking email:", e);
+          }
         }
 
         if (session.metadata?.bookingId && session.metadata?.type !== "subscription") {
