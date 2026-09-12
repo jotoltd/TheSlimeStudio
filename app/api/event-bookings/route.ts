@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { getStripeModeAsync, getStripeKeysForMode } from "@/lib/stripe";
 
 export const runtime = "nodejs";
 
@@ -95,9 +96,9 @@ export async function POST(req: NextRequest) {
 }
 
 async function createStripeCheckout(booking: any, event: any, instance: any, total: number) {
-  const STRIPE_SECRET = process.env.STRIPE_MODE === "live"
-    ? process.env.STRIPE_LIVE_SECRET_KEY
-    : process.env.STRIPE_TEST_SECRET_KEY;
+  const mode = await getStripeModeAsync();
+  const keys = getStripeKeysForMode(mode);
+  const STRIPE_SECRET = keys.secretKey;
 
   if (!STRIPE_SECRET) {
     return NextResponse.json({ error: "Payment not configured" }, { status: 500 });
@@ -117,8 +118,8 @@ async function createStripeCheckout(booking: any, event: any, instance: any, tot
       "line_items[0][price_data][currency]": "gbp",
       "line_items[0][price_data][unit_amount]": String(Math.round(total * 100)),
       "line_items[0][price_data][product_data][name]": `${event.title} — ${instance.date} ${instance.start_time}`,
-      success_url: `${origin}/events?booked=1`,
-      cancel_url: `${origin}/events?cancelled=1`,
+      success_url: `${origin}/events/${event.id}?booked=1`,
+      cancel_url: `${origin}/events/${event.id}?cancelled=1`,
       "metadata[event_booking_id]": booking.id,
       "metadata[booking_type]": "special_event",
       "metadata[instance_id]": instance.id,
