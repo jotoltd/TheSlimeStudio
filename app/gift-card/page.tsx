@@ -150,7 +150,7 @@ export default function GiftCardPage() {
                 ))}
               </div>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-soft font-medium">£</span>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-soft font-medium text-sm">£</span>
                 <input
                   type="number"
                   value={customAmount}
@@ -159,7 +159,7 @@ export default function GiftCardPage() {
                   min="10"
                   max="500"
                   step="0.01"
-                  className="w-full pl-8 pr-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
+                  className="w-full pl-8 pr-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
                 />
               </div>
               {amount < 10 && (
