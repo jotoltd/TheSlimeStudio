@@ -118,8 +118,8 @@ async function createStripeCheckout(booking: any, event: any, instance: any, tot
       "line_items[0][price_data][currency]": "gbp",
       "line_items[0][price_data][unit_amount]": String(Math.round(total * 100)),
       "line_items[0][price_data][product_data][name]": `${event.title} — ${instance.date} ${instance.start_time}`,
-      success_url: `${origin}/events/${event.id}?booked=1`,
-      cancel_url: `${origin}/events/${event.id}?cancelled=1`,
+      success_url: `${origin}/events/${event.slug || event.id}?booked=1&qty=${booking.quantity}&total=${total}&date=${encodeURIComponent(instance.date)}&time=${encodeURIComponent(instance.start_time)}`,
+      cancel_url: `${origin}/events/${event.slug || event.id}?cancelled=1`,
       "metadata[event_booking_id]": booking.id,
       "metadata[booking_type]": "special_event",
       "metadata[instance_id]": instance.id,
@@ -162,7 +162,7 @@ async function createSumUpCheckout(booking: any, event: any, instance: any, tota
       currency: "GBP",
       merchant_code: process.env.SUMUP_MERCHANT_CODE || "",
       description: `${event.title} — ${instance.date} ${instance.start_time}`,
-      return_url: `${origin}/events?booked=1`,
+      return_url: `${origin}/events/${event.slug || event.id}?booked=1&qty=${booking.quantity}&total=${total}&date=${encodeURIComponent(instance.date)}&time=${encodeURIComponent(instance.start_time)}`,
     }),
   });
 

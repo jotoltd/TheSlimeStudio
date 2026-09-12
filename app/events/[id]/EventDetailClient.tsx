@@ -45,6 +45,10 @@ export default function EventDetailClient({
   const searchParams = useSearchParams();
   const booked = searchParams.get("booked") === "1";
   const cancelled = searchParams.get("cancelled") === "1";
+  const bookedQty = searchParams.get("qty");
+  const bookedTotal = searchParams.get("total");
+  const bookedDate = searchParams.get("date");
+  const bookedTime = searchParams.get("time");
 
   const [selectedInstance, setSelectedInstance] = useState<EventInstance | null>(null);
   const [bookingQty, setBookingQty] = useState(1);
@@ -154,13 +158,68 @@ export default function EventDetailClient({
         </div>
 
         {booked && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm text-center">
-            Booking confirmed! Check your email for details.
+          <div className="mb-6 bg-white rounded-2xl shadow-lg overflow-hidden">
+            <div className="bg-green-500 px-6 py-4 text-center">
+              <div className="text-white text-3xl mb-1">✓</div>
+              <h2 className="font-display text-xl text-white">Booking Confirmed!</h2>
+            </div>
+            <div className="p-6">
+              <p className="text-ink-soft text-sm mb-4 text-center">
+                Great news! Your booking is confirmed. A confirmation email is on its way to you.
+              </p>
+              <div className="bg-ink/5 rounded-xl p-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-ink-soft">Event</span>
+                  <span className="font-medium text-ink">{event.title}</span>
+                </div>
+                {bookedDate && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-ink-soft">Date</span>
+                    <span className="font-medium text-ink">
+                      {new Date(bookedDate + "T00:00:00").toLocaleDateString("en-GB", {
+                        weekday: "long",
+                        day: "numeric",
+                        month: "long",
+                      })}
+                    </span>
+                  </div>
+                )}
+                {bookedTime && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-ink-soft">Time</span>
+                    <span className="font-medium text-ink">{bookedTime}</span>
+                  </div>
+                )}
+                {bookedQty && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-ink-soft">{event.pricing_model === "per_person" ? "People" : "Tickets"}</span>
+                    <span className="font-medium text-ink">{bookedQty}</span>
+                  </div>
+                )}
+                {bookedTotal && (
+                  <div className="flex justify-between text-sm border-t border-ink/10 pt-2 mt-2">
+                    <span className="text-ink-soft font-medium">Total Paid</span>
+                    <span className="font-display font-bold text-ink">£{parseFloat(bookedTotal).toFixed(2)}</span>
+                  </div>
+                )}
+              </div>
+              <p className="text-[0.8rem] text-ink-soft mt-4 text-center">
+                Please arrive 5 minutes before the event starts. Everything you need is provided!
+              </p>
+            </div>
           </div>
         )}
         {cancelled && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm text-center">
-            Payment was cancelled. Please try again.
+          <div className="mb-6 bg-white rounded-2xl shadow-lg overflow-hidden">
+            <div className="bg-red-500 px-6 py-4 text-center">
+              <div className="text-white text-3xl mb-1">✕</div>
+              <h2 className="font-display text-xl text-white">Payment Cancelled</h2>
+            </div>
+            <div className="p-6">
+              <p className="text-ink-soft text-sm text-center">
+                Your payment was cancelled and no charge was made. You can try booking again below.
+              </p>
+            </div>
           </div>
         )}
 
