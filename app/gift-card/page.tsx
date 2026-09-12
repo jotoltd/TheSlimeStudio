@@ -116,6 +116,72 @@ export default function GiftCardPage() {
       <div className="min-h-screen bg-gradient-to-br from-sky-blue-light/20 via-white to-bright-lavender/20 py-12 px-4">
         <div className="max-w-2xl mx-auto">
         <div className="text-center mb-8">
+          {/* Gift Card Illustration */}
+          <div className="flex justify-center mb-6">
+            <svg width="220" height="160" viewBox="0 0 220 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="cardBg" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#abf7dc" />
+                  <stop offset="100%" stopColor="#64d8ec" />
+                </linearGradient>
+                <linearGradient id="bowLoop" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#ff6fae" />
+                  <stop offset="100%" stopColor="#ff2d78" />
+                </linearGradient>
+                <linearGradient id="bowLoop2" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#ff2d78" />
+                  <stop offset="100%" stopColor="#CBC3E3" />
+                </linearGradient>
+                <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="130%">
+                  <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="#211B3D" floodOpacity="0.15" />
+                </filter>
+              </defs>
+
+              {/* Gift card body */}
+              <g filter="url(#cardShadow)">
+                <rect x="20" y="45" width="180" height="100" rx="12" fill="url(#cardBg)" />
+                <rect x="20" y="45" width="180" height="100" rx="12" fill="none" stroke="#fff" strokeWidth="2" opacity="0.5" />
+
+                {/* Slime logo on card */}
+                <g transform="translate(40, 62) scale(0.45)">
+                  <path d="M32 12 C20 12 14 22 14 32 C14 42 20 52 32 52 C44 52 50 42 50 32 C50 22 44 12 32 12 Z M32 18 C36 18 39 21 39 25 C39 29 36 32 32 32 C28 32 25 29 25 25 C25 21 28 18 32 18 Z" fill="#fff" opacity="0.85" />
+                  <circle cx="26" cy="28" r="3" fill="#64d8ec" opacity="0.6" />
+                  <circle cx="38" cy="28" r="2" fill="#64d8ec" opacity="0.4" />
+                </g>
+
+                {/* "THE SLIME STUDIO" text on card */}
+                <text x="82" y="82" fontFamily="Avenir, Poppins, sans-serif" fontSize="11" fontWeight="700" fill="#211B3D" opacity="0.7">THE SLIME</text>
+                <text x="82" y="95" fontFamily="Avenir, Poppins, sans-serif" fontSize="11" fontWeight="700" fill="#211B3D" opacity="0.7">STUDIO</text>
+
+                {/* Gift card chip */}
+                <rect x="40" y="108" width="30" height="22" rx="4" fill="#211B3D" opacity="0.12" />
+                <rect x="43" y="111" width="24" height="16" rx="2" fill="#211B3D" opacity="0.08" />
+
+                {/* Dots pattern on right side */}
+                <circle cx="155" cy="115" r="3" fill="#fff" opacity="0.4" />
+                <circle cx="168" cy="115" r="3" fill="#fff" opacity="0.4" />
+                <circle cx="181" cy="115" r="3" fill="#fff" opacity="0.4" />
+                <circle cx="155" cy="128" r="3" fill="#fff" opacity="0.3" />
+                <circle cx="168" cy="128" r="3" fill="#fff" opacity="0.3" />
+                <circle cx="181" cy="128" r="3" fill="#fff" opacity="0.3" />
+              </g>
+
+              {/* Bow on top of card */}
+              {/* Left loop */}
+              <path d="M110 50 C90 20, 60 15, 55 35 C52 48, 75 52, 110 50 Z" fill="url(#bowLoop)" />
+              {/* Right loop */}
+              <path d="M110 50 C130 20, 160 15, 165 35 C168 48, 145 52, 110 50 Z" fill="url(#bowLoop2)" />
+              {/* Ribbon tails */}
+              <path d="M105 50 L92 90 L100 88 L108 55 Z" fill="#ff2d78" opacity="0.85" />
+              <path d="M115 50 L128 90 L120 88 L112 55 Z" fill="#ff6fae" opacity="0.85" />
+              {/* Bow knot center */}
+              <ellipse cx="110" cy="50" rx="10" ry="8" fill="#ff2d78" />
+              <ellipse cx="110" cy="48" rx="7" ry="5" fill="#ff6fae" opacity="0.6" />
+              {/* Highlight on bow */}
+              <ellipse cx="100" cy="38" rx="8" ry="4" fill="#fff" opacity="0.3" transform="rotate(-20 100 38)" />
+              <ellipse cx="120" cy="38" rx="8" ry="4" fill="#fff" opacity="0.3" transform="rotate(20 120 38)" />
+            </svg>
+          </div>
           <h1 className="font-display text-4xl text-ink mb-3">Gift Cards</h1>
           <p className="text-ink-soft text-lg">
             Give the gift of slime! Perfect for birthdays, holidays, or just because.
