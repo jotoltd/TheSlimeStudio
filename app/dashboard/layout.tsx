@@ -22,6 +22,7 @@ const navSections = [
     label: "Bookings",
     items: [
       { href: "/dashboard/bookings", label: "Bookings", Icon: CalendarIcon },
+      { href: "/dashboard/events", label: "Special Events", Icon: CalendarIcon },
       { href: "/dashboard/opening-hours", label: "Opening Hours", Icon: ClockIcon },
     ],
   },
