@@ -143,15 +143,7 @@ export default function GiftCardPage() {
                 <rect x="20" y="45" width="180" height="100" rx="12" fill="none" stroke="#fff" strokeWidth="2" opacity="0.5" />
 
                 {/* Slime logo on card */}
-                <g transform="translate(40, 62) scale(0.45)">
-                  <path d="M32 12 C20 12 14 22 14 32 C14 42 20 52 32 52 C44 52 50 42 50 32 C50 22 44 12 32 12 Z M32 18 C36 18 39 21 39 25 C39 29 36 32 32 32 C28 32 25 29 25 25 C25 21 28 18 32 18 Z" fill="#fff" opacity="0.85" />
-                  <circle cx="26" cy="28" r="3" fill="#64d8ec" opacity="0.6" />
-                  <circle cx="38" cy="28" r="2" fill="#64d8ec" opacity="0.4" />
-                </g>
-
-                {/* "THE SLIME STUDIO" text on card */}
-                <text x="82" y="82" fontFamily="Avenir, Poppins, sans-serif" fontSize="11" fontWeight="700" fill="#211B3D" opacity="0.7">THE SLIME</text>
-                <text x="82" y="95" fontFamily="Avenir, Poppins, sans-serif" fontSize="11" fontWeight="700" fill="#211B3D" opacity="0.7">STUDIO</text>
+                <image href="/images/header_logo.png" x="35" y="55" width="90" height="28" opacity="0.9" />
 
                 {/* Gift card chip */}
                 <rect x="40" y="108" width="30" height="22" rx="4" fill="#211B3D" opacity="0.12" />
