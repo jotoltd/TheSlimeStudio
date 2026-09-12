@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import PageHeader from "@/components/PageHeader";
 import { useToast } from "@/components/Toast";
+import { supabase } from "@/lib/supabase";
 
 type EventInstance = {
   id: string;
@@ -58,6 +59,7 @@ export default function EventsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<SpecialEvent | null>(null);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const { toast } = useToast();
 
@@ -476,14 +478,42 @@ export default function EventsPage() {
             )}
 
             <div>
-              <label className="block text-sm font-medium mb-1.5">Image URL (optional)</label>
-              <input
-                type="text"
-                value={form.image_url}
-                onChange={(e) => setForm({ ...form, image_url: e.target.value })}
-                placeholder="/images/event.jpg"
-                className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
-              />
+              <label className="block text-sm font-medium mb-1.5">Event Image (optional)</label>
+              {form.image_url ? (
+                <div className="relative w-full h-32 rounded-xl overflow-hidden border-2 border-ink/15">
+                  <img src={form.image_url} alt="Event" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, image_url: "" })}
+                    className="absolute top-2 right-2 w-7 h-7 rounded-full bg-ink/60 text-white grid place-items-center text-sm hover:bg-ink/80"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <input
+                  type="file"
+                  accept="image/*"
+                  disabled={uploading}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setUploading(true);
+                    const ext = file.name.split(".").pop();
+                    const fileName = `events/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+                    const { error } = await supabase.storage.from("event-images").upload(fileName, file);
+                    if (!error) {
+                      const { data: urlData } = supabase.storage.from("event-images").getPublicUrl(fileName);
+                      setForm({ ...form, image_url: urlData.publicUrl });
+                    } else {
+                      toast(`Upload failed: ${error.message}`, "error");
+                    }
+                    setUploading(false);
+                  }}
+                  className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
+                />
+              )}
+              {uploading && <p className="text-[0.8rem] text-ink-soft mt-1">Uploading...</p>}
             </div>
             <div className="flex items-center gap-3 pt-6">
               <button
