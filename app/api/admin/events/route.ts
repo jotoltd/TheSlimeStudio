@@ -83,6 +83,31 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const { action } = body;
 
+  // Generate a URL-friendly slug from a title
+  function generateSlug(title: string): string {
+    return title
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
+  }
+
+  // Ensure slug is unique
+  async function uniqueSlug(base: string, excludeId?: string): Promise<string> {
+    let slug = base || "event";
+    let suffix = 1;
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      let query = supabaseAdmin.from("special_events").select("id").eq("slug", slug);
+      if (excludeId) query = query.neq("id", excludeId);
+      const { data } = await query.maybeSingle();
+      if (!data) return slug;
+      slug = `${base}-${suffix++}`;
+    }
+  }
+
   if (action === "create") {
     const { event, instances } = body as {
       event: {
@@ -96,14 +121,18 @@ export async function POST(req: NextRequest) {
         duration_minutes: number;
         image_url?: string;
         is_active: boolean;
+        slug?: string;
       };
       instances: { date: string; start_time: string; capacity?: number }[];
     };
+
+    const slug = await uniqueSlug(event.slug?.trim() || generateSlug(event.title));
 
     const { data: newEvent, error: createError } = await supabaseAdmin
       .from("special_events")
       .insert({
         ...event,
+        slug,
         updated_at: new Date().toISOString(),
       })
       .select()
@@ -134,9 +163,22 @@ export async function POST(req: NextRequest) {
       newInstances?: { date: string; start_time: string; capacity?: number }[];
     };
 
+    // If title changed and no explicit slug provided, regenerate slug
+    let updateData = { ...event };
+    if (event.title && !event.slug) {
+      const newSlug = await uniqueSlug(generateSlug(event.title), id);
+      updateData.slug = newSlug;
+    }
+    if (event.slug) {
+      updateData.slug = await uniqueSlug(
+        event.slug.trim() || generateSlug(event.title || "event"),
+        id
+      );
+    }
+
     const { error: updateError } = await supabaseAdmin
       .from("special_events")
-      .update({ ...event, updated_at: new Date().toISOString() })
+      .update({ ...updateData, updated_at: new Date().toISOString() })
       .eq("id", id);
 
     if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });

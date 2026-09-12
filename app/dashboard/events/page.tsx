@@ -26,6 +26,7 @@ type SpecialEvent = {
   capacity: number;
   duration_minutes: number;
   image_url: string | null;
+  slug: string | null;
   is_active: boolean;
   created_at: string;
   instances: EventInstance[];
@@ -74,6 +75,7 @@ export default function EventsPage() {
     capacity: "10",
     duration_minutes: "60",
     image_url: "",
+    slug: "",
     is_active: true,
   });
 
@@ -112,6 +114,7 @@ export default function EventsPage() {
       capacity: "10",
       duration_minutes: "60",
       image_url: "",
+      slug: "",
       is_active: true,
     });
     setEditing(null);
@@ -138,6 +141,7 @@ export default function EventsPage() {
       capacity: String(e.capacity),
       duration_minutes: String(e.duration_minutes),
       image_url: e.image_url || "",
+      slug: e.slug || "",
       is_active: e.is_active,
     });
     setShowForm(true);
@@ -161,6 +165,7 @@ export default function EventsPage() {
       capacity: parseInt(form.capacity) || 10,
       duration_minutes: parseInt(form.duration_minutes) || 60,
       image_url: form.image_url.trim() || null,
+      slug: form.slug.trim() || undefined,
       is_active: form.is_active,
     };
 
@@ -478,6 +483,20 @@ export default function EventsPage() {
             )}
 
             <div>
+              <label className="block text-sm font-medium mb-1.5">URL Slug (optional)</label>
+              <input
+                type="text"
+                value={form.slug}
+                onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-") })}
+                placeholder="sip-and-slime"
+                className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
+              />
+              <p className="text-[0.75rem] text-ink-soft mt-1">
+                Auto-generated from title if left blank. URL: /events/{form.slug || "auto-generated"}
+              </p>
+            </div>
+
+            <div>
               <label className="block text-sm font-medium mb-1.5">Event Image (optional)</label>
               {form.image_url ? (
                 <div className="relative w-full h-32 rounded-xl overflow-hidden border-2 border-ink/15">
@@ -620,7 +639,7 @@ export default function EventsPage() {
                         + Add Sessions
                       </button>
                     )}
-                    <a href={`/events/${e.id}`} target="_blank" className="text-[0.8rem] text-sky-blue-light hover:underline">View</a>
+                    <a href={`/events/${e.slug || e.id}`} target="_blank" className="text-[0.8rem] text-sky-blue-light hover:underline">View</a>
                     <button onClick={() => startEdit(e)} className="text-[0.8rem] text-sky-blue-light hover:underline">Edit</button>
                     <button onClick={() => deleteEvent(e)} className="text-[0.8rem] text-red-500 hover:underline">Delete</button>
                   </div>

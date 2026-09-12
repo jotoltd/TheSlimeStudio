@@ -1,16 +1,30 @@
-import { NextRequest } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import EventDetailClient from "./EventDetailClient";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
+// Look up an event by slug first, then fall back to ID
+async function getEvent(slugOrId: string) {
+  // Try slug first
+  const { data: bySlug } = await supabaseAdmin
+    .from("special_events")
+    .select("*")
+    .eq("slug", slugOrId)
+    .single();
+  if (bySlug) return bySlug;
+
+  // Fall back to ID
+  const { data: byId } = await supabaseAdmin
+    .from("special_events")
+    .select("*")
+    .eq("id", slugOrId)
+    .single();
+  return byId;
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { data: event } = await supabaseAdmin
-    .from("special_events")
-    .select("title, description, image_url")
-    .eq("id", id)
-    .single();
+  const event = await getEvent(id);
 
   if (!event) {
     return { title: "Event not found — The Slime Studio" };
@@ -29,11 +43,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function EventPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { data: event } = await supabaseAdmin
-    .from("special_events")
-    .select("*")
-    .eq("id", id)
-    .single();
+  const event = await getEvent(id);
 
   if (!event) {
     return (
@@ -56,7 +66,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
   const { data: instances } = await supabaseAdmin
     .from("special_event_instances")
     .select("*")
-    .eq("event_id", id)
+    .eq("event_id", event.id)
     .gte("date", today)
     .eq("status", "open")
     .order("date", { ascending: true });

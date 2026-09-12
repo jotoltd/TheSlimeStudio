@@ -27,6 +27,7 @@ type SpecialEvent = {
   capacity: number;
   duration_minutes: number;
   image_url: string | null;
+  slug: string | null;
   is_active: boolean;
   instances: EventInstance[];
 };
@@ -116,8 +117,9 @@ export default function EventsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {filtered.map((event) => {
                 const badge = CATEGORY_BADGE[event.category] || CATEGORY_BADGE.special;
+                const eventHref = event.slug ? `/events/${event.slug}` : `/events/${event.id}`;
                 return (
-                  <Link key={event.id} href={`/events/${event.id}`} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
+                  <Link key={event.id} href={eventHref} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
                     {event.image_url && (
                       <div className="h-40 overflow-hidden">
                         <img src={event.image_url} alt={event.title} className="w-full h-full object-cover" />
