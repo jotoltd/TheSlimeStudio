@@ -40,9 +40,17 @@ export async function POST(req: NextRequest) {
       case "checkout.session.completed": {
         const session = event.data.object as {
           id: string;
-          metadata?: { bookingId?: string; subscriberId?: string; type?: string; order_number?: string; gift_card_code?: string };
+          metadata?: { bookingId?: string; subscriberId?: string; type?: string; order_number?: string; gift_card_code?: string; booking_type?: string; event_booking_id?: string };
           payment_status: string;
         };
+
+        // Special event booking
+        if (session.metadata?.booking_type === "special_event" && session.metadata?.event_booking_id) {
+          await supabaseAdmin
+            .from("special_event_bookings")
+            .update({ payment_status: "paid" })
+            .eq("id", session.metadata.event_booking_id);
+        }
 
         if (session.metadata?.bookingId && session.metadata?.type !== "subscription") {
           await supabaseAdmin
@@ -132,8 +140,16 @@ export async function POST(req: NextRequest) {
 
       case "checkout.session.expired": {
         const session = event.data.object as {
-          metadata?: { bookingId?: string; subscriberId?: string; type?: string; order_number?: string };
+          metadata?: { bookingId?: string; subscriberId?: string; type?: string; order_number?: string; booking_type?: string; event_booking_id?: string };
         };
+
+        // Special event booking expired
+        if (session.metadata?.booking_type === "special_event" && session.metadata?.event_booking_id) {
+          await supabaseAdmin
+            .from("special_event_bookings")
+            .update({ payment_status: "cancelled" })
+            .eq("id", session.metadata.event_booking_id);
+        }
 
         if (session.metadata?.bookingId && session.metadata?.type !== "subscription") {
           await supabaseAdmin

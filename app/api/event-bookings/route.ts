@@ -119,7 +119,7 @@ async function createStripeCheckout(booking: any, event: any, instance: any, tot
       "line_items[0][price_data][product_data][name]": `${event.title} — ${instance.date} ${instance.start_time}`,
       success_url: `${origin}/events?booked=1`,
       cancel_url: `${origin}/events?cancelled=1`,
-      "metadata[booking_id]": booking.id,
+      "metadata[event_booking_id]": booking.id,
       "metadata[booking_type]": "special_event",
       "metadata[instance_id]": instance.id,
       "metadata[event_id]": event.id,

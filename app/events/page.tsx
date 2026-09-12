@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
@@ -46,6 +47,9 @@ const CATEGORY_BADGE: Record<string, { label: string; color: string }> = {
 };
 
 export default function EventsPage() {
+  const searchParams = useSearchParams();
+  const booked = searchParams.get("booked") === "1";
+  const cancelled = searchParams.get("cancelled") === "1";
   const [events, setEvents] = useState<SpecialEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
@@ -140,6 +144,17 @@ export default function EventsPage() {
               Adult-only evenings, after school clubs, workshops and more.
             </p>
           </div>
+
+          {booked && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm text-center">
+              Booking confirmed! Check your email for details.
+            </div>
+          )}
+          {cancelled && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm text-center">
+              Payment was cancelled. Please try again.
+            </div>
+          )}
 
           {/* Category filter */}
           <div className="flex flex-wrap justify-center gap-2 mb-8">

@@ -56,6 +56,33 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ received: true, alreadyPaid: true });
     }
 
+    // Check if this is a special event booking (reference starts with SLM-EVENT-)
+    if (checkoutRef.startsWith("SLM-EVENT-")) {
+      const { data: eventBooking } = await supabaseAdmin
+        .from("special_event_bookings")
+        .select("*")
+        .eq("payment_reference", checkoutRef)
+        .single();
+
+      if (eventBooking && eventBooking.payment_status === "paid") {
+        return NextResponse.json({ received: true, alreadyPaid: true });
+      }
+
+      // Verify with SumUp that the checkout is actually paid
+      const eventVerification = await verifySumUpPayment(checkoutRef);
+      if (!eventVerification.paid) {
+        return NextResponse.json({ received: true, notPaid: true });
+      }
+
+      if (eventBooking) {
+        await supabaseAdmin
+          .from("special_event_bookings")
+          .update({ payment_status: "paid" })
+          .eq("id", eventBooking.id);
+        return NextResponse.json({ received: true, recovered: true, eventBookingId: eventBooking.id });
+      }
+    }
+
     // Verify with SumUp that the checkout is actually paid (don't trust the webhook
     // alone). Falls back to settled transaction history if the checkout object has
     // already been purged, which happens for retried/late webhook deliveries.
