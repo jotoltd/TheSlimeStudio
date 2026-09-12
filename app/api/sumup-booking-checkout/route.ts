@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
     .select("slot_capacity, max_daily_bookings")
     .eq("id", 1)
     .single();
-  const slotCap = settings?.slot_capacity || 5;
+  const slotCap = settings?.slot_capacity || 10;
   const maxDaily = settings?.max_daily_bookings || 5;
 
   const { data: slotBookings } = await supabaseAdmin

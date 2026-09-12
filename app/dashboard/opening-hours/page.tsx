@@ -29,6 +29,15 @@ export default function OpeningHoursPage() {
   const [savingOv, setSavingOv] = useState(false);
   const [editingOverride, setEditingOverride] = useState<string | null>(null);
 
+  // Bulk override form
+  const [bulkStart, setBulkStart] = useState(todayISO());
+  const [bulkEnd, setBulkEnd] = useState(todayISO());
+  const [bulkIsOpen, setBulkIsOpen] = useState(true);
+  const [bulkSlots, setBulkSlots] = useState<string>(DEFAULT_SLOTS.join("\n"));
+  const [bulkLabel, setBulkLabel] = useState("");
+  const [bulkDays, setBulkDays] = useState<number[]>([1, 2, 3, 4, 5, 6]); // Mon-Sat by default
+  const [savingBulk, setSavingBulk] = useState(false);
+
   useEffect(() => { load(); }, []);
 
   async function load() {
@@ -158,6 +167,74 @@ export default function OpeningHoursPage() {
     load();
   }
 
+  function toggleBulkDay(dow: number) {
+    setBulkDays((prev) =>
+      prev.includes(dow) ? prev.filter((d) => d !== dow) : [...prev, dow]
+    );
+  }
+
+  async function saveBulkOverride() {
+    if (!bulkStart || !bulkEnd) { toast("Please select start and end dates", "error"); return; }
+    if (new Date(bulkEnd) < new Date(bulkStart)) { toast("End date must be after start date", "error"); return; }
+    if (bulkIsOpen && bulkDays.length === 0) { toast("Select at least one day of the week", "error"); return; }
+    setSavingBulk(true);
+    const slots = bulkIsOpen ? bulkSlots.split("\n").map((s) => s.trim()).filter(Boolean) : [];
+    try {
+      const res = await fetch("/api/opening-hours", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "bulk_override",
+          start_date: bulkStart,
+          end_date: bulkEnd,
+          is_open: bulkIsOpen,
+          time_slots: slots,
+          label: bulkLabel || null,
+          days_of_week: bulkIsOpen ? bulkDays : [0, 1, 2, 3, 4, 5, 6],
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast(data.error || "Failed to save", "error"); }
+      else {
+        toast(`Saved ${data.count || ""} date overrides!`);
+        setBulkLabel("");
+        load();
+      }
+    } catch {
+      toast("Network error", "error");
+    }
+    setSavingBulk(false);
+  }
+
+  function applyPreset(preset: "term" | "holiday") {
+    const slots = [...DEFAULT_SLOTS];
+    if (preset === "term") {
+      // Term time: Sat & Sun open, Mon-Fri closed
+      setWeekly([
+        { id: "temp-0", day_of_week: 0, is_open: true, time_slots: slots },  // Sunday
+        { id: "temp-1", day_of_week: 1, is_open: false, time_slots: [] },
+        { id: "temp-2", day_of_week: 2, is_open: false, time_slots: [] },
+        { id: "temp-3", day_of_week: 3, is_open: false, time_slots: [] },
+        { id: "temp-4", day_of_week: 4, is_open: false, time_slots: [] },
+        { id: "temp-5", day_of_week: 5, is_open: false, time_slots: [] },
+        { id: "temp-6", day_of_week: 6, is_open: true, time_slots: slots },  // Saturday
+      ]);
+      toast("Term time preset loaded — click Save Schedule to apply");
+    } else {
+      // School holidays: Mon-Sat open, Sun closed
+      setWeekly([
+        { id: "temp-0", day_of_week: 0, is_open: false, time_slots: [] },   // Sunday
+        { id: "temp-1", day_of_week: 1, is_open: true, time_slots: slots },
+        { id: "temp-2", day_of_week: 2, is_open: true, time_slots: slots },
+        { id: "temp-3", day_of_week: 3, is_open: true, time_slots: slots },
+        { id: "temp-4", day_of_week: 4, is_open: true, time_slots: slots },
+        { id: "temp-5", day_of_week: 5, is_open: true, time_slots: slots },
+        { id: "temp-6", day_of_week: 6, is_open: true, time_slots: slots },
+      ]);
+      toast("School holiday preset loaded — click Save Schedule to apply");
+    }
+  }
+
   // Sort overrides by date
   const sortedOverrides = [...overrides].sort((a, b) => a.date.localeCompare(b.date));
   const upcomingOverrides = sortedOverrides.filter((o) => o.date >= todayISO());
@@ -180,6 +257,24 @@ export default function OpeningHoursPage() {
               </button>
             </div>
             <p className="text-[0.85rem] text-ink-soft mb-5">Set default opening hours for each day of the week. Use date overrides below for holidays and special events.</p>
+
+            <div className="flex items-center gap-3 mb-5">
+              <span className="text-[0.85rem] font-medium text-ink-soft">Quick presets:</span>
+              <button
+                type="button"
+                onClick={() => applyPreset("term")}
+                className="px-4 py-2 rounded-full bg-sky-blue-light/20 text-ink text-[0.8rem] font-medium hover:bg-sky-blue-light/40 transition-colors"
+              >
+                Term Time (Sat & Sun)
+              </button>
+              <button
+                type="button"
+                onClick={() => applyPreset("holiday")}
+                className="px-4 py-2 rounded-full bg-bright-lavender/15 text-ink text-[0.8rem] font-medium hover:bg-bright-lavender/30 transition-colors"
+              >
+                School Holidays (Mon–Sat)
+              </button>
+            </div>
 
             <div className="space-y-3">
               {[1, 2, 3, 4, 5, 6, 0].map((dow) => {
@@ -286,6 +381,102 @@ export default function OpeningHoursPage() {
                 )}
               </div>
             </div>
+
+            {/* Bulk Date Range Override */}
+            <details className="rounded-xl border-2 border-ink/[0.08] mb-5">
+              <summary className="cursor-pointer px-4 py-3 font-display text-[0.9rem] hover:bg-ink/[0.02]">
+                Bulk Date Range Override <span className="text-[0.8rem] text-ink-soft font-normal">— set a whole holiday period at once</span>
+              </summary>
+              <div className="px-4 pb-4 pt-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5">Start Date</label>
+                    <input
+                      type="date"
+                      value={bulkStart}
+                      min={todayISO()}
+                      onChange={(e) => setBulkStart(e.target.value)}
+                      className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5">End Date</label>
+                    <input
+                      type="date"
+                      value={bulkEnd}
+                      min={bulkStart || todayISO()}
+                      onChange={(e) => setBulkEnd(e.target.value)}
+                      className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
+                    />
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-1.5">Label (optional)</label>
+                  <input
+                    type="text"
+                    value={bulkLabel}
+                    onChange={(e) => setBulkLabel(e.target.value)}
+                    placeholder="e.g. Summer holidays, Half term"
+                    className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
+                  />
+                </div>
+
+                <div className="flex items-center gap-3 mb-4">
+                  <button
+                    type="button"
+                    onClick={() => setBulkIsOpen(!bulkIsOpen)}
+                    className={`relative w-12 h-7 rounded-full transition-colors ${bulkIsOpen ? "bg-green-400" : "bg-ink/15"}`}
+                  >
+                    <span className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${bulkIsOpen ? "translate-x-5" : ""}`} />
+                  </button>
+                  <span className="text-sm font-medium">{bulkIsOpen ? "Open on these dates" : "Closed on these dates"}</span>
+                </div>
+
+                {bulkIsOpen && (
+                  <>
+                    <div className="mb-4">
+                      <label className="block text-[0.85rem] font-medium mb-2">Days of the week</label>
+                      <div className="flex flex-wrap gap-2">
+                        {[1, 2, 3, 4, 5, 6, 0].map((dow) => (
+                          <button
+                            key={dow}
+                            type="button"
+                            onClick={() => toggleBulkDay(dow)}
+                            className={`px-3 py-1.5 rounded-full text-[0.8rem] font-medium transition-colors ${
+                              bulkDays.includes(dow)
+                                ? "bg-sky-blue-light text-ink"
+                                : "bg-ink/5 text-ink-soft hover:bg-ink/10"
+                            }`}
+                          >
+                            {DAY_SHORT[dow]}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="mb-4">
+                      <label className="block text-[0.8rem] text-ink-soft mb-1.5">Time slots (one per line)</label>
+                      <textarea
+                        value={bulkSlots}
+                        onChange={(e) => setBulkSlots(e.target.value)}
+                        rows={4}
+                        placeholder={"10:00\n11:00\n12:00\n13:00\n14:00\n15:00"}
+                        className="w-full px-3 py-2 border-2 border-ink/10 rounded-lg text-sm focus:outline-none focus:border-sky-blue-light resize-none font-mono"
+                      />
+                    </div>
+                  </>
+                )}
+
+                <button
+                  onClick={saveBulkOverride}
+                  disabled={savingBulk}
+                  className="px-5 py-2.5 rounded-full bg-bright-lavender text-white text-[0.85rem] font-medium disabled:opacity-60 hover:opacity-90 transition-all"
+                >
+                  {savingBulk ? "Saving..." : "Apply to Date Range"}
+                </button>
+              </div>
+            </details>
 
             {/* Existing overrides */}
             {upcomingOverrides.length > 0 && (

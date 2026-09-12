@@ -8,7 +8,7 @@ export default function GiftCardSuccessPage() {
   const sessionId = searchParams.get("session_id");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [giftCard, setGiftCard] = useState<{ code: string; amount: number } | null>(null);
+  const [giftCard, setGiftCard] = useState<{ code: string; amount: number; expiryDate: string | null } | null>(null);
 
   useEffect(() => {
     async function loadGiftCard() {
@@ -76,11 +76,16 @@ export default function GiftCardSuccessPage() {
             <div className="font-display text-3xl text-ink mb-4 tracking-wider">{giftCard.code}</div>
             <div className="text-sm text-ink-soft mb-1">Balance</div>
             <div className="font-display text-2xl text-ink">£{giftCard.amount.toFixed(2)}</div>
+            {giftCard.expiryDate && (
+              <div className="text-sm text-ink-soft mt-4 pt-4 border-t border-ink/10">
+                Valid until {new Date(giftCard.expiryDate).toLocaleDateString("en-GB")}
+              </div>
+            )}
           </div>
         )}
 
         <div className="space-y-3 mb-6 text-left text-sm text-ink-soft">
-          <p>• Gift cards are valid for 1 year from purchase</p>
+          <p>• Gift cards are valid for 3 months from the date of purchase</p>
           <p>• Use at checkout for bookings or shop orders</p>
           <p>• Share the code with the recipient</p>
         </div>

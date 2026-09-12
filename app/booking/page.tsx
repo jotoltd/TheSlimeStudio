@@ -860,7 +860,7 @@ function BookingPageInner() {
                       value={giftCardCode}
                       onChange={(e) => setGiftCardCode(e.target.value.toUpperCase())}
                       onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), validateGiftCard())}
-                      placeholder="Gift card code (optional)"
+                      placeholder="SS-XXXXX"
                       className="flex-1 px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light uppercase"
                     />
                     <button
@@ -977,7 +977,7 @@ function BookingPageInner() {
                 </div>
                 <div className="flex gap-3">
                   <span className="text-[1.1rem] flex-shrink-0">👶</span>
-                  <p>Suitable for all ages — toddlers to grandparents. Children under 5 may need a grown-up to help them.</p>
+                  <p>Suitable for all ages — kids to grandparents. Children under 5 may need a grown-up to help them.</p>
                 </div>
                 <div className="flex gap-3">
                   <span className="text-[1.1rem] flex-shrink-0">📍</span>

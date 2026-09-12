@@ -83,6 +83,53 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true });
   }
 
+  if (action === "bulk_override") {
+    const { start_date, end_date, is_open, time_slots, label, days_of_week } = body as {
+      start_date: string;
+      end_date: string;
+      is_open: boolean;
+      time_slots: string[];
+      label?: string;
+      days_of_week: number[]; // 0=Sun, 1=Mon, ..., 6=Sat
+    };
+
+    if (!start_date || !end_date) {
+      return NextResponse.json({ error: "Start and end dates are required" }, { status: 400 });
+    }
+
+    const start = new Date(start_date + "T00:00:00");
+    const end = new Date(end_date + "T00:00:00");
+    if (end < start) {
+      return NextResponse.json({ error: "End date must be after start date" }, { status: 400 });
+    }
+
+    const rows: { date: string; is_open: boolean; time_slots: string[]; label: string | null }[] = [];
+    const cursor = new Date(start);
+    while (cursor <= end) {
+      const dow = cursor.getDay();
+      if (days_of_week.includes(dow)) {
+        rows.push({
+          date: cursor.toISOString().split("T")[0],
+          is_open,
+          time_slots: is_open ? time_slots : [],
+          label: label || null,
+        });
+      }
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    if (rows.length === 0) {
+      return NextResponse.json({ error: "No matching dates in the selected range" }, { status: 400 });
+    }
+
+    const { error } = await supabaseAdmin
+      .from("date_overrides")
+      .upsert(rows, { onConflict: "date" });
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true, count: rows.length });
+  }
+
   if (action === "remove_override") {
     const { date } = body as { date: string };
     const { error } = await supabaseAdmin.from("date_overrides").delete().eq("date", date);

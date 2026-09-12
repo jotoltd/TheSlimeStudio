@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripeAsync } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase";
-import { randomBytes } from "crypto";
 
 export const runtime = "nodejs";
 
@@ -41,12 +40,28 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Generate unique gift card code
-  const code = `GIFT-${randomBytes(4).toString("hex").toUpperCase()}-${randomBytes(4).toString("hex").toUpperCase()}`;
+  // Generate unique gift card code in SS-XXXXX format
+  let code = "";
+  let exists = true;
+  let attempts = 0;
+  while (exists && attempts < 10) {
+    const randomPart = Math.random().toString(36).substring(2, 7).toUpperCase();
+    code = `SS-${randomPart}`;
+    const { data: existing } = await supabaseAdmin
+      .from("gift_cards")
+      .select("id")
+      .eq("code", code)
+      .single();
+    exists = !!existing;
+    attempts++;
+  }
+  if (exists || !code) {
+    return NextResponse.json({ error: "Failed to generate unique gift card code" }, { status: 500 });
+  }
 
-  // Calculate expiry date (1 year from now)
+  // Calculate expiry date (3 months from purchase)
   const expiryDate = new Date();
-  expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+  expiryDate.setMonth(expiryDate.getMonth() + 3);
 
   // Create Stripe checkout session
   if (paymentMethod === "stripe") {
@@ -123,9 +138,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "SumUp is not configured" }, { status: 500 });
     }
 
-    const checkoutRef = `SLM-GIFT-${Date.now().toString(36).toUpperCase()}${randomBytes(3)
-      .toString("hex")
-      .toUpperCase()}`;
+    const checkoutRef = `SLM-GIFT-${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
     try {
       const res = await fetch("https://api.sumup.com/v0.1/checkouts", {

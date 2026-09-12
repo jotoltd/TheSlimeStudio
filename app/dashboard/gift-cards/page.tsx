@@ -19,6 +19,14 @@ type GiftCard = {
   redeemed_at: string | null;
   payment_reference: string | null;
   customer_id: string | null;
+  customer_name?: string | null;
+  customer_email?: string | null;
+};
+
+type Customer = {
+  id: string;
+  name: string;
+  email: string;
 };
 
 type Redemption = {
@@ -43,6 +51,11 @@ export default function GiftCardsPage() {
   const [selected, setSelected] = useState<GiftCard | null>(null);
   const [redemptions, setRedemptions] = useState<Redemption[]>([]);
   const [loadingRedemptions, setLoadingRedemptions] = useState(false);
+
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [customerResults, setCustomerResults] = useState<Customer[]>([]);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [searching, setSearching] = useState(false);
 
   const [form, setForm] = useState({
     code: "",
@@ -94,6 +107,9 @@ export default function GiftCardsPage() {
     setEditing(null);
     setShowForm(false);
     setMsg(null);
+    setCustomerSearch("");
+    setCustomerResults([]);
+    setSelectedCustomer(null);
   }
 
   function startEdit(c: GiftCard) {
@@ -111,7 +127,47 @@ export default function GiftCardsPage() {
       expiry_date: c.expiry_date ? c.expiry_date.split("T")[0] : "",
       customer_id: c.customer_id || "",
     });
+    if (c.customer_id) {
+      setSelectedCustomer({
+        id: c.customer_id,
+        name: c.customer_name || "",
+        email: c.customer_email || "",
+      });
+      setCustomerSearch(c.customer_name ? `${c.customer_name} (${c.customer_email})` : c.customer_email || "");
+    } else {
+      setSelectedCustomer(null);
+      setCustomerSearch("");
+    }
     setShowForm(true);
+  }
+
+  async function searchCustomers(query: string) {
+    setCustomerSearch(query);
+    if (query.trim().length < 2) {
+      setCustomerResults([]);
+      return;
+    }
+    setSearching(true);
+    try {
+      const res = await fetch(`/api/admin/search-customers?q=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      if (data.customers) setCustomerResults(data.customers);
+    } catch {}
+    setSearching(false);
+  }
+
+  function pickCustomer(c: Customer) {
+    setSelectedCustomer(c);
+    setCustomerSearch(`${c.name} (${c.email})`);
+    setCustomerResults([]);
+    setForm({ ...form, customer_id: c.id });
+  }
+
+  function clearCustomer() {
+    setSelectedCustomer(null);
+    setCustomerSearch("");
+    setCustomerResults([]);
+    setForm({ ...form, customer_id: "" });
   }
 
   async function save() {
@@ -134,7 +190,7 @@ export default function GiftCardsPage() {
       message: form.message.trim() || null,
       status: form.status,
       expiry_date: form.expiry_date ? new Date(form.expiry_date + "T23:59:59").toISOString() : null,
-      customer_id: form.customer_id.trim() || null,
+      customer_id: selectedCustomer ? selectedCustomer.id : null,
     };
 
     try {
@@ -247,7 +303,7 @@ export default function GiftCardsPage() {
                 type="text"
                 value={form.code}
                 onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
-                placeholder="GIFT-XXXX-XXXX"
+                placeholder="SS-XXXXX"
                 className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light uppercase"
                 disabled={!!editing}
               />
@@ -347,14 +403,46 @@ export default function GiftCardsPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1.5">Customer ID (optional - link to account)</label>
-              <input
-                type="text"
-                value={form.customer_id}
-                onChange={(e) => setForm({ ...form, customer_id: e.target.value })}
-                placeholder="UUID from customers table"
-                className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
-              />
+              <label className="block text-sm font-medium mb-1.5">Customer (optional - link to account)</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={customerSearch}
+                  onChange={(e) => searchCustomers(e.target.value)}
+                  placeholder="Search by name or email..."
+                  className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
+                />
+                {searching && (
+                  <span className="absolute right-3 top-3 text-[0.75rem] text-ink-soft">searching...</span>
+                )}
+                {customerResults.length > 0 && (
+                  <div className="absolute z-10 mt-1 w-full bg-white border-2 border-ink/15 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                    {customerResults.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => pickCustomer(c)}
+                        className="w-full text-left px-4 py-2.5 hover:bg-ink/[0.03] border-b border-ink/5 last:border-0"
+                      >
+                        <div className="text-sm font-medium">{c.name}</div>
+                        <div className="text-[0.75rem] text-ink-soft">{c.email}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {selectedCustomer && (
+                <div className="mt-2 flex items-center gap-2 text-[0.8rem] text-green-600">
+                  <span>Selected: {selectedCustomer.name} ({selectedCustomer.email})</span>
+                  <button
+                    type="button"
+                    onClick={clearCustomer}
+                    className="text-red-500 hover:underline text-[0.75rem]"
+                  >
+                    Remove
+                  </button>
+                </div>
+              )}
             </div>
           </div>
           {msg && (

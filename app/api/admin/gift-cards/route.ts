@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabaseAdmin
     .from("gift_cards")
-    .select("*", { count: "exact" })
+    .select("*, customer:customers(id, name, email)", { count: "exact" })
     .order("purchased_at", { ascending: false })
     .range(offset, offset + limit - 1);
 
@@ -29,8 +29,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // Flatten the joined customer object for easier frontend use
+  const giftCards = (data || []).map((card: any) => ({
+    ...card,
+    customer_name: card.customer?.name || null,
+    customer_email: card.customer?.email || null,
+    customer: undefined,
+  }));
+
   return NextResponse.json({
-    giftCards: data || [],
+    giftCards,
     total: count || 0,
     totalPages: Math.ceil((count || 0) / limit),
   });

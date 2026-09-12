@@ -357,7 +357,7 @@ export default function CheckoutPage() {
                         value={giftCardCode}
                         onChange={(e) => setGiftCardCode(e.target.value.toUpperCase())}
                         onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), validateGiftCard())}
-                        placeholder="Gift card code (optional)"
+                        placeholder="SS-XXXXX"
                         className="flex-1 px-3 py-2 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light uppercase"
                       />
                       <button

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
-const PRESET_AMOUNTS = [10, 25, 50, 75, 100];
+const PRESET_AMOUNTS = [10, 15, 25, 50, 75, 100];
 
 export default function GiftCardPage() {
   const router = useRouter();
@@ -129,7 +129,7 @@ export default function GiftCardPage() {
             {/* Amount Selection */}
             <div>
               <label className="block text-sm font-semibold text-ink mb-3">Select Amount</label>
-              <div className="grid grid-cols-5 gap-2 mb-3">
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-3">
                 {PRESET_AMOUNTS.map((value) => (
                   <button
                     key={value}
@@ -164,6 +164,9 @@ export default function GiftCardPage() {
               {amount > 500 && (
                 <p className="text-red-600 text-xs mt-1">Maximum amount is £500</p>
               )}
+              <p className="text-ink-soft text-xs mt-3">
+                Gift cards are valid for 3 months from the date of purchase.
+              </p>
             </div>
 
             <div className="text-center mt-6">

@@ -62,7 +62,7 @@ export default function GiftCardBalancePage() {
                   type="text"
                   value={code}
                   onChange={(e) => setCode(e.target.value.toUpperCase())}
-                  placeholder="GIFT-XXXX-XXXX"
+                  placeholder="SS-XXXXX"
                   className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light uppercase"
                 />
               </div>

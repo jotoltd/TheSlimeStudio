@@ -9,14 +9,16 @@ import { supabase } from "@/lib/supabase";
 import { useContent } from "@/lib/useContent";
 
 const INCLUDED = [
-  { img: "/images/slime_mixing.jpg.jpeg", label: "1 Hour Private Studio Time" },
+  { img: "/images/slime_mixing.jpg.jpeg", label: "90 Minutes Private Studio Time" },
   { img: "/images/slime_studio_pink_slime_pot.jpg.jpeg", label: "Choose Your Slime" },
   { img: "/images/slime_studio_slime_toppings.jpg.jpeg", label: "Pick Your Colour & Scent" },
   { img: "/images/foam_beads.jpg.jpeg", label: "Add Charms & Decorations" },
+  { img: "/images/purple_finished_slime.jpg.jpeg", label: "Slime Bubble-Making Fun" },
+  { img: "/images/purple_finished_slime.jpg.jpeg", label: "Balloons & Birthday Banner" },
   { img: "/images/purple_finished_slime.jpg.jpeg", label: "Take Your Slime Home" },
 ];
 
-const EXAMPLES = [5, 8, 10, 12, 15];
+const EXAMPLES = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 
 export default function PartiesPage() {
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
@@ -116,7 +118,7 @@ export default function PartiesPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-5 mb-6">
             <div className="bg-white rounded-2xl p-7 text-center shadow-sm border-2 border-[#ff6fae]/30">
               <div className="inline-block rounded-full px-4 py-1 mb-3 text-[0.7rem] font-semibold uppercase tracking-wider text-white" style={{ backgroundColor: "#ff2d78" }}>
-                Minimum
+                Party Package
               </div>
               <div className="font-display text-[2.4rem] leading-none mb-2" style={{ color: "#ff2d78" }}>£100</div>
               <div className="text-[0.85rem] text-ink-soft leading-snug">
@@ -138,7 +140,7 @@ export default function PartiesPage() {
 
             <div className="bg-white rounded-2xl p-7 text-center shadow-sm border-2 border-[#8b5fbf]/30">
               <div className="mb-3 text-2xl">🕐</div>
-              <div className="font-display text-[2.4rem] leading-none mb-2" style={{ color: "#8b5fbf" }}>1 Hour</div>
+              <div className="font-display text-[2.4rem] leading-none mb-2" style={{ color: "#8b5fbf" }}>90 Mins</div>
               <div className="text-[0.85rem] text-ink-soft leading-snug">
                 Private<br />
                 <span className="font-semibold text-ink">studio time</span>
@@ -150,7 +152,7 @@ export default function PartiesPage() {
           <div className="bg-white rounded-2xl p-6 md:p-7 shadow-sm mb-5">
             <h3 className="font-display text-[1rem] text-center mb-1 text-ink">What You&apos;ll Pay</h3>
             <p className="text-center text-[0.8rem] text-ink-soft mb-5">
-              £100 covers your first {BASE_CHILDREN} children, then just £12.50 for each extra child.
+              £100 covers up to {BASE_CHILDREN} children, then just £{ADDITIONAL_CHILD_PRICE.toFixed(2)} for each additional child.
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               {EXAMPLES.map((count) => (
@@ -193,7 +195,7 @@ export default function PartiesPage() {
             <span className="text-ink/40">↜</span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 md:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 md:gap-6">
             {INCLUDED.map((item) => (
               <div key={item.label} className="flex flex-col items-center text-center">
                 <div className="w-16 h-16 rounded-full overflow-hidden bg-white grid place-items-center mb-3 shadow-sm">
@@ -202,6 +204,17 @@ export default function PartiesPage() {
                 <p className="text-[0.85rem] text-ink/80 leading-snug">{item.label}</p>
               </div>
             ))}
+          </div>
+
+          {/* Cake & Food info */}
+          <div className="mt-10 bg-white/60 rounded-2xl p-6 md:p-8 text-center max-w-2xl mx-auto">
+            <div className="text-2xl mb-3">🎂</div>
+            <h3 className="font-display text-[1rem] text-ink mb-2">Bring Your Own Cake & Food</h3>
+            <p className="text-[0.9rem] text-ink-soft leading-relaxed">
+              You're welcome to bring your own birthday cake or party food to enjoy during your session.
+              Alternatively, we can suggest local companies who will deliver food to the studio at an extra cost —
+              just ask when enquiring!
+            </p>
           </div>
         </div>
       </section>

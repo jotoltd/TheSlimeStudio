@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
 
     const { data: giftCard } = await supabaseAdmin
       .from("gift_cards")
-      .select("code, balance")
+      .select("code, balance, expiry_date")
       .eq("code", giftCardCode)
       .single();
 
@@ -45,6 +45,7 @@ export async function GET(req: NextRequest) {
       giftCard: {
         code: giftCard.code,
         amount: giftCard.balance,
+        expiryDate: giftCard.expiry_date,
       },
     });
   } catch (err) {
