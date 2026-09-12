@@ -53,13 +53,6 @@ export default function EventsPage() {
   const [events, setEvents] = useState<SpecialEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
-  const [selectedInstance, setSelectedInstance] = useState<{ event: SpecialEvent; instance: EventInstance } | null>(null);
-  const [bookingQty, setBookingQty] = useState(1);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [booking, setBooking] = useState(false);
-  const [bookingMsg, setBookingMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
   useEffect(() => {
     fetch("/api/events")
@@ -72,66 +65,6 @@ export default function EventsPage() {
   }, []);
 
   const filtered = filter === "all" ? events : events.filter((e) => e.category === filter);
-
-  function openBooking(event: SpecialEvent, instance: EventInstance) {
-    setSelectedInstance({ event, instance });
-    setBookingQty(1);
-    setName("");
-    setEmail("");
-    setPhone("");
-    setBookingMsg(null);
-  }
-
-  function closeBooking() {
-    setSelectedInstance(null);
-    setBookingMsg(null);
-  }
-
-  async function submitBooking() {
-    if (!selectedInstance) return;
-    if (!name.trim() || !email.trim()) {
-      setBookingMsg({ type: "err", text: "Please enter your name and email." });
-      return;
-    }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setBookingMsg({ type: "err", text: "Please enter a valid email address." });
-      return;
-    }
-    if (bookingQty < 1) {
-      setBookingMsg({ type: "err", text: "Please select at least 1 spot." });
-      return;
-    }
-
-    setBooking(true);
-    setBookingMsg(null);
-
-    try {
-      const res = await fetch("/api/event-bookings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          instance_id: selectedInstance.instance.id,
-          event_id: selectedInstance.event.id,
-          name: name.trim(),
-          email: email.trim(),
-          phone: phone.trim() || undefined,
-          quantity: bookingQty,
-        }),
-      });
-      const data = await res.json();
-      if (data.error) {
-        setBookingMsg({ type: "err", text: data.error });
-      } else if (data.url) {
-        window.location.href = data.url;
-      } else {
-        setBookingMsg({ type: "ok", text: "Booking confirmed! Check your email for details." });
-      }
-    } catch {
-      setBookingMsg({ type: "err", text: "Network error. Please try again." });
-    }
-    setBooking(false);
-  }
 
   return (
     <>
@@ -184,7 +117,7 @@ export default function EventsPage() {
               {filtered.map((event) => {
                 const badge = CATEGORY_BADGE[event.category] || CATEGORY_BADGE.special;
                 return (
-                  <div key={event.id} className="bg-white rounded-2xl shadow-lg overflow-hidden">
+                  <Link key={event.id} href={`/events/${event.id}`} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
                     {event.image_url && (
                       <div className="h-40 overflow-hidden">
                         <img src={event.image_url} alt={event.title} className="w-full h-full object-cover" />
@@ -215,12 +148,12 @@ export default function EventsPage() {
                         <span>{event.duration_minutes} min</span>
                       </div>
 
-                      {/* Upcoming sessions */}
+                      {/* Upcoming sessions preview */}
                       <div className="space-y-2">
                         <div className="text-[0.75rem] text-ink-soft uppercase tracking-wider font-semibold">
                           Upcoming Sessions
                         </div>
-                        {event.instances.map((inst) => {
+                        {event.instances.slice(0, 3).map((inst) => {
                           const remaining = inst.spots_remaining ?? (inst.capacity - (inst.booked_count || 0));
                           const isFull = remaining <= 0;
                           return (
@@ -241,19 +174,22 @@ export default function EventsPage() {
                                   {isFull ? "Fully booked" : `${remaining} spots left`}
                                 </div>
                               </div>
-                              <button
-                                onClick={() => openBooking(event, inst)}
-                                disabled={isFull}
-                                className="px-4 py-1.5 rounded-full text-sm font-medium bg-sky-blue-light text-ink hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
-                              >
-                                {isFull ? "Full" : "Book"}
-                              </button>
                             </div>
                           );
                         })}
+                        {event.instances.length > 3 && (
+                          <p className="text-[0.8rem] text-sky-blue-light font-medium">
+                            +{event.instances.length - 3} more sessions — click to view all
+                          </p>
+                        )}
+                      </div>
+                      <div className="mt-4 text-center">
+                        <span className="inline-block px-5 py-2 rounded-full bg-sky-blue-light text-ink text-sm font-medium">
+                          View Event & Book →
+                        </span>
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 );
               })}
             </div>
@@ -266,102 +202,6 @@ export default function EventsPage() {
           </div>
         </div>
       </div>
-
-      {/* Booking modal */}
-      {selectedInstance && (
-        <div className="fixed inset-0 z-50 bg-black/40 grid place-items-center p-4" onClick={closeBooking}>
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-display text-lg mb-1">{selectedInstance.event.title}</h3>
-            <p className="text-sm text-ink-soft mb-4">
-              {new Date(selectedInstance.instance.date + "T00:00:00").toLocaleDateString("en-GB", {
-                weekday: "long",
-                day: "numeric",
-                month: "long",
-              })}{" "}
-              at {selectedInstance.instance.start_time}
-            </p>
-
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium mb-1.5">Name *</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Your name"
-                  className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1.5">Email *</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1.5">Phone (optional)</label>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="07123 456789"
-                  className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1.5">Quantity</label>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setBookingQty(Math.max(1, bookingQty - 1))}
-                    className="w-9 h-9 rounded-full bg-ink/5 text-ink grid place-items-center hover:bg-ink/10"
-                  >
-                    −
-                  </button>
-                  <span className="font-display text-lg w-8 text-center">{bookingQty}</span>
-                  <button
-                    onClick={() => setBookingQty(Math.min(selectedInstance.instance.spots_remaining ?? 10, bookingQty + 1))}
-                    className="w-9 h-9 rounded-full bg-ink/5 text-ink grid place-items-center hover:bg-ink/10"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-              <div className="bg-ink/5 rounded-xl p-3 flex justify-between">
-                <span className="text-sm text-ink-soft">Total</span>
-                <span className="font-display font-bold text-ink">
-                  £{(selectedInstance.event.price * bookingQty).toFixed(2)}
-                </span>
-              </div>
-            </div>
-
-            {bookingMsg && (
-              <p className={`text-sm mt-3 ${bookingMsg.type === "ok" ? "text-green-600" : "text-red-600"}`}>
-                {bookingMsg.text}
-              </p>
-            )}
-
-            <div className="flex gap-3 mt-5">
-              <button
-                onClick={submitBooking}
-                disabled={booking}
-                className="btn-primary text-sm flex-1 disabled:opacity-60"
-              >
-                {booking ? "Processing..." : `Pay £${(selectedInstance.event.price * bookingQty).toFixed(2)}`}
-              </button>
-              <button
-                onClick={closeBooking}
-                className="px-5 py-2.5 rounded-full bg-ink/5 text-ink text-sm font-medium hover:bg-ink/10"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <Footer />
     </>

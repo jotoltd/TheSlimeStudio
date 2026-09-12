@@ -620,6 +620,7 @@ export default function EventsPage() {
                         + Add Sessions
                       </button>
                     )}
+                    <a href={`/events/${e.id}`} target="_blank" className="text-[0.8rem] text-sky-blue-light hover:underline">View</a>
                     <button onClick={() => startEdit(e)} className="text-[0.8rem] text-sky-blue-light hover:underline">Edit</button>
                     <button onClick={() => deleteEvent(e)} className="text-[0.8rem] text-red-500 hover:underline">Delete</button>
                   </div>
