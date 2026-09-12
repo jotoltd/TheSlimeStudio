@@ -4,11 +4,12 @@ import EventDetailClient from "./EventDetailClient";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
-export async function generateMetadata({ params }: { params: { id: string } }) {
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const { data: event } = await supabaseAdmin
     .from("special_events")
     .select("title, description, image_url")
-    .eq("id", params.id)
+    .eq("id", id)
     .single();
 
   if (!event) {
@@ -26,11 +27,12 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
   };
 }
 
-export default async function EventPage({ params }: { params: { id: string } }) {
+export default async function EventPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const { data: event } = await supabaseAdmin
     .from("special_events")
     .select("*")
-    .eq("id", params.id)
+    .eq("id", id)
     .single();
 
   if (!event) {
@@ -54,7 +56,7 @@ export default async function EventPage({ params }: { params: { id: string } }) 
   const { data: instances } = await supabaseAdmin
     .from("special_event_instances")
     .select("*")
-    .eq("event_id", params.id)
+    .eq("event_id", id)
     .gte("date", today)
     .eq("status", "open")
     .order("date", { ascending: true });
