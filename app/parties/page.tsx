@@ -27,7 +27,7 @@ export default function PartiesPage() {
 
   const BASE_PRICE = parseFloat(c.parties_base_price) || 100;
   const BASE_CHILDREN = parseInt(c.parties_base_children) || 5;
-  const ADDITIONAL_CHILD_PRICE = parseFloat(c.parties_additional_child_price) || 12.5;
+  const ADDITIONAL_CHILD_PRICE = parseFloat(c.parties_additional_child_price) || 15;
   const MAX_CHILDREN = parseInt(c.parties_max_children) || 15;
 
   function partyTotal(count: number) {
@@ -131,7 +131,7 @@ export default function PartiesPage() {
               <div className="inline-block rounded-full px-4 py-1 mb-3 text-[0.7rem] font-semibold uppercase tracking-wider text-white" style={{ backgroundColor: "#2ba7c4" }}>
                 Each Additional Child
               </div>
-              <div className="font-display text-[2.4rem] leading-none mb-2" style={{ color: "#2ba7c4" }}>£12.50</div>
+              <div className="font-display text-[2.4rem] leading-none mb-2" style={{ color: "#2ba7c4" }}>£{ADDITIONAL_CHILD_PRICE.toFixed(2)}</div>
               <div className="text-[0.85rem] text-ink-soft leading-snug">
                 Per child<br />
                 <span className="font-semibold text-ink">Maximum {MAX_CHILDREN} children</span>
@@ -299,7 +299,7 @@ export default function PartiesPage() {
                   className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-[#ff2d78]"
                 />
                 <p className="text-[0.78rem] text-ink-soft mt-2">
-                  £100 for up to {BASE_CHILDREN} children, then £12.50 per extra child (max {MAX_CHILDREN}).
+                  £{BASE_PRICE} for up to {BASE_CHILDREN} children, then £{ADDITIONAL_CHILD_PRICE.toFixed(2)} per extra child (max {MAX_CHILDREN}).
                 </p>
               </div>
 
