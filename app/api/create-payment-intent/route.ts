@@ -93,12 +93,13 @@ export async function POST(req: NextRequest) {
     }, { status: 409 });
   }
 
-  // Check daily cap (only paid bookings count)
+  // Check daily cap (only paid, non-party bookings count)
   const { data: dailyBookings } = await supabaseAdmin
     .from("bookings")
     .select("people")
     .eq("date", date)
-    .eq("payment_status", "paid");
+    .eq("payment_status", "paid")
+    .eq("is_party", false);
   const dailyUsed = (dailyBookings || []).reduce((sum: number, b: { people: number }) => sum + b.people, 0);
   if (dailyUsed + people > maxDaily) {
     return NextResponse.json({

@@ -393,12 +393,13 @@ function BookingPageInner() {
       setTermsPreAgreed(true);
     }
 
-    // Check total bookings for this date (daily cap) — only paid bookings count
+    // Check total bookings for this date (daily cap, excluding parties) — only paid bookings count
     const { data: dailyBookings } = await supabase
       .from("bookings")
       .select("people")
       .eq("date", date)
-      .eq("payment_status", "paid");
+      .eq("payment_status", "paid")
+      .eq("is_party", false);
     const dailyUsed = (dailyBookings || []).reduce((sum: number, b: { people: number }) => sum + b.people, 0);
     if (dailyUsed + people > maxDaily) {
       setStatus("error");
