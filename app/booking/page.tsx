@@ -258,6 +258,8 @@ function BookingPageInner() {
       if (ov) continue;
       // Skip if blocked — blocked dates already in the list, no need to duplicate
       if (blockedDates.includes(iso)) continue;
+      // An open event makes an otherwise closed date bookable.
+      if (eventDates.includes(iso)) continue;
       const dow = d.getDay();
       const weekly = openingHours.find((w) => w.day_of_week === dow);
       if (weekly && !weekly.is_open) closed.push(iso);
@@ -266,14 +268,11 @@ function BookingPageInner() {
   }
 
   useEffect(() => {
-    const { slots, isOpen } = getSlotsForDate(date);
+    const { slots } = getSlotsForDate(date);
     setTimeSlots(slots);
-    if (!isOpen) {
-      setRemaining({});
-      setLoadingSlots(false);
-    } else {
-      loadAvailability(date);
-    }
+    // Always load availability: an event can make a normally closed date bookable.
+    // loadAvailability handles an empty regular-slot list and still loads events.
+    loadAvailability(date);
     setTimeSlot("");
   }, [date, slotCapacity, openingHours, dateOverrides, globalSlots]);
 

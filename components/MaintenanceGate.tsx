@@ -39,10 +39,12 @@ export default function MaintenanceGate({ children }: { children: React.ReactNod
       return;
     }
 
-    Promise.all([
-      supabase.from("site_settings").select("*").eq("id", 1).single(),
-      fetch("/api/session").then((res) => (res.ok ? res.json() : null)),
-    ]).then(([{ data }, session]) => {
+    supabase.from("site_settings").select("*").eq("id", 1).single().then(async ({ data }) => {
+      let session = null;
+      if (data?.maintenance_mode) {
+        const response = await fetch("/api/session");
+        session = response.ok ? await response.json() : null;
+      }
       if (data) {
         const s = data as SiteSettings;
         setInMaintenance(s.maintenance_mode);

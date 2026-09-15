@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 export async function GET(req: NextRequest) {
   const session = getCustomerSession(req);
   if (!session) {
-    return NextResponse.json({ authenticated: false }, { status: 401 });
+    return NextResponse.json({ authenticated: false });
   }
 
   const { data: customer } = await supabaseAdmin
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     .maybeSingle();
 
   if (!customer) {
-    return NextResponse.json({ authenticated: false }, { status: 401 });
+    return NextResponse.json({ authenticated: false });
   }
 
   return NextResponse.json({
