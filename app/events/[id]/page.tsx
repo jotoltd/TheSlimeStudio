@@ -53,7 +53,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
           <div className="text-center">
             <h1 className="font-display text-2xl text-ink mb-2">Event not found</h1>
             <p className="text-ink-soft mb-4">This event may have been removed.</p>
-            <a href="/events" className="text-sky-blue-light hover:underline">← Back to all events</a>
+            <a href="/booking" className="text-sky-blue-light hover:underline">← Back to booking</a>
           </div>
         </div>
         <Footer />

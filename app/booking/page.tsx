@@ -58,6 +58,13 @@ function BookingPageInner() {
   const [giftCardCode, setGiftCardCode] = useState("");
   const [giftCardBalance, setGiftCardBalance] = useState<number | null>(null);
   const [giftCardChecking, setGiftCardChecking] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
+  const [evtQty, setEvtQty] = useState(1);
+  const [evtName, setEvtName] = useState("");
+  const [evtEmail, setEvtEmail] = useState("");
+  const [evtPhone, setEvtPhone] = useState("");
+  const [evtBooking, setEvtBooking] = useState(false);
+  const [evtMsg, setEvtMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [giftCardError, setGiftCardError] = useState("");
 
 
@@ -753,7 +760,7 @@ function BookingPageInner() {
                 {eventDates.length > 0 && (
                   <p className="text-[0.75rem] text-ink-soft mt-2 flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-purple-500 inline-block" />
-                    Special event day — <a href="/events" className="text-sky-blue-light hover:underline">view events</a>
+                    Days with special events are highlighted
                   </p>
                 )}
               </div>
@@ -771,13 +778,15 @@ function BookingPageInner() {
                     {dayEvents.map((evt) => {
                       const isFull = evt.spots_remaining <= 0;
                       return (
-                        <a
+                        <button
+                          type="button"
                           key={evt.instance_id}
-                          href={`/events/${evt.event_slug || evt.event_id}`}
-                          className={`flex items-center justify-between rounded-xl border-2 px-4 py-3 transition-all ${
+                          disabled={isFull}
+                          onClick={() => { setSelectedEvent(evt); setEvtQty(1); setEvtName(""); setEvtEmail(""); setEvtPhone(""); setEvtMsg(null); }}
+                          className={`w-full flex items-center justify-between rounded-xl border-2 px-4 py-3 transition-all text-left ${
                             isFull
-                              ? "border-ink/10 bg-ink/[0.02] opacity-60"
-                              : "border-purple-200 bg-purple-50 hover:border-purple-400 hover:shadow-sm"
+                              ? "border-ink/10 bg-ink/[0.02] opacity-60 cursor-not-allowed"
+                              : "border-purple-200 bg-purple-50 hover:border-purple-400 hover:shadow-sm cursor-pointer"
                           }`}
                         >
                           <div className="flex items-center gap-3 min-w-0">
@@ -795,9 +804,8 @@ function BookingPageInner() {
                             <span className={`text-[0.8rem] font-medium ${isFull ? "text-ink-soft" : "text-purple-700"}`}>
                               {isFull ? "Full" : `${evt.spots_remaining} left`}
                             </span>
-                            <span className="text-[0.8rem] text-purple-700 ml-1">→</span>
                           </div>
-                        </a>
+                        </button>
                       );
                     })}
                   </div>
@@ -1093,6 +1101,92 @@ function BookingPageInner() {
           </div>
         </div>
       </section>
+
+      {/* Event booking modal */}
+      {selectedEvent && (
+        <div className="fixed inset-0 z-50 bg-black/40 grid place-items-center p-4" onClick={() => setSelectedEvent(null)}>
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-display text-lg mb-1">{selectedEvent.title}</h3>
+            <p className="text-sm text-ink-soft mb-1">
+              {new Date(selectedEvent.instance?.date || date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })} at {selectedEvent.start_time}
+            </p>
+            {selectedEvent.image_url && (
+              <img src={selectedEvent.image_url} alt="" className="w-full h-32 object-cover rounded-xl mb-4 mt-3" />
+            )}
+            <div className="space-y-3 mt-4">
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Name *</label>
+                <input type="text" value={evtName} onChange={(e) => setEvtName(e.target.value)} placeholder="Your name"
+                  className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Email *</label>
+                <input type="email" value={evtEmail} onChange={(e) => setEvtEmail(e.target.value)} placeholder="you@example.com"
+                  className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Phone (optional)</label>
+                <input type="tel" value={evtPhone} onChange={(e) => setEvtPhone(e.target.value)} placeholder="07123 456789"
+                  className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">
+                  {selectedEvent.pricing_model === "per_person" ? "Number of People" : "Number of Tickets"}
+                </label>
+                <div className="flex items-center gap-3">
+                  <button type="button" onClick={() => setEvtQty(Math.max(1, evtQty - 1))}
+                    className="w-9 h-9 rounded-full bg-ink/5 text-ink grid place-items-center hover:bg-ink/10">−</button>
+                  <span className="font-display text-lg w-8 text-center">{evtQty}</span>
+                  <button type="button" onClick={() => setEvtQty(Math.min(selectedEvent.spots_remaining ?? 10, evtQty + 1))}
+                    className="w-9 h-9 rounded-full bg-ink/5 text-ink grid place-items-center hover:bg-ink/10">+</button>
+                </div>
+              </div>
+              <div className="bg-ink/5 rounded-xl p-3 flex justify-between">
+                <span className="text-sm text-ink-soft">Total</span>
+                <span className="font-display font-bold text-ink">£{(selectedEvent.price * evtQty).toFixed(2)}</span>
+              </div>
+            </div>
+            {evtMsg && (
+              <p className={`text-sm mt-3 ${evtMsg.type === "ok" ? "text-green-600" : "text-red-600"}`}>{evtMsg.text}</p>
+            )}
+            <div className="flex gap-3 mt-5">
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!evtName.trim() || !evtEmail.trim()) { setEvtMsg({ type: "err", text: "Please enter your name and email." }); return; }
+                  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(evtEmail)) { setEvtMsg({ type: "err", text: "Please enter a valid email." }); return; }
+                  setEvtBooking(true); setEvtMsg(null);
+                  try {
+                    const res = await fetch("/api/event-bookings", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        instance_id: selectedEvent.instance_id,
+                        event_id: selectedEvent.event_id,
+                        name: evtName.trim(), email: evtEmail.trim(), phone: evtPhone.trim() || undefined,
+                        quantity: evtQty,
+                      }),
+                    });
+                    const data = await res.json();
+                    if (data.error) { setEvtMsg({ type: "err", text: data.error }); }
+                    else if (data.url) { window.location.href = data.url; }
+                    else { setEvtMsg({ type: "ok", text: "Booking confirmed!" }); }
+                  } catch { setEvtMsg({ type: "err", text: "Network error. Please try again." }); }
+                  setEvtBooking(false);
+                }}
+                disabled={evtBooking}
+                className="btn-primary text-sm flex-1 disabled:opacity-60"
+              >
+                {evtBooking ? "Processing..." : `Pay £${(selectedEvent.price * evtQty).toFixed(2)}`}
+              </button>
+              <button type="button" onClick={() => setSelectedEvent(null)}
+                className="px-5 py-2.5 rounded-full bg-ink/5 text-ink text-sm font-medium hover:bg-ink/10">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </>

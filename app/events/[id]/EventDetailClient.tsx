@@ -136,8 +136,8 @@ export default function EventDetailClient({
     <div className="min-h-screen bg-gradient-to-br from-bright-lavender/20 via-white to-sky-blue-light/20 py-12 px-4">
       <div className="max-w-3xl mx-auto">
         {/* Back link */}
-        <Link href="/events" className="text-sky-blue-light hover:underline text-sm mb-6 inline-block">
-          ← All Events
+        <Link href="/booking" className="text-sky-blue-light hover:underline text-sm mb-6 inline-block">
+          ← Back to Booking
         </Link>
 
         {/* Share button */}
