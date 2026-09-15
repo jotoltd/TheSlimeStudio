@@ -35,6 +35,7 @@ function BookingPageInner() {
   const [bookingId, setBookingId] = useState("");
   const [blockedDates, setBlockedDates] = useState<string[]>([]);
   const [eventDates, setEventDates] = useState<string[]>([]);
+  const [dayEvents, setDayEvents] = useState<any[]>([]);
   const [pricePerPerson, setPricePerPerson] = useState(PRICE_PER_PERSON);
   const [timeSlots, setTimeSlots] = useState<string[]>(DEFAULT_SLOTS);
   const [slotCapacity, setSlotCapacity] = useState(DEFAULT_CAP);
@@ -290,6 +291,42 @@ function BookingPageInner() {
     });
     setRemaining(rem);
     setLoadingSlots(false);
+
+    // Fetch events for this date
+    try {
+      const res = await fetch(`/api/events?date=${forDate}`);
+      const eventData = await res.json();
+      if (eventData.events) {
+        // Flatten instances for this date
+        const dayEvts: any[] = [];
+        eventData.events.forEach((e: any) => {
+          (e.instances || []).forEach((inst: any) => {
+            if (inst.date === forDate && inst.status === "open") {
+              dayEvts.push({
+                event_id: e.id,
+                event_slug: e.slug,
+                instance_id: inst.id,
+                title: e.title,
+                category: e.category,
+                image_url: e.image_url,
+                start_time: inst.start_time,
+                duration_minutes: e.duration_minutes,
+                price: e.price,
+                pricing_model: e.pricing_model,
+                spots_remaining: inst.spots_remaining ?? (inst.capacity - (inst.booked_count || 0)),
+                capacity: inst.capacity || e.capacity,
+              });
+            }
+          });
+        });
+        dayEvts.sort((a, b) => a.start_time.localeCompare(b.start_time));
+        setDayEvents(dayEvts);
+      } else {
+        setDayEvents([]);
+      }
+    } catch {
+      setDayEvents([]);
+    }
   }
 
   const maxPeopleForSlot = timeSlot ? remaining[timeSlot] ?? slotCapacity : slotCapacity;
@@ -721,13 +758,61 @@ function BookingPageInner() {
                 )}
               </div>
 
+              {/* Special events on this date */}
+              {dayEvents.length > 0 && (
+                <div className="mb-6">
+                  <label className="block text-sm font-medium mb-3">
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-purple-500 inline-block" />
+                      Special Events on This Day
+                    </span>
+                  </label>
+                  <div className="space-y-2">
+                    {dayEvents.map((evt) => {
+                      const isFull = evt.spots_remaining <= 0;
+                      return (
+                        <a
+                          key={evt.instance_id}
+                          href={`/events/${evt.event_slug || evt.event_id}`}
+                          className={`flex items-center justify-between rounded-xl border-2 px-4 py-3 transition-all ${
+                            isFull
+                              ? "border-ink/10 bg-ink/[0.02] opacity-60"
+                              : "border-purple-200 bg-purple-50 hover:border-purple-400 hover:shadow-sm"
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            {evt.image_url && (
+                              <img src={evt.image_url} alt="" className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
+                            )}
+                            <div className="min-w-0">
+                              <div className="text-sm font-medium text-ink truncate">{evt.title}</div>
+                              <div className="text-[0.75rem] text-ink-soft">
+                                {evt.start_time} · {evt.duration_minutes} min · £{evt.price}{evt.pricing_model === "per_person" ? "/person" : "/ticket"}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex-shrink-0 ml-2">
+                            <span className={`text-[0.8rem] font-medium ${isFull ? "text-ink-soft" : "text-purple-700"}`}>
+                              {isFull ? "Full" : `${evt.spots_remaining} left`}
+                            </span>
+                            <span className="text-[0.8rem] text-purple-700 ml-1">→</span>
+                          </div>
+                        </a>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div className="mb-6">
-                <label className="block text-sm font-medium mb-3">Time Slot (1 hour)</label>
+                <label className="block text-sm font-medium mb-3">Slime Making Sessions (1 hour)</label>
                 {loadingSlots ? (
                   <div className="text-sm text-ink-soft py-4 text-center">Checking availability...</div>
                 ) : timeSlots.length === 0 ? (
                   <div className="text-sm text-ink-soft py-4 text-center bg-ink/[0.03] rounded-xl">
-                    We're closed on this day. Please choose another date.
+                    {dayEvents.length > 0
+                      ? "No regular slime sessions on this day, but there are special events above!"
+                      : "We're closed on this day. Please choose another date."}
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 md:gap-3">

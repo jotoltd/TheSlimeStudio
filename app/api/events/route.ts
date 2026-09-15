@@ -7,6 +7,7 @@ export const runtime = "nodejs";
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const category = searchParams.get("category");
+  const specificDate = searchParams.get("date");
   const today = new Date().toISOString().split("T")[0];
 
   let eventQuery = supabaseAdmin
@@ -27,13 +28,20 @@ export async function GET(req: NextRequest) {
   let instancesMap: Record<string, any[]> = {};
 
   if (eventIds.length > 0) {
-    const { data: instances } = await supabaseAdmin
+    let instanceQuery = supabaseAdmin
       .from("special_event_instances")
       .select("*")
       .in("event_id", eventIds)
-      .gte("date", today)
-      .eq("status", "open")
-      .order("date", { ascending: true });
+      .eq("status", "open");
+
+    if (specificDate) {
+      instanceQuery = instanceQuery.eq("date", specificDate);
+    } else {
+      instanceQuery = instanceQuery.gte("date", today);
+    }
+    instanceQuery = instanceQuery.order("date", { ascending: true });
+
+    const { data: instances } = await instanceQuery;
 
     (instances || []).forEach((inst: any) => {
       if (!instancesMap[inst.event_id]) instancesMap[inst.event_id] = [];
@@ -60,7 +68,7 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // Only return events that have upcoming instances
+  // Only return events that have instances (for the specific date, or upcoming)
   const eventsWithInstances = (events || [])
     .filter((e: any) => instancesMap[e.id] && instancesMap[e.id].length > 0)
     .map((e: any) => ({

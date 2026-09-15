@@ -31,6 +31,8 @@ export default function BookingsAdminPage() {
   const [addDailyUsed, setAddDailyUsed] = useState(0);
   const [calMonth, setCalMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [eventBookingsByDate, setEventBookingsByDate] = useState<Record<string, any[]>>({});
+  const [eventInstancesByDate, setEventInstancesByDate] = useState<Record<string, any[]>>({});
   const [timeSlots, setTimeSlots] = useState<string[]>(DEFAULT_SLOTS);
   const [slotCapacity, setSlotCapacity] = useState(DEFAULT_CAP);
   const [maxDaily, setMaxDaily] = useState(DEFAULT_MAX);
@@ -57,6 +59,49 @@ export default function BookingsAdminPage() {
   }
 
   useEffect(() => { loadBookings(); }, [filter]);
+
+  // Load event instances and bookings for the visible calendar month
+  useEffect(() => {
+    const start = `${calYear}-${String(calMonthIdx + 1).padStart(2, "0")}-01`;
+    const endDay = new Date(calYear, calMonthIdx + 1, 0).getDate();
+    const end = `${calYear}-${String(calMonthIdx + 1).padStart(2, "0")}-${String(endDay).padStart(2, "0")}`;
+    loadEventData(start, end);
+  }, [calMonth]);
+
+  async function loadEventData(start: string, end: string) {
+    // Fetch event instances for this month
+    const { data: instances } = await supabase
+      .from("special_event_instances")
+      .select("*, event:special_events(id, title, slug, category, price, pricing_model, duration_minutes)")
+      .gte("date", start)
+      .lte("date", end)
+      .order("date", { ascending: true });
+
+    const instMap: Record<string, any[]> = {};
+    (instances || []).forEach((inst: any) => {
+      if (!instMap[inst.date]) instMap[inst.date] = [];
+      instMap[inst.date].push(inst);
+    });
+    setEventInstancesByDate(instMap);
+
+    // Fetch event bookings for this month
+    const { data: evtBookings } = await supabase
+      .from("special_event_bookings")
+      .select("*, event:special_events(title, slug, category), instance:special_event_instances(date, start_time)")
+      .gte("created_at", start)
+      .lte("created_at", `${end}T23:59:59`)
+      .order("created_at", { ascending: false });
+
+    const ebMap: Record<string, any[]> = {};
+    (evtBookings || []).forEach((eb: any) => {
+      const date = eb.instance?.date || eb.created_at?.split("T")[0];
+      if (date) {
+        if (!ebMap[date]) ebMap[date] = [];
+        ebMap[date].push(eb);
+      }
+    });
+    setEventBookingsByDate(ebMap);
+  }
 
   useEffect(() => {
     if (showAddBooking) loadAddAvailability(addForm.date);
@@ -436,32 +481,47 @@ export default function BookingsAdminPage() {
                 const day = i + 1;
                 const dateStr = `${calYear}-${String(calMonthIdx + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
                 const dayBookings = bookingsByDate[dateStr] || [];
+                const dayEvents = eventInstancesByDate[dateStr] || [];
                 const hasBookings = dayBookings.length > 0;
+                const hasEvents = dayEvents.length > 0;
                 const isSelected = selectedDate === dateStr;
                 const isToday = dateStr === new Date().toISOString().split("T")[0];
                 return (
                   <button key={day} onClick={() => setSelectedDate(isSelected ? null : dateStr)}
                     className={`min-h-[70px] md:min-h-[100px] rounded-lg md:rounded-xl p-1 md:p-1.5 text-left transition-all relative flex flex-col ${
                       isSelected ? "bg-sky-blue-light/40 ring-2 ring-sky-blue-light" :
+                      hasEvents && hasBookings ? "bg-bright-lavender/10 hover:bg-bright-lavender/20" :
+                      hasEvents ? "bg-purple-50 hover:bg-purple-100" :
                       hasBookings ? "bg-bright-lavender/10 hover:bg-bright-lavender/20" :
                       "bg-ink/[0.03] hover:bg-ink/[0.06]"
                     } ${isToday && !isSelected ? "ring-2 ring-bright-lavender" : ""}`}>
-                    <span className={`text-[0.7rem] md:text-[0.85rem] font-medium ${hasBookings ? "text-ink" : "text-ink-soft"}`}>{day}</span>
-                    {dayBookings.length > 0 && (
-                      <div className="flex-1 mt-0.5 space-y-0.5 overflow-hidden">
-                        {dayBookings.slice(0, 3).map((b) => (
-                          <div key={b.id} className="text-[0.55rem] md:text-[0.65rem] leading-tight truncate px-1 py-0.5 rounded bg-bright-lavender/20 text-ink">
-                            {b.time_slot} {b.name}
-                          </div>
-                        ))}
-                        {dayBookings.length > 3 && (
-                          <div className="text-[0.55rem] md:text-[0.65rem] text-ink-soft px-1">+{dayBookings.length - 3} more</div>
-                        )}
-                      </div>
-                    )}
+                    <span className={`text-[0.7rem] md:text-[0.85rem] font-medium ${hasBookings || hasEvents ? "text-ink" : "text-ink-soft"}`}>{day}</span>
+                    <div className="flex-1 mt-0.5 space-y-0.5 overflow-hidden">
+                      {dayEvents.slice(0, 2).map((evt: any) => (
+                        <div key={evt.id} className="text-[0.55rem] md:text-[0.65rem] leading-tight truncate px-1 py-0.5 rounded bg-purple-200 text-purple-800">
+                          {evt.start_time} {evt.event?.title}
+                        </div>
+                      ))}
+                      {dayBookings.slice(0, 3 - Math.min(dayEvents.length, 2)).map((b) => (
+                        <div key={b.id} className="text-[0.55rem] md:text-[0.65rem] leading-tight truncate px-1 py-0.5 rounded bg-bright-lavender/20 text-ink">
+                          {b.time_slot} {b.name}
+                        </div>
+                      ))}
+                      {(dayBookings.length + dayEvents.length) > 3 && (
+                        <div className="text-[0.55rem] md:text-[0.65rem] text-ink-soft px-1">+{dayBookings.length + dayEvents.length - 3} more</div>
+                      )}
+                    </div>
                   </button>
                 );
               })}
+            </div>
+            <div className="flex flex-wrap gap-4 mt-4 pt-3 border-t border-ink/[0.06]">
+              <div className="flex items-center gap-1.5 text-[0.7rem] text-ink-soft">
+                <span className="w-3 h-3 rounded bg-bright-lavender/20 inline-block" /> Session bookings
+              </div>
+              <div className="flex items-center gap-1.5 text-[0.7rem] text-ink-soft">
+                <span className="w-3 h-3 rounded bg-purple-200 inline-block" /> Special events
+              </div>
             </div>
           </div>
 
@@ -474,18 +534,86 @@ export default function BookingsAdminPage() {
                     <h2 className="font-display text-[1.1rem]">
                       {new Date(selectedDate).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}
                     </h2>
-                    <p className="text-[0.85rem] text-ink-soft mt-0.5">{selectedDateBookings.length} booking{selectedDateBookings.length !== 1 ? "s" : ""}</p>
+                    <p className="text-[0.85rem] text-ink-soft mt-0.5">
+                      {selectedDateBookings.length} session{selectedDateBookings.length !== 1 ? "s" : ""}
+                      {(eventInstancesByDate[selectedDate] || []).length > 0 && ` · ${(eventInstancesByDate[selectedDate] || []).length} event${(eventInstancesByDate[selectedDate] || []).length !== 1 ? "s" : ""}`}
+                    </p>
                   </div>
                   <button onClick={() => setSelectedDate(null)} className="text-[0.8rem] text-ink-soft hover:text-ink">Clear selection</button>
                 </div>
-                {selectedDateBookings.length === 0 ? (
-                  <div className="text-center py-8 text-ink-soft text-[0.9rem]">No bookings on this date.</div>
-                ) : (
-                  <div className="grid sm:grid-cols-2 gap-3">
-                    {selectedDateBookings.map((b) => (
-                      <BookingCard key={b.id} b={b} onEdit={() => startEdit(b)} onCancel={() => cancelBooking(b.id, b.name, b.payment_status)} cancelling={cancellingId === b.id} />
-                    ))}
+
+                {/* Events on this date */}
+                {(eventInstancesByDate[selectedDate] || []).length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="text-[0.8rem] font-semibold text-purple-700 uppercase tracking-wider mb-3">Special Events</h3>
+                    <div className="space-y-2">
+                      {(eventInstancesByDate[selectedDate] || []).map((inst: any) => {
+                        const instBookings = (eventBookingsByDate[selectedDate] || []).filter(
+                          (eb: any) => eb.instance_id === inst.id && eb.payment_status === "paid"
+                        );
+                        const totalBooked = instBookings.reduce((sum: number, eb: any) => sum + eb.quantity, 0);
+                        return (
+                          <div key={inst.id} className="bg-purple-50 border-2 border-purple-200 rounded-xl p-4">
+                            <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+                              <div>
+                                <div className="font-display text-[0.95rem] text-ink">{inst.event?.title}</div>
+                                <div className="text-[0.8rem] text-ink-soft">
+                                  {inst.start_time} · {inst.event?.duration_minutes || "—"} min · {inst.event?.pricing_model === "per_person" ? `£${inst.event?.price}/person` : `£${inst.event?.price}/ticket`}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className={`text-[0.75rem] px-2 py-0.5 rounded-full font-medium ${inst.status === "open" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                                  {inst.status}
+                                </span>
+                                <a
+                                  href={`/events/${inst.event?.slug || inst.event?.id}`}
+                                  target="_blank"
+                                  className="text-[0.75rem] text-sky-blue-light hover:underline"
+                                >
+                                  View →
+                                </a>
+                              </div>
+                            </div>
+                            <div className="text-[0.8rem] text-ink-soft mb-2">
+                              {totalBooked} booked / {inst.capacity} capacity
+                            </div>
+                            {instBookings.length > 0 && (
+                              <div className="space-y-1 mt-3 pt-3 border-t border-purple-200">
+                                {instBookings.map((eb: any) => (
+                                  <div key={eb.id} className="flex items-center justify-between text-[0.8rem] py-1">
+                                    <div>
+                                      <span className="font-medium text-ink">{eb.name}</span>
+                                      <span className="text-ink-soft ml-2">{eb.quantity} {inst.event?.pricing_model === "per_person" ? "people" : "tickets"}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-ink-soft">£{eb.total_price.toFixed(2)}</span>
+                                      <a href={`mailto:${eb.email}`} className="text-sky-blue-light hover:underline text-[0.7rem]">Email</a>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
+                )}
+
+                {/* Regular session bookings */}
+                {selectedDateBookings.length === 0 && (eventInstancesByDate[selectedDate] || []).length === 0 ? (
+                  <div className="text-center py-8 text-ink-soft text-[0.9rem]">No bookings on this date.</div>
+                ) : selectedDateBookings.length > 0 && (
+                  <>
+                    {(eventInstancesByDate[selectedDate] || []).length > 0 && (
+                      <h3 className="text-[0.8rem] font-semibold text-ink-soft uppercase tracking-wider mb-3">Slime Sessions</h3>
+                    )}
+                    <div className="grid sm:grid-cols-2 gap-3">
+                      {selectedDateBookings.map((b) => (
+                        <BookingCard key={b.id} b={b} onEdit={() => startEdit(b)} onCancel={() => cancelBooking(b.id, b.name, b.payment_status)} cancelling={cancellingId === b.id} />
+                      ))}
+                    </div>
+                  </>
                 )}
               </>
             ) : (
