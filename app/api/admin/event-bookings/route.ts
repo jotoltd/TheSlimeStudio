@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { verifyToken } from "@/lib/auth";
+import { getStripeAsync } from "@/lib/stripe";
 
 export const runtime = "nodejs";
 
@@ -65,12 +66,44 @@ export async function POST(req: NextRequest) {
   }
 
   if (action === "cancel") {
+    // Fetch the booking first so we can refund if it was paid
+    const { data: evtBooking } = await supabaseAdmin
+      .from("special_event_bookings")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    let refundResult: { refunded: boolean; error?: string } = { refunded: false };
+
+    if (evtBooking?.payment_status === "paid" && evtBooking?.payment_reference) {
+      const ref = evtBooking.payment_reference as string;
+      try {
+        const stripe = await getStripeAsync();
+        if (stripe) {
+          if (ref.startsWith("pi_")) {
+            const refund = await stripe.refunds.create({ payment_intent: ref });
+            refundResult = { refunded: refund.status === "succeeded" };
+          } else if (ref.startsWith("cs_")) {
+            const session = await stripe.checkout.sessions.retrieve(ref);
+            if (session.payment_intent) {
+              const refund = await stripe.refunds.create({ payment_intent: session.payment_intent as string });
+              refundResult = { refunded: refund.status === "succeeded" };
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Event booking Stripe refund error:", e);
+        refundResult = { refunded: false, error: e instanceof Error ? e.message : "Unknown error" };
+      }
+    }
+
+    const newStatus = refundResult.refunded ? "refunded" : "cancelled";
     const { error } = await supabaseAdmin
       .from("special_event_bookings")
-      .update({ payment_status: "cancelled" })
+      .update({ payment_status: newStatus })
       .eq("id", id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, refunded: refundResult.refunded, refundError: refundResult.error });
   }
 
   if (action === "delete") {

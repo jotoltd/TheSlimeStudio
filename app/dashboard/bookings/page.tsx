@@ -158,9 +158,15 @@ export default function BookingsAdminPage() {
     loadBookings();
   }
 
-  async function updateEventBooking(id: string, action: "mark_paid" | "mark_pending" | "cancel" | "delete") {
+  async function updateEventBooking(id: string, action: "mark_paid" | "mark_pending" | "cancel" | "delete", paymentStatus?: string, name?: string) {
     if (action === "delete" && !confirm("Delete this event booking permanently?")) return;
-    if (action === "cancel" && !confirm("Cancel this event booking?")) return;
+    if (action === "cancel") {
+      const isPaid = paymentStatus === "paid";
+      const msg = isPaid
+        ? `Cancel the booking for "${name || "this customer"}"? This will refund the customer via Stripe. This cannot be undone.`
+        : `Cancel this event booking?`;
+      if (!confirm(msg)) return;
+    }
     try {
       const res = await fetch("/api/admin/event-bookings", {
         method: "POST",
@@ -171,6 +177,10 @@ export default function BookingsAdminPage() {
       if (!res.ok || data.error) {
         alert(data.error || "Failed to update event booking");
         return;
+      }
+      if (action === "cancel") {
+        if (data.refunded) alert("Booking cancelled and Stripe refund processed successfully.");
+        else if (data.refundError) alert("Booking cancelled but refund failed: " + data.refundError);
       }
       const start = `${calYear}-${String(calMonthIdx + 1).padStart(2, "0")}-01`;
       const endDay = new Date(calYear, calMonthIdx + 1, 0).getDate();
@@ -598,7 +608,7 @@ export default function BookingsAdminPage() {
                                     <div className="min-w-0">
                                       <div className="flex items-center gap-2 flex-wrap">
                                         <span className="font-medium text-ink">{eb.name}</span>
-                                        <span className={`text-[0.65rem] px-1.5 py-0.5 rounded-full ${eb.payment_status === "paid" ? "bg-green-100 text-green-700" : eb.payment_status === "cancelled" ? "bg-red-100 text-red-700" : "bg-orange-100 text-orange-700"}`}>{eb.payment_status}</span>
+                                        <span className={`text-[0.65rem] px-1.5 py-0.5 rounded-full ${eb.payment_status === "paid" ? "bg-green-100 text-green-700" : eb.payment_status === "cancelled" ? "bg-red-100 text-red-700" : eb.payment_status === "refunded" ? "bg-orange-100 text-orange-700" : "bg-orange-100 text-orange-700"}`}>{eb.payment_status}</span>
                                       </div>
                                       <div className="text-ink-soft">{eb.email} · {eb.quantity} {inst.event?.pricing_model === "per_person" ? "people" : "tickets"} · £{Number(eb.total_price).toFixed(2)}</div>
                                     </div>
@@ -606,7 +616,7 @@ export default function BookingsAdminPage() {
                                       <a href={`mailto:${eb.email}`} className="text-sky-blue-light hover:underline text-[0.7rem]">Email</a>
                                       {eb.payment_status !== "paid" && eb.payment_status !== "cancelled" && <button onClick={() => updateEventBooking(eb.id, "mark_paid")} className="text-[0.7rem] text-green-700 hover:underline">Mark paid</button>}
                                       {eb.payment_status === "paid" && <button onClick={() => updateEventBooking(eb.id, "mark_pending")} className="text-[0.7rem] text-orange-700 hover:underline">Unmark</button>}
-                                      {eb.payment_status !== "cancelled" && <button onClick={() => updateEventBooking(eb.id, "cancel")} className="text-[0.7rem] text-red-700 hover:underline">Cancel</button>}
+                                      {eb.payment_status !== "cancelled" && eb.payment_status !== "refunded" && <button onClick={() => updateEventBooking(eb.id, "cancel", eb.payment_status, eb.name)} className="text-[0.7rem] text-red-700 hover:underline">Cancel</button>}
                                       <button onClick={() => updateEventBooking(eb.id, "delete")} className="text-[0.7rem] text-ink-soft hover:underline">Delete</button>
                                     </div>
                                   </div>
