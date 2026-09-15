@@ -58,6 +58,9 @@ export default function AdPixels() {
 
 function injectFacebookPixel(pixelId: string) {
   if (typeof window === "undefined") return;
+  // Meta Test Events code — read from URL query param if present (for testing only)
+  const params = new URLSearchParams(window.location.search);
+  const testCode = params.get("test_event_code") || "";
   /* eslint-disable */
   (function (f: any, b: any, e: any, v: any) {
     let n: any = (f as any).fbq || function () {
@@ -73,7 +76,7 @@ function injectFacebookPixel(pixelId: string) {
     s.parentNode.insertBefore(t, s);
     (f as any).fbq = n;
   })(window, document, "script", "https://connect.facebook.net/en_US/fbevents.js");
-  (window as any).fbq("init", pixelId);
+  (window as any).fbq("init", pixelId, testCode ? { test_event_code: testCode } : undefined);
   (window as any).fbq("track", "PageView");
   /* eslint-enable */
 }
