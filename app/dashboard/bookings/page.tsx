@@ -706,10 +706,13 @@ export default function BookingsAdminPage() {
                         <div className="text-[0.9rem] font-medium text-ink">
                           {b.name}
                           {b.is_party && <span className="ml-1.5 text-[0.6rem] bg-bright-lavender/20 px-1.5 py-0.5 rounded-full align-middle">Party</span>}
+                          {b.notes && b.notes.startsWith("[Ad:") && (
+                            <span className="ml-1.5 text-[0.6rem] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full align-middle font-medium" title={b.notes}>Meta Ad</span>
+                          )}
                         </div>
                         <div className="text-[0.8rem] text-ink-soft">{b.email}</div>
                         {b.phone && <div className="text-[0.75rem] text-ink-soft">{b.phone}</div>}
-                        {b.notes && <div className="text-[0.7rem] text-ink-soft mt-0.5 italic">📝 {b.notes.length > 30 ? b.notes.slice(0, 30) + "…" : b.notes}</div>}
+                        {b.notes && !b.notes.startsWith("[Ad:") && <div className="text-[0.7rem] text-ink-soft mt-0.5 italic">📝 {b.notes.length > 30 ? b.notes.slice(0, 30) + "…" : b.notes}</div>}
                       </td>
                       <td className="py-3.5 pr-4 text-[0.8rem] text-ink-soft">{new Date(b.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</td>
                       <td className="py-3.5 pr-4">
@@ -958,7 +961,12 @@ function BookingCard({ b, onEdit, onCancel, cancelling }: { b: Booking; onEdit: 
         </div>
       </div>
       <div className="space-y-1 mb-3">
-        <div className="text-[0.9rem] font-medium">{b.name} <span className="text-[0.75rem] text-ink-soft font-normal">· {b.people} {b.people === 1 ? "person" : "people"}</span></div>
+        <div className="text-[0.9rem] font-medium">
+          {b.name} <span className="text-[0.75rem] text-ink-soft font-normal">· {b.people} {b.people === 1 ? "person" : "people"}</span>
+          {b.notes && b.notes.startsWith("[Ad:") && (
+            <span className="ml-1.5 text-[0.6rem] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full align-middle font-medium" title={b.notes}>Meta Ad</span>
+          )}
+        </div>
         <div className="text-[0.8rem] text-ink-soft">{b.email}</div>
         {b.phone && <div className="text-[0.8rem] text-ink-soft">{b.phone}</div>}
       </div>
@@ -966,7 +974,7 @@ function BookingCard({ b, onEdit, onCancel, cancelling }: { b: Booking; onEdit: 
         <span className="font-display text-ink">£{Number(b.total_price).toFixed(2)}</span>
         <span className="text-ink-soft text-[0.7rem]">Booked {bookedDate}</span>
       </div>
-      {b.notes && <div className="text-[0.8rem] text-ink-soft bg-ink/[0.04] rounded-lg px-3 py-2 mb-3">📝 {b.notes}</div>}
+      {b.notes && !b.notes.startsWith("[Ad:") && <div className="text-[0.8rem] text-ink-soft bg-ink/[0.04] rounded-lg px-3 py-2 mb-3">📝 {b.notes}</div>}
       <div className="flex gap-2">
         <button onClick={onEdit} className="px-3 py-1.5 rounded-lg bg-sky-blue-light/30 text-ink text-[0.8rem] hover:bg-sky-blue-light/50 transition-colors">Edit</button>
         <button onClick={onCancel} disabled={cancelling} className="px-3 py-1.5 rounded-lg bg-red-100 text-red-700 text-[0.8rem] hover:bg-red-200 transition-colors disabled:opacity-60">{cancelling ? "Cancelling..." : "Cancel"}</button>

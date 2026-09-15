@@ -165,6 +165,7 @@ export async function POST(req: NextRequest) {
       stripe_session_id: checkoutRef,
       discount_code: discountCode || null,
       discount_amount: 0,
+      notes: body.adSource || null,
     }).select().single();
 
     if (insertError || !booking) {

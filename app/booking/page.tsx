@@ -78,6 +78,27 @@ function BookingPageInner() {
         setShowDiscountField(true);
         localStorage.removeItem("refCode");
       }
+      // Capture ad attribution from URL (fbclid = Facebook/Instagram ad, gclid = Google ad, utm_source)
+      const params = new URLSearchParams(window.location.search);
+      const fbclid = params.get("fbclid");
+      const gclid = params.get("gclid");
+      const utmSource = params.get("utm_source");
+      const utmCampaign = params.get("utm_campaign");
+      if (fbclid || gclid || utmSource) {
+        const adParts: string[] = [];
+        if (fbclid) adParts.push("Facebook/Instagram Ad");
+        if (gclid) adParts.push("Google Ad");
+        if (utmSource) adParts.push(`utm:${utmSource}${utmCampaign ? `/${utmCampaign}` : ""}`);
+        const adSource = `[Ad: ${adParts.join(", ")}]`;
+        localStorage.setItem("adSource", adSource);
+        // Clean up URL so the ad params don't persist across navigation
+        const url = new URL(window.location.href);
+        url.searchParams.delete("fbclid");
+        url.searchParams.delete("gclid");
+        url.searchParams.delete("utm_source");
+        url.searchParams.delete("utm_campaign");
+        window.history.replaceState({}, "", url.toString());
+      }
     }
   }, []);
 
@@ -471,6 +492,7 @@ function BookingPageInner() {
     try {
       if (paymentProvider === "sumup") {
         // SumUp: redirect to hosted checkout
+        const adSource = typeof window !== "undefined" ? localStorage.getItem("adSource") : null;
         const res = await fetch("/api/sumup-booking-checkout", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -484,6 +506,7 @@ function BookingPageInner() {
             totalPrice: finalPrice,
             discountCode: appliedDiscount?.code,
             giftCardCode: giftCardBalance !== null ? giftCardCode : null,
+            adSource,
           }),
         });
         const data = await res.json();
@@ -506,6 +529,7 @@ function BookingPageInner() {
       }
 
       // Stripe: inline payment intent
+      const adSource = typeof window !== "undefined" ? localStorage.getItem("adSource") : null;
       const res = await fetch("/api/create-payment-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -520,6 +544,7 @@ function BookingPageInner() {
           isParty: false,
           discountCode: appliedDiscount?.code,
           giftCardCode: giftCardBalance !== null ? giftCardCode : null,
+          adSource,
         }),
       });
       const data = await res.json();
@@ -706,6 +731,7 @@ function BookingPageInner() {
                             isParty: false,
                             discountCode: appliedDiscount?.code,
                             giftCardCode: giftCardBalance !== null ? giftCardCode : null,
+                            adSource: localStorage.getItem("adSource"),
                           }),
                         });
                         const data = await res.json();

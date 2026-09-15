@@ -130,6 +130,7 @@ export async function POST(req: NextRequest) {
         stripe_session_id: `free_${Date.now()}`,
         is_party: false,
         discount_code: discountCode || null,
+        notes: body.adSource || null,
       })
       .select("id")
       .single();
@@ -249,6 +250,7 @@ export async function POST(req: NextRequest) {
         phone: body.phone || "",
         discountCode: discountCode || "",
         giftCardCode: giftCardCode || "",
+        adSource: body.adSource || "",
       },
       receipt_email: email,
       description: isParty

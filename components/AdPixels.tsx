@@ -24,6 +24,23 @@ export default function AdPixels() {
     if (pixelsLoaded) return;
     pixelsLoaded = true;
 
+    // Capture ad attribution from URL on any landing page (fbclid = Meta ad, gclid = Google ad, utm_source)
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const fbclid = params.get("fbclid");
+      const gclid = params.get("gclid");
+      const utmSource = params.get("utm_source");
+      const utmCampaign = params.get("utm_campaign");
+      if (fbclid || gclid || utmSource) {
+        const adParts: string[] = [];
+        if (fbclid) adParts.push("Facebook/Instagram Ad");
+        if (gclid) adParts.push("Google Ad");
+        if (utmSource) adParts.push(`utm:${utmSource}${utmCampaign ? `/${utmCampaign}` : ""}`);
+        const adSource = `[Ad: ${adParts.join(", ")}]`;
+        localStorage.setItem("adSource", adSource);
+      }
+    }
+
     supabase
       .from("site_settings")
       .select("fb_pixel_id, fb_pixel_enabled, ga_measurement_id, ga_enabled, tiktok_pixel_id, tiktok_pixel_enabled, google_ads_id, google_ads_enabled, snapchat_pixel_id, snapchat_pixel_enabled")

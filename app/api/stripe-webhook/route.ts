@@ -234,6 +234,7 @@ export async function POST(req: NextRequest) {
             totalPrice?: string;
             phone?: string;
             discountCode?: string;
+            adSource?: string;
           };
         };
 
@@ -269,6 +270,7 @@ export async function POST(req: NextRequest) {
             totalPrice: md.totalPrice ? parseFloat(md.totalPrice) : intent.amount / 100,
             isParty: md.type === "party",
             discountCode: md.discountCode || null,
+            adSource: md.adSource || null,
           });
           if (result.created) {
             console.warn(`[stripe-webhook] Recovered booking ${result.bookingId} for ${intent.id} — client never confirmed it.`);

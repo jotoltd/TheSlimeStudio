@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
     totalPrice,
     isParty,
     discountCode: body.discountCode || intent.metadata?.discountCode || null,
+    adSource: body.adSource || intent.metadata?.adSource || null,
   });
 
   if (!result.bookingId) {

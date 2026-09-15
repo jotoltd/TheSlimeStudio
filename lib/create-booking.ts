@@ -19,6 +19,7 @@ export type BookingDetails = {
   totalPrice: number;
   isParty?: boolean;
   discountCode?: string | null;
+  adSource?: string | null;
 };
 
 export type CreateBookingResult = {
@@ -42,7 +43,7 @@ export type CreateBookingResult = {
 export async function createPaidBooking(details: BookingDetails): Promise<CreateBookingResult> {
   const {
     paymentRef, name, email, phone, date, timeSlot,
-    people, totalPrice, isParty, discountCode,
+    people, totalPrice, isParty, discountCode, adSource,
   } = details;
 
   // Idempotency: has this payment already produced a booking?
@@ -73,6 +74,7 @@ export async function createPaidBooking(details: BookingDetails): Promise<Create
       payment_status: "paid",
       stripe_session_id: paymentRef,
       discount_code: discountCode || null,
+      notes: adSource || null,
       admin_notes: overCapacity
         ? "⚠️ OVER CAPACITY — payment was taken after the slot filled up. Review and contact the customer."
         : "",
