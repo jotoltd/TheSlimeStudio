@@ -88,8 +88,8 @@ export default function BookingsAdminPage() {
     const { data: evtBookings } = await supabase
       .from("special_event_bookings")
       .select("*, event:special_events(title, slug, category), instance:special_event_instances(date, start_time)")
-      .gte("created_at", start)
-      .lte("created_at", `${end}T23:59:59`)
+      // Filter by the event date below, not created_at: future event bookings are
+      // often created months before the event takes place.
       .order("created_at", { ascending: false });
 
     const ebMap: Record<string, any[]> = {};
@@ -156,6 +156,29 @@ export default function BookingsAdminPage() {
     } catch { alert("Failed to cancel booking"); }
     setCancellingId(null);
     loadBookings();
+  }
+
+  async function updateEventBooking(id: string, action: "mark_paid" | "mark_pending" | "cancel" | "delete") {
+    if (action === "delete" && !confirm("Delete this event booking permanently?")) return;
+    if (action === "cancel" && !confirm("Cancel this event booking?")) return;
+    try {
+      const res = await fetch("/api/admin/event-bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, id }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        alert(data.error || "Failed to update event booking");
+        return;
+      }
+      const start = `${calYear}-${String(calMonthIdx + 1).padStart(2, "0")}-01`;
+      const endDay = new Date(calYear, calMonthIdx + 1, 0).getDate();
+      const end = `${calYear}-${String(calMonthIdx + 1).padStart(2, "0")}-${String(endDay).padStart(2, "0")}`;
+      loadEventData(start, end);
+    } catch {
+      alert("Failed to update event booking");
+    }
   }
 
   function startEdit(b: Booking) {
@@ -520,7 +543,7 @@ export default function BookingsAdminPage() {
                 <span className="w-3 h-3 rounded bg-bright-lavender/20 inline-block" /> Session bookings
               </div>
               <div className="flex items-center gap-1.5 text-[0.7rem] text-ink-soft">
-                <span className="w-3 h-3 rounded bg-purple-200 inline-block" /> Special events
+                <span className="w-3 h-3 rounded bg-purple-200 inline-block" /> Event bookings
               </div>
             </div>
           </div>
@@ -535,63 +558,62 @@ export default function BookingsAdminPage() {
                       {new Date(selectedDate).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}
                     </h2>
                     <p className="text-[0.85rem] text-ink-soft mt-0.5">
-                      {selectedDateBookings.length} session{selectedDateBookings.length !== 1 ? "s" : ""}
-                      {(eventInstancesByDate[selectedDate] || []).length > 0 && ` · ${(eventInstancesByDate[selectedDate] || []).length} event${(eventInstancesByDate[selectedDate] || []).length !== 1 ? "s" : ""}`}
+                      {selectedDateBookings.length + (eventBookingsByDate[selectedDate] || []).length} booking{selectedDateBookings.length + (eventBookingsByDate[selectedDate] || []).length !== 1 ? "s" : ""}
+                      {(eventInstancesByDate[selectedDate] || []).length > 0 && " · event bookings are marked below"}
                     </p>
                   </div>
                   <button onClick={() => setSelectedDate(null)} className="text-[0.8rem] text-ink-soft hover:text-ink">Clear selection</button>
                 </div>
 
-                {/* Events on this date */}
+                {/* Event bookings are shown here alongside regular bookings. */}
                 {(eventInstancesByDate[selectedDate] || []).length > 0 && (
                   <div className="mb-6">
-                    <h3 className="text-[0.8rem] font-semibold text-purple-700 uppercase tracking-wider mb-3">Special Events</h3>
+                    <h3 className="text-[0.8rem] font-semibold text-ink-soft uppercase tracking-wider mb-3">Bookings</h3>
                     <div className="space-y-2">
                       {(eventInstancesByDate[selectedDate] || []).map((inst: any) => {
-                        const instBookings = (eventBookingsByDate[selectedDate] || []).filter(
-                          (eb: any) => eb.instance_id === inst.id && eb.payment_status === "paid"
-                        );
-                        const totalBooked = instBookings.reduce((sum: number, eb: any) => sum + eb.quantity, 0);
+                        const instBookings = (eventBookingsByDate[selectedDate] || []).filter((eb: any) => eb.instance_id === inst.id);
+                        const activeBookings = instBookings.filter((eb: any) => eb.payment_status !== "cancelled");
+                        const totalBooked = activeBookings.reduce((sum: number, eb: any) => sum + eb.quantity, 0);
                         return (
                           <div key={inst.id} className="bg-purple-50 border-2 border-purple-200 rounded-xl p-4">
                             <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
                               <div>
-                                <div className="font-display text-[0.95rem] text-ink">{inst.event?.title}</div>
-                                <div className="text-[0.8rem] text-ink-soft">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[0.65rem] px-2 py-0.5 rounded-full font-medium bg-purple-200 text-purple-800">Event booking</span>
+                                  <div className="font-display text-[0.95rem] text-ink">{inst.event?.title}</div>
+                                </div>
+                                <div className="text-[0.8rem] text-ink-soft mt-1">
                                   {inst.start_time} · {inst.event?.duration_minutes || "—"} min · {inst.event?.pricing_model === "per_person" ? `£${inst.event?.price}/person` : `£${inst.event?.price}/ticket`}
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2">
-                                <span className={`text-[0.75rem] px-2 py-0.5 rounded-full font-medium ${inst.status === "open" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                                  {inst.status}
-                                </span>
-                                <a
-                                  href={`/events/${inst.event?.slug || inst.event?.id}`}
-                                  target="_blank"
-                                  className="text-[0.75rem] text-sky-blue-light hover:underline"
-                                >
-                                  View →
-                                </a>
-                              </div>
+                              <span className={`text-[0.75rem] px-2 py-0.5 rounded-full font-medium ${inst.status === "open" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                                {inst.status}
+                              </span>
                             </div>
-                            <div className="text-[0.8rem] text-ink-soft mb-2">
-                              {totalBooked} booked / {inst.capacity} capacity
-                            </div>
-                            {instBookings.length > 0 && (
-                              <div className="space-y-1 mt-3 pt-3 border-t border-purple-200">
+                            <div className="text-[0.8rem] text-ink-soft mb-2">{totalBooked} booked / {inst.capacity} capacity</div>
+                            {instBookings.length > 0 ? (
+                              <div className="space-y-2 mt-3 pt-3 border-t border-purple-200">
                                 {instBookings.map((eb: any) => (
-                                  <div key={eb.id} className="flex items-center justify-between text-[0.8rem] py-1">
-                                    <div>
-                                      <span className="font-medium text-ink">{eb.name}</span>
-                                      <span className="text-ink-soft ml-2">{eb.quantity} {inst.event?.pricing_model === "per_person" ? "people" : "tickets"}</span>
+                                  <div key={eb.id} className="flex items-center justify-between gap-3 text-[0.8rem] py-1 flex-wrap">
+                                    <div className="min-w-0">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="font-medium text-ink">{eb.name}</span>
+                                        <span className={`text-[0.65rem] px-1.5 py-0.5 rounded-full ${eb.payment_status === "paid" ? "bg-green-100 text-green-700" : eb.payment_status === "cancelled" ? "bg-red-100 text-red-700" : "bg-orange-100 text-orange-700"}`}>{eb.payment_status}</span>
+                                      </div>
+                                      <div className="text-ink-soft">{eb.email} · {eb.quantity} {inst.event?.pricing_model === "per_person" ? "people" : "tickets"} · £{Number(eb.total_price).toFixed(2)}</div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-ink-soft">£{eb.total_price.toFixed(2)}</span>
+                                    <div className="flex items-center gap-2 flex-shrink-0">
                                       <a href={`mailto:${eb.email}`} className="text-sky-blue-light hover:underline text-[0.7rem]">Email</a>
+                                      {eb.payment_status !== "paid" && eb.payment_status !== "cancelled" && <button onClick={() => updateEventBooking(eb.id, "mark_paid")} className="text-[0.7rem] text-green-700 hover:underline">Mark paid</button>}
+                                      {eb.payment_status === "paid" && <button onClick={() => updateEventBooking(eb.id, "mark_pending")} className="text-[0.7rem] text-orange-700 hover:underline">Unmark</button>}
+                                      {eb.payment_status !== "cancelled" && <button onClick={() => updateEventBooking(eb.id, "cancel")} className="text-[0.7rem] text-red-700 hover:underline">Cancel</button>}
+                                      <button onClick={() => updateEventBooking(eb.id, "delete")} className="text-[0.7rem] text-ink-soft hover:underline">Delete</button>
                                     </div>
                                   </div>
                                 ))}
                               </div>
+                            ) : (
+                              <div className="text-[0.8rem] text-ink-soft mt-3 pt-3 border-t border-purple-200">No attendee bookings yet.</div>
                             )}
                           </div>
                         );
@@ -600,7 +622,7 @@ export default function BookingsAdminPage() {
                   </div>
                 )}
 
-                {/* Regular session bookings */}
+                {/* Regular session bookings, shown alongside the event bookings above */}
                 {selectedDateBookings.length === 0 && (eventInstancesByDate[selectedDate] || []).length === 0 ? (
                   <div className="text-center py-8 text-ink-soft text-[0.9rem]">No bookings on this date.</div>
                 ) : selectedDateBookings.length > 0 && (
