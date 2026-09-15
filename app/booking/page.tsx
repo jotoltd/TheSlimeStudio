@@ -111,18 +111,19 @@ function BookingPageInner() {
     fetch("/api/blocked-dates").then(r => r.json()).then(d => {
       if (d.blockedDates) setBlockedDates(d.blockedDates.map((b: { date: string }) => b.date));
     }).catch(() => {});
-    // Fetch upcoming event dates to highlight on calendar
-    fetch("/api/events").then(r => r.json()).then(d => {
-      if (d.events) {
-        const dates = new Set<string>();
-        d.events.forEach((e: any) => {
-          (e.instances || []).forEach((inst: any) => {
-            if (inst.status === "open") dates.add(inst.date);
-          });
-        });
-        setEventDates(Array.from(dates));
-      }
-    }).catch(() => {});
+    // Fetch upcoming event dates directly from supabase
+    const today = new Date().toISOString().split("T")[0];
+    supabase.from("special_event_instances")
+      .select("date, status")
+      .eq("status", "open")
+      .gte("date", today)
+      .then(({ data: instData }) => {
+        if (instData) {
+          const dates = new Set<string>();
+          instData.forEach((inst: any) => dates.add(inst.date));
+          setEventDates(Array.from(dates));
+        }
+      });
     fetch("/api/opening-hours", { cache: "no-store" }).then(r => r.json()).then(d => {
       if (d.weekly) setOpeningHours(d.weekly);
       if (d.overrides) setDateOverrides(d.overrides);
@@ -300,38 +301,35 @@ function BookingPageInner() {
     setRemaining(rem);
     setLoadingSlots(false);
 
-    // Fetch events for this date
+    // Fetch events for this date directly from supabase
     try {
-      const res = await fetch(`/api/events?date=${forDate}`);
-      const eventData = await res.json();
-      if (eventData.events) {
-        // Flatten instances for this date
-        const dayEvts: any[] = [];
-        eventData.events.forEach((e: any) => {
-          (e.instances || []).forEach((inst: any) => {
-            if (inst.date === forDate && inst.status === "open") {
-              dayEvts.push({
-                event_id: e.id,
-                event_slug: e.slug,
-                instance_id: inst.id,
-                title: e.title,
-                category: e.category,
-                image_url: e.image_url,
-                start_time: inst.start_time,
-                duration_minutes: e.duration_minutes,
-                price: e.price,
-                pricing_model: e.pricing_model,
-                spots_remaining: inst.spots_remaining ?? (inst.capacity - (inst.booked_count || 0)),
-                capacity: inst.capacity || e.capacity,
-              });
-            }
+      const { data: instances } = await supabase
+        .from("special_event_instances")
+        .select("*, event:special_events(id, title, slug, category, image_url, price, pricing_model, duration_minutes, is_active)")
+        .eq("date", forDate)
+        .eq("status", "open");
+
+      const dayEvts: any[] = [];
+      (instances || []).forEach((inst: any) => {
+        if (inst.event && inst.event.is_active) {
+          dayEvts.push({
+            event_id: inst.event.id,
+            event_slug: inst.event.slug,
+            instance_id: inst.id,
+            title: inst.event.title,
+            category: inst.event.category,
+            image_url: inst.event.image_url,
+            start_time: inst.start_time,
+            duration_minutes: inst.event.duration_minutes,
+            price: inst.event.price,
+            pricing_model: inst.event.pricing_model,
+            spots_remaining: inst.capacity - (inst.booked_count || 0),
+            capacity: inst.capacity,
           });
-        });
-        dayEvts.sort((a, b) => a.start_time.localeCompare(b.start_time));
-        setDayEvents(dayEvts);
-      } else {
-        setDayEvents([]);
-      }
+        }
+      });
+      dayEvts.sort((a, b) => a.start_time.localeCompare(b.start_time));
+      setDayEvents(dayEvts);
     } catch {
       setDayEvents([]);
     }
