@@ -756,8 +756,11 @@ function BookingPageInner() {
                 <Calendar value={date} onChange={(d) => { setDate(d); setSelectedSession("slime"); setSelectedEvent(null); setTimeSlot(""); }} min={todayISO()} disableDays={[]} blockedDates={[...blockedDates.filter((bd) => {
                   // Don't block dates that have an 'open' override
                   const ov = dateOverrides.find((o) => o.date === bd);
-                  return !(ov && ov.is_open);
-                }), ...getClosedDates()]} />
+                  if (ov && ov.is_open) return false;
+                  // Don't block dates that have events
+                  if (eventDates.includes(bd)) return false;
+                  return true;
+                }), ...getClosedDates().filter((d) => !eventDates.includes(d))]} />
                 {eventDates.length > 0 && null}
               </div>
 
