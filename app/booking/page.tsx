@@ -59,6 +59,7 @@ function BookingPageInner() {
   const [giftCardBalance, setGiftCardBalance] = useState<number | null>(null);
   const [giftCardChecking, setGiftCardChecking] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
+  const [selectedSession, setSelectedSession] = useState<string>("slime"); // "slime" or event instance id
   const [evtQty, setEvtQty] = useState(1);
   const [evtName, setEvtName] = useState("");
   const [evtEmail, setEvtEmail] = useState("");
@@ -752,46 +753,72 @@ function BookingPageInner() {
 
               <div className="mb-6">
                 <label className="block text-sm font-medium mb-2">Date</label>
-                <Calendar value={date} onChange={setDate} min={todayISO()} disableDays={[]} blockedDates={[...blockedDates.filter((bd) => {
+                <Calendar value={date} onChange={(d) => { setDate(d); setSelectedSession("slime"); setSelectedEvent(null); setTimeSlot(""); }} min={todayISO()} disableDays={[]} blockedDates={[...blockedDates.filter((bd) => {
                   // Don't block dates that have an 'open' override
                   const ov = dateOverrides.find((o) => o.date === bd);
                   return !(ov && ov.is_open);
-                }), ...getClosedDates()]} eventDates={eventDates} />
-                {eventDates.length > 0 && (
-                  <p className="text-[0.75rem] text-ink-soft mt-2 flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-purple-500 inline-block" />
-                    Days with special events are highlighted
-                  </p>
-                )}
+                }), ...getClosedDates()]} />
+                {eventDates.length > 0 && null}
               </div>
 
-              {/* Special events on this date */}
-              {dayEvents.length > 0 && (
-                <div className="mb-6">
-                  <label className="block text-sm font-medium mb-3">
-                    <span className="inline-flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-purple-500 inline-block" />
-                      Special Events on This Day
-                    </span>
-                  </label>
+              {/* Choose a session card */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium mb-3">Choose a Session</label>
+                {loadingSlots ? (
+                  <div className="text-sm text-ink-soft py-4 text-center">Checking availability...</div>
+                ) : timeSlots.length === 0 && dayEvents.length === 0 ? (
+                  <div className="text-sm text-ink-soft py-4 text-center bg-ink/[0.03] rounded-xl">
+                    We're closed on this day. Please choose another date.
+                  </div>
+                ) : (
                   <div className="space-y-2">
+                    {/* Slime Making Session card */}
+                    {timeSlots.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => { setSelectedSession("slime"); setSelectedEvent(null); setTimeSlot(""); }}
+                        className={`w-full flex items-center justify-between rounded-xl border-2 px-4 py-3 transition-all text-left ${
+                          selectedSession === "slime"
+                            ? "border-sky-blue-light bg-sky-blue-light/10 shadow-sm"
+                            : "border-ink/10 bg-white hover:border-ink/20"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-12 h-12 rounded-lg bg-bright-lavender/20 grid place-items-center text-2xl flex-shrink-0">🫧</div>
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium text-ink truncate">Slime Making Session</div>
+                            <div className="text-[0.75rem] text-ink-soft">1 hour · £{pricePerPerson.toFixed(2)}/person</div>
+                          </div>
+                        </div>
+                        <div className="flex-shrink-0 ml-2 text-[0.8rem] font-medium text-sky-blue-light">
+                          {selectedSession === "slime" ? "Selected" : "Select →"}
+                        </div>
+                      </button>
+                    )}
+
+                    {/* Event cards */}
                     {dayEvents.map((evt) => {
                       const isFull = evt.spots_remaining <= 0;
+                      const isSelected = selectedSession === evt.instance_id;
                       return (
                         <button
                           type="button"
                           key={evt.instance_id}
                           disabled={isFull}
-                          onClick={() => { setSelectedEvent(evt); setEvtQty(1); setEvtName(""); setEvtEmail(""); setEvtPhone(""); setEvtMsg(null); }}
+                          onClick={() => { setSelectedSession(evt.instance_id); setSelectedEvent(evt); setEvtQty(1); setEvtName(""); setEvtEmail(""); setEvtPhone(""); setEvtMsg(null); setTimeSlot(""); }}
                           className={`w-full flex items-center justify-between rounded-xl border-2 px-4 py-3 transition-all text-left ${
                             isFull
                               ? "border-ink/10 bg-ink/[0.02] opacity-60 cursor-not-allowed"
-                              : "border-purple-200 bg-purple-50 hover:border-purple-400 hover:shadow-sm cursor-pointer"
+                              : isSelected
+                              ? "border-sky-blue-light bg-sky-blue-light/10 shadow-sm"
+                              : "border-ink/10 bg-white hover:border-ink/20"
                           }`}
                         >
                           <div className="flex items-center gap-3 min-w-0">
-                            {evt.image_url && (
+                            {evt.image_url ? (
                               <img src={evt.image_url} alt="" className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
+                            ) : (
+                              <div className="w-12 h-12 rounded-lg bg-purple-100 grid place-items-center text-2xl flex-shrink-0">✨</div>
                             )}
                             <div className="min-w-0">
                               <div className="text-sm font-medium text-ink truncate">{evt.title}</div>
@@ -800,53 +827,9 @@ function BookingPageInner() {
                               </div>
                             </div>
                           </div>
-                          <div className="flex-shrink-0 ml-2">
-                            <span className={`text-[0.8rem] font-medium ${isFull ? "text-ink-soft" : "text-purple-700"}`}>
-                              {isFull ? "Full" : `${evt.spots_remaining} left`}
-                            </span>
+                          <div className="flex-shrink-0 ml-2 text-[0.8rem] font-medium">
+                            {isFull ? <span className="text-ink-soft">Full</span> : isSelected ? <span className="text-sky-blue-light">Selected</span> : <span className="text-ink-soft">{evt.spots_remaining} left →</span>}
                           </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              <div className="mb-6">
-                <label className="block text-sm font-medium mb-3">Slime Making Sessions (1 hour)</label>
-                {loadingSlots ? (
-                  <div className="text-sm text-ink-soft py-4 text-center">Checking availability...</div>
-                ) : timeSlots.length === 0 ? (
-                  <div className="text-sm text-ink-soft py-4 text-center bg-ink/[0.03] rounded-xl">
-                    {dayEvents.length > 0
-                      ? "No regular slime sessions on this day, but there are special events above!"
-                      : "We're closed on this day. Please choose another date."}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 md:gap-3">
-                    {timeSlots.map((slot) => {
-                      const rem = remaining[slot] ?? slotCapacity;
-                      const full = rem === 0;
-                      const past = isSlotInPast(slot, date);
-                      const disabled = full || past;
-                      return (
-                        <button
-                          type="button"
-                          key={slot}
-                          disabled={disabled}
-                          onClick={() => selectSlot(slot)}
-                          className={`rounded-xl py-3 text-sm font-display transition-all ${
-                            disabled
-                              ? "bg-ink/[0.03] text-ink/30 cursor-not-allowed"
-                              : timeSlot === slot
-                              ? "bg-sky-blue-light text-ink shadow-sm"
-                              : "bg-ink/[0.04] text-ink hover:bg-sky-blue-light/30"
-                          }`}
-                        >
-                          {slot}
-                          <span className="block text-[0.65rem] font-body normal-case mt-0.5">
-                            {past ? "Past" : full ? "Full" : `${rem} left`}
-                          </span>
                         </button>
                       );
                     })}
@@ -854,6 +837,119 @@ function BookingPageInner() {
                 )}
               </div>
 
+              {/* Time slots — only when Slime Making Session is selected */}
+              {selectedSession === "slime" && timeSlots.length > 0 && (
+                <div className="mb-6">
+                  <label className="block text-sm font-medium mb-3">Time Slot</label>
+                  {loadingSlots ? (
+                    <div className="text-sm text-ink-soft py-4 text-center">Checking availability...</div>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 md:gap-3">
+                      {timeSlots.map((slot) => {
+                        const rem = remaining[slot] ?? slotCapacity;
+                        const full = rem === 0;
+                        const past = isSlotInPast(slot, date);
+                        const disabled = full || past;
+                        return (
+                          <button
+                            type="button"
+                            key={slot}
+                            disabled={disabled}
+                            onClick={() => selectSlot(slot)}
+                            className={`rounded-xl py-3 text-sm font-display transition-all ${
+                              disabled
+                                ? "bg-ink/[0.03] text-ink/30 cursor-not-allowed"
+                                : timeSlot === slot
+                                ? "bg-sky-blue-light text-ink shadow-sm"
+                                : "bg-ink/[0.04] text-ink hover:bg-sky-blue-light/30"
+                            }`}
+                          >
+                            {slot}
+                            <span className="block text-[0.65rem] font-body normal-case mt-0.5">
+                              {past ? "Past" : full ? "Full" : `${rem} left`}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Event booking form — only when an event is selected */}
+              {selectedSession !== "slime" && selectedEvent && (
+                <div className="mb-6 bg-ink/[0.02] rounded-xl p-4">
+                  <h3 className="font-display text-sm mb-3 text-ink">{selectedEvent.title} — {selectedEvent.start_time}</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium mb-1.5">Name *</label>
+                      <input type="text" value={evtName} onChange={(e) => setEvtName(e.target.value)} placeholder="Your name"
+                        className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1.5">Email *</label>
+                      <input type="email" value={evtEmail} onChange={(e) => setEvtEmail(e.target.value)} placeholder="you@example.com"
+                        className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1.5">Phone (optional)</label>
+                      <input type="tel" value={evtPhone} onChange={(e) => setEvtPhone(e.target.value)} placeholder="07123 456789"
+                        className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1.5">
+                        {selectedEvent.pricing_model === "per_person" ? "Number of People" : "Number of Tickets"}
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <button type="button" onClick={() => setEvtQty(Math.max(1, evtQty - 1))}
+                          className="w-9 h-9 rounded-full bg-ink/5 text-ink grid place-items-center hover:bg-ink/10">−</button>
+                        <span className="font-display text-lg w-8 text-center">{evtQty}</span>
+                        <button type="button" onClick={() => setEvtQty(Math.min(selectedEvent.spots_remaining ?? 10, evtQty + 1))}
+                          className="w-9 h-9 rounded-full bg-ink/5 text-ink grid place-items-center hover:bg-ink/10">+</button>
+                      </div>
+                    </div>
+                    <div className="bg-white rounded-xl p-3 flex justify-between">
+                      <span className="text-sm text-ink-soft">Total</span>
+                      <span className="font-display font-bold text-ink">£{(selectedEvent.price * evtQty).toFixed(2)}</span>
+                    </div>
+                  </div>
+                  {evtMsg && (
+                    <p className={`text-sm mt-3 ${evtMsg.type === "ok" ? "text-green-600" : "text-red-600"}`}>{evtMsg.text}</p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!evtName.trim() || !evtEmail.trim()) { setEvtMsg({ type: "err", text: "Please enter your name and email." }); return; }
+                      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(evtEmail)) { setEvtMsg({ type: "err", text: "Please enter a valid email." }); return; }
+                      setEvtBooking(true); setEvtMsg(null);
+                      try {
+                        const res = await fetch("/api/event-bookings", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            instance_id: selectedEvent.instance_id,
+                            event_id: selectedEvent.event_id,
+                            name: evtName.trim(), email: evtEmail.trim(), phone: evtPhone.trim() || undefined,
+                            quantity: evtQty,
+                          }),
+                        });
+                        const data = await res.json();
+                        if (data.error) { setEvtMsg({ type: "err", text: data.error }); }
+                        else if (data.url) { window.location.href = data.url; }
+                        else { setEvtMsg({ type: "ok", text: "Booking confirmed!" }); }
+                      } catch { setEvtMsg({ type: "err", text: "Network error. Please try again." }); }
+                      setEvtBooking(false);
+                    }}
+                    disabled={evtBooking}
+                    className="btn-primary text-sm w-full justify-center inline-flex items-center gap-2 mt-4 disabled:opacity-60"
+                  >
+                    {evtBooking ? "Processing..." : `Continue to Payment — £${(selectedEvent.price * evtQty).toFixed(2)}`}
+                  </button>
+                </div>
+              )}
+
+              {selectedSession === "slime" && (
+              <>
               <div className="mb-6">
                 <label className="block text-sm font-medium mb-2">
                   Number of Slime Makers {timeSlot && `(max ${maxPeopleForSlot} available)`}
@@ -1043,12 +1139,16 @@ function BookingPageInner() {
                 </label>
               </div>
 
-              {errorMsg && (
+              </>
+              )}
+
+              {errorMsg && selectedSession === "slime" && (
                 <div className="bg-red-100 text-red-700 text-sm rounded-xl p-3 mb-5">
                   {errorMsg}
                 </div>
               )}
 
+              {selectedSession === "slime" && (
               <div className="text-center">
                 <button type="submit" disabled={status === "sending"} className="btn-primary disabled:opacity-60 w-full justify-center inline-flex items-center gap-2">
                   {status === "sending" && (
@@ -1057,6 +1157,7 @@ function BookingPageInner() {
                   {status === "sending" ? "Processing..." : `Continue to Payment — £${finalPrice.toFixed(2)}`}
                 </button>
               </div>
+              )}
             </form>
           )}
         </div>
@@ -1101,92 +1202,6 @@ function BookingPageInner() {
           </div>
         </div>
       </section>
-
-      {/* Event booking modal */}
-      {selectedEvent && (
-        <div className="fixed inset-0 z-50 bg-black/40 grid place-items-center p-4" onClick={() => setSelectedEvent(null)}>
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-display text-lg mb-1">{selectedEvent.title}</h3>
-            <p className="text-sm text-ink-soft mb-1">
-              {new Date(selectedEvent.instance?.date || date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })} at {selectedEvent.start_time}
-            </p>
-            {selectedEvent.image_url && (
-              <img src={selectedEvent.image_url} alt="" className="w-full h-32 object-cover rounded-xl mb-4 mt-3" />
-            )}
-            <div className="space-y-3 mt-4">
-              <div>
-                <label className="block text-sm font-medium mb-1.5">Name *</label>
-                <input type="text" value={evtName} onChange={(e) => setEvtName(e.target.value)} placeholder="Your name"
-                  className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1.5">Email *</label>
-                <input type="email" value={evtEmail} onChange={(e) => setEvtEmail(e.target.value)} placeholder="you@example.com"
-                  className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1.5">Phone (optional)</label>
-                <input type="tel" value={evtPhone} onChange={(e) => setEvtPhone(e.target.value)} placeholder="07123 456789"
-                  className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1.5">
-                  {selectedEvent.pricing_model === "per_person" ? "Number of People" : "Number of Tickets"}
-                </label>
-                <div className="flex items-center gap-3">
-                  <button type="button" onClick={() => setEvtQty(Math.max(1, evtQty - 1))}
-                    className="w-9 h-9 rounded-full bg-ink/5 text-ink grid place-items-center hover:bg-ink/10">−</button>
-                  <span className="font-display text-lg w-8 text-center">{evtQty}</span>
-                  <button type="button" onClick={() => setEvtQty(Math.min(selectedEvent.spots_remaining ?? 10, evtQty + 1))}
-                    className="w-9 h-9 rounded-full bg-ink/5 text-ink grid place-items-center hover:bg-ink/10">+</button>
-                </div>
-              </div>
-              <div className="bg-ink/5 rounded-xl p-3 flex justify-between">
-                <span className="text-sm text-ink-soft">Total</span>
-                <span className="font-display font-bold text-ink">£{(selectedEvent.price * evtQty).toFixed(2)}</span>
-              </div>
-            </div>
-            {evtMsg && (
-              <p className={`text-sm mt-3 ${evtMsg.type === "ok" ? "text-green-600" : "text-red-600"}`}>{evtMsg.text}</p>
-            )}
-            <div className="flex gap-3 mt-5">
-              <button
-                type="button"
-                onClick={async () => {
-                  if (!evtName.trim() || !evtEmail.trim()) { setEvtMsg({ type: "err", text: "Please enter your name and email." }); return; }
-                  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(evtEmail)) { setEvtMsg({ type: "err", text: "Please enter a valid email." }); return; }
-                  setEvtBooking(true); setEvtMsg(null);
-                  try {
-                    const res = await fetch("/api/event-bookings", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        instance_id: selectedEvent.instance_id,
-                        event_id: selectedEvent.event_id,
-                        name: evtName.trim(), email: evtEmail.trim(), phone: evtPhone.trim() || undefined,
-                        quantity: evtQty,
-                      }),
-                    });
-                    const data = await res.json();
-                    if (data.error) { setEvtMsg({ type: "err", text: data.error }); }
-                    else if (data.url) { window.location.href = data.url; }
-                    else { setEvtMsg({ type: "ok", text: "Booking confirmed!" }); }
-                  } catch { setEvtMsg({ type: "err", text: "Network error. Please try again." }); }
-                  setEvtBooking(false);
-                }}
-                disabled={evtBooking}
-                className="btn-primary text-sm flex-1 disabled:opacity-60"
-              >
-                {evtBooking ? "Processing..." : `Pay £${(selectedEvent.price * evtQty).toFixed(2)}`}
-              </button>
-              <button type="button" onClick={() => setSelectedEvent(null)}
-                className="px-5 py-2.5 rounded-full bg-ink/5 text-ink text-sm font-medium hover:bg-ink/10">
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <Footer />
     </>
