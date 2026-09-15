@@ -609,6 +609,9 @@ export default function BookingsAdminPage() {
                                       <div className="flex items-center gap-2 flex-wrap">
                                         <span className="font-medium text-ink">{eb.name}</span>
                                         <span className={`text-[0.65rem] px-1.5 py-0.5 rounded-full ${eb.payment_status === "paid" ? "bg-green-100 text-green-700" : eb.payment_status === "cancelled" ? "bg-red-100 text-red-700" : eb.payment_status === "refunded" ? "bg-orange-100 text-orange-700" : "bg-orange-100 text-orange-700"}`}>{eb.payment_status}</span>
+                                        {eb.notes && eb.notes.startsWith("[Ad:") && (
+                                          <span className="text-[0.6rem] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-medium" title={eb.notes}>Meta Ad</span>
+                                        )}
                                       </div>
                                       <div className="text-ink-soft">{eb.email} · {eb.quantity} {inst.event?.pricing_model === "per_person" ? "people" : "tickets"} · £{Number(eb.total_price).toFixed(2)}</div>
                                     </div>

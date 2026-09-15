@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
       case "checkout.session.completed": {
         const session = event.data.object as {
           id: string;
-          metadata?: { bookingId?: string; subscriberId?: string; type?: string; order_number?: string; gift_card_code?: string; booking_type?: string; event_booking_id?: string };
+          metadata?: { bookingId?: string; subscriberId?: string; type?: string; order_number?: string; gift_card_code?: string; booking_type?: string; event_booking_id?: string; adSource?: string };
           payment_status: string;
         };
 
@@ -48,7 +48,10 @@ export async function POST(req: NextRequest) {
         if (session.metadata?.booking_type === "special_event" && session.metadata?.event_booking_id) {
           await supabaseAdmin
             .from("special_event_bookings")
-            .update({ payment_status: "paid" })
+            .update({
+              payment_status: "paid",
+              ...(session.metadata?.adSource ? { notes: session.metadata.adSource } : {}),
+            })
             .eq("id", session.metadata.event_booking_id);
 
           // Send confirmation email

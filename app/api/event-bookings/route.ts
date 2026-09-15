@@ -72,6 +72,7 @@ export async function POST(req: NextRequest) {
       quantity,
       total_price: totalPrice,
       payment_status: "pending",
+      notes: body.adSource || null,
     })
     .select()
     .single();
@@ -124,6 +125,7 @@ async function createStripeCheckout(booking: any, event: any, instance: any, tot
       "metadata[booking_type]": "special_event",
       "metadata[instance_id]": instance.id,
       "metadata[event_id]": event.id,
+      "metadata[adSource]": booking.notes || "",
       customer_email: booking.email,
       "payment_intent_data[receipt_email]": booking.email,
       "payment_intent_data[description]": `${event.title} — ${instance.date} at ${instance.start_time}`,

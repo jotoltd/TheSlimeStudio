@@ -95,6 +95,7 @@ export default function EventDetailClient({
     setBookingMsg(null);
 
     try {
+      const adSource = typeof window !== "undefined" ? localStorage.getItem("adSource") : null;
       const res = await fetch("/api/event-bookings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -105,6 +106,7 @@ export default function EventDetailClient({
           email: email.trim(),
           phone: phone.trim() || undefined,
           quantity: bookingQty,
+          adSource,
         }),
       });
       const data = await res.json();

@@ -9,6 +9,7 @@ ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS stripe_session_id TEXT;
 ALTER TABLE public.subscribers ADD COLUMN IF NOT EXISTS stripe_session_id TEXT;
 ALTER TABLE public.subscribers ADD COLUMN IF NOT EXISTS payment_status TEXT DEFAULT 'unpaid';
 ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS stripe_mode TEXT DEFAULT 'test';
+ALTER TABLE public.special_event_bookings ADD COLUMN IF NOT EXISTS notes TEXT;
 
 -- RLS policies for enquiries (anon can insert and select)
 ALTER TABLE public.enquiries ENABLE ROW LEVEL SECURITY;
@@ -77,6 +78,10 @@ CREATE POLICY "Anon can update products" ON public.products FOR UPDATE TO anon U
 DROP POLICY IF EXISTS "Anon can delete products" ON public.products;
 CREATE POLICY "Anon can delete products" ON public.products FOR DELETE TO anon USING (true);
 `;
+
+export async function GET(req: NextRequest) {
+  return POST(req);
+}
 
 export async function POST(req: NextRequest) {
   const token = req.cookies.get("admin_token")?.value;
