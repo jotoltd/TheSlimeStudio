@@ -329,9 +329,24 @@ function BookingPageInner() {
         .eq("date", forDate)
         .eq("status", "open");
 
+      // Fetch paid booking counts for these instances so capacity decrements correctly
+      const instanceIds = (instances || []).map((i: any) => i.id);
+      let bookingCounts: Record<string, number> = {};
+      if (instanceIds.length > 0) {
+        const { data: paidBookings } = await supabase
+          .from("special_event_bookings")
+          .select("instance_id, quantity")
+          .in("instance_id", instanceIds)
+          .eq("payment_status", "paid");
+        (paidBookings || []).forEach((b: any) => {
+          bookingCounts[b.instance_id] = (bookingCounts[b.instance_id] || 0) + b.quantity;
+        });
+      }
+
       const dayEvts: any[] = [];
       (instances || []).forEach((inst: any) => {
         if (inst.event && inst.event.is_active) {
+          const bookedCount = bookingCounts[inst.id] || 0;
           dayEvts.push({
             event_id: inst.event.id,
             event_slug: inst.event.slug,
@@ -343,7 +358,7 @@ function BookingPageInner() {
             duration_minutes: inst.event.duration_minutes,
             price: inst.event.price,
             pricing_model: inst.event.pricing_model,
-            spots_remaining: inst.capacity - (inst.booked_count || 0),
+            spots_remaining: inst.capacity - bookedCount,
             capacity: inst.capacity,
           });
         }
