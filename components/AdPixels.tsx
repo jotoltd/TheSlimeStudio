@@ -53,9 +53,7 @@ export default function AdPixels() {
         if (s.fb_pixel_enabled && s.fb_pixel_id) {
           injectFacebookPixel(s.fb_pixel_id);
         }
-        if (s.ga_enabled && s.ga_measurement_id) {
-          injectGoogleAnalytics(s.ga_measurement_id);
-        }
+
         if (s.tiktok_pixel_enabled && s.tiktok_pixel_id) {
           injectTikTokPixel(s.tiktok_pixel_id);
         }
@@ -96,22 +94,6 @@ function injectFacebookPixel(pixelId: string) {
   (window as any).fbq("init", pixelId, testCode ? { test_event_code: testCode } : undefined);
   (window as any).fbq("track", "PageView");
   /* eslint-enable */
-}
-
-function injectGoogleAnalytics(measurementId: string) {
-  if (typeof window === "undefined") return;
-  const script = document.createElement("script");
-  script.async = true;
-  script.src = `https://www.googletagmanager.com/gtag/js?id=${measurementId}`;
-  document.head.appendChild(script);
-
-  window.dataLayer = window.dataLayer || [];
-  function gtag(...args: any[]) {
-    (window as any).dataLayer.push(args);
-  }
-  (window as any).gtag = gtag;
-  gtag("js", new Date());
-  gtag("config", measurementId);
 }
 
 function injectTikTokPixel(pixelId: string) {
