@@ -22,9 +22,12 @@ type InsightRow = {
 
 function countPurchases(actions: MetaAction[] | undefined): number {
   if (!actions) return 0;
-  return actions
-    .filter((a) => a.action_type === "purchase" || a.action_type.includes("fb_pixel_purchase") || a.action_type === "omni_purchase")
-    .reduce((s, a) => s + Number(a.value), 0);
+  // Meta reports the same conversion under several action types
+  // (purchase, omni_purchase, fb_pixel_purchase, onsite_web_purchase...).
+  // "purchase" is the canonical attributed count — use it alone or we
+  // triple-count every conversion.
+  const a = actions.find((a) => a.action_type === "purchase");
+  return a ? Number(a.value) : 0;
 }
 
 function landingPageViews(actions: MetaAction[] | undefined): number {
