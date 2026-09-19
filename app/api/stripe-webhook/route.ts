@@ -3,6 +3,7 @@ import { getStripeAsync, getStripeModeAsync, getStripeKeysForMode } from "@/lib/
 import { supabaseAdmin } from "@/lib/supabase";
 import { sendOrderConfirmationEmail } from "@/lib/email";
 import { createPaidBooking } from "@/lib/create-booking";
+import { sendCapiEvent } from "@/lib/capi";
 
 export const runtime = "nodejs";
 
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
       case "checkout.session.completed": {
         const session = event.data.object as {
           id: string;
-          metadata?: { bookingId?: string; subscriberId?: string; type?: string; order_number?: string; gift_card_code?: string; booking_type?: string; event_booking_id?: string; adSource?: string };
+          metadata?: { bookingId?: string; subscriberId?: string; type?: string; order_number?: string; gift_card_code?: string; booking_type?: string; event_booking_id?: string; adSource?: string; fbp?: string; fbc?: string; cip?: string; cua?: string };
           payment_status: string;
         };
 
@@ -62,6 +63,21 @@ export async function POST(req: NextRequest) {
               .eq("id", session.metadata.event_booking_id)
               .single();
             if (booking) {
+              // Server-side Purchase event — the browser pixel on the event
+              // confirmation page can't always be relied on.
+              await sendCapiEvent({
+                eventName: "Purchase",
+                eventId: session.id,
+                email: booking.email,
+                name: booking.name,
+                value: booking.total_price,
+                sourceUrl: "https://theslimestudio.co.uk/events",
+                clientIp: session.metadata.cip || null,
+                userAgent: session.metadata.cua || null,
+                fbp: session.metadata.fbp || null,
+                fbc: session.metadata.fbc || null,
+              });
+
               const { data: event } = await supabaseAdmin
                 .from("special_events")
                 .select("title, duration_minutes, pricing_model")
@@ -238,6 +254,10 @@ export async function POST(req: NextRequest) {
             phone?: string;
             discountCode?: string;
             adSource?: string;
+            fbp?: string;
+            fbc?: string;
+            cip?: string;
+            cua?: string;
           };
         };
 
@@ -278,6 +298,22 @@ export async function POST(req: NextRequest) {
           if (result.created) {
             console.warn(`[stripe-webhook] Recovered booking ${result.bookingId} for ${intent.id} — client never confirmed it.`);
           }
+
+          // Server-side Purchase — event_id matches the browser event
+          // (paymentIntentId) so Meta dedupes if the client also fired it.
+          await sendCapiEvent({
+            eventName: "Purchase",
+            eventId: intent.id,
+            email: md.email,
+            name: md.name,
+            phone: md.phone,
+            value: md.totalPrice ? parseFloat(md.totalPrice) : intent.amount / 100,
+            sourceUrl: "https://theslimestudio.co.uk/booking",
+            clientIp: md.cip || null,
+            userAgent: md.cua || null,
+            fbp: md.fbp || null,
+            fbc: md.fbc || null,
+          });
         }
         break;
       }

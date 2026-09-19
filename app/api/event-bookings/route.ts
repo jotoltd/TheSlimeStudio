@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getStripeModeAsync, getStripeKeysForMode } from "@/lib/stripe";
+import { sendCapiEvent, metaContextFromRequest } from "@/lib/capi";
 
 export const runtime = "nodejs";
 
@@ -89,14 +90,26 @@ export async function POST(req: NextRequest) {
     .single();
   const provider = settings?.payment_provider || "stripe";
 
+  const meta = metaContextFromRequest(req, body);
+  await sendCapiEvent({
+    eventName: "InitiateCheckout",
+    eventId: `ic_${booking.id}`,
+    email: booking.email,
+    name: booking.name,
+    phone: booking.phone,
+    value: totalPrice,
+    sourceUrl: `https://theslimestudio.co.uk/events/${event.slug || event.id}`,
+    ...meta,
+  });
+
   // Create checkout
   if (provider === "sumup") {
     return createSumUpCheckout(booking, event, instance, totalPrice);
   }
-  return createStripeCheckout(booking, event, instance, totalPrice);
+  return createStripeCheckout(booking, event, instance, totalPrice, meta);
 }
 
-async function createStripeCheckout(booking: any, event: any, instance: any, total: number) {
+async function createStripeCheckout(booking: any, event: any, instance: any, total: number, meta?: { clientIp: string | null; userAgent: string | null; fbp: string | null; fbc: string | null }) {
   const mode = await getStripeModeAsync();
   const keys = getStripeKeysForMode(mode);
   const STRIPE_SECRET = keys.secretKey;
@@ -119,13 +132,17 @@ async function createStripeCheckout(booking: any, event: any, instance: any, tot
       "line_items[0][price_data][currency]": "gbp",
       "line_items[0][price_data][unit_amount]": String(Math.round(total * 100)),
       "line_items[0][price_data][product_data][name]": `${event.title} — ${instance.date} ${instance.start_time}`,
-      success_url: `${origin}/events/${event.slug || event.id}?booked=1&qty=${booking.quantity}&total=${total}&date=${encodeURIComponent(instance.date)}&time=${encodeURIComponent(instance.start_time)}`,
+      success_url: `${origin}/events/${event.slug || event.id}?booked=1&qty=${booking.quantity}&total=${total}&date=${encodeURIComponent(instance.date)}&time=${encodeURIComponent(instance.start_time)}&sid={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/events/${event.slug || event.id}?cancelled=1`,
       "metadata[event_booking_id]": booking.id,
       "metadata[booking_type]": "special_event",
       "metadata[instance_id]": instance.id,
       "metadata[event_id]": event.id,
       "metadata[adSource]": booking.notes || "",
+      "metadata[fbp]": (meta?.fbp || "").slice(0, 400),
+      "metadata[fbc]": (meta?.fbc || "").slice(0, 400),
+      "metadata[cip]": (meta?.clientIp || "").slice(0, 100),
+      "metadata[cua]": (meta?.userAgent || "").slice(0, 400),
       customer_email: booking.email,
       "payment_intent_data[receipt_email]": booking.email,
       "payment_intent_data[description]": `${event.title} — ${instance.date} at ${instance.start_time}`,

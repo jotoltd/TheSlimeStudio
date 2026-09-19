@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getStripeAsync, getStripeModeAsync } from "@/lib/stripe";
 import { supabaseAdmin, STAMPS_PER_REWARD } from "@/lib/supabase";
 import { generateRewardCode, redeemRewardCode } from "@/lib/loyalty-rewards";
+import { sendCapiEvent, metaContextFromRequest } from "@/lib/capi";
 
 export const runtime = "nodejs";
 
@@ -139,6 +140,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Failed to create booking: " + bookingError.message }, { status: 500 });
     }
 
+    const meta = metaContextFromRequest(req, body);
+    await sendCapiEvent({
+      eventName: "Purchase",
+      eventId: booking?.id || `free_${Date.now()}`,
+      email, name, phone: body.phone,
+      value: 0,
+      sourceUrl: "https://theslimestudio.co.uk/booking",
+      ...meta,
+    });
+
     // Send confirmation email
     try {
       await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/booking-confirmation`, {
@@ -233,6 +244,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ free: true, bookingId: booking?.id });
   }
 
+  const meta = metaContextFromRequest(req, body);
+
   try {
     const intent = await stripe.paymentIntents.create({
       amount: Math.round(totalPrice * 100),
@@ -251,11 +264,26 @@ export async function POST(req: NextRequest) {
         discountCode: discountCode || "",
         giftCardCode: giftCardCode || "",
         adSource: body.adSource || "",
+        // Meta click context — lets the Conversions API Purchase event match
+        // back to the ad click even when the browser pixel was blocked.
+        fbp: (body.fbp || "").slice(0, 400),
+        fbc: (body.fbc || "").slice(0, 400),
+        cip: (meta.clientIp || "").slice(0, 100),
+        cua: (meta.userAgent || "").slice(0, 400),
       },
       receipt_email: email,
       description: isParty
         ? `Birthday Party Booking — ${people} children`
         : `Slime Studio Session — ${people} ${people === 1 ? "person" : "people"} — ${date} at ${timeSlot}`,
+    });
+
+    await sendCapiEvent({
+      eventName: "InitiateCheckout",
+      eventId: intent.id,
+      email, name, phone: body.phone,
+      value: totalPrice,
+      sourceUrl: "https://theslimestudio.co.uk/booking",
+      ...meta,
     });
 
     return NextResponse.json({ clientSecret: intent.client_secret, paymentIntentId: intent.id, mode });

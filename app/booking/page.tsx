@@ -7,7 +7,7 @@ import Calendar from "@/components/Calendar";
 import { supabase, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, PRICE_PER_PERSON, MAX_DAILY_BOOKINGS as DEFAULT_MAX } from "@/lib/supabase";
 import type { BookingSettings, OpeningHour, DateOverride } from "@/lib/supabase";
 import { useContent } from "@/lib/useContent";
-import { trackPurchase, trackInitiateCheckout } from "@/lib/ad-tracking";
+import { trackPurchase, trackInitiateCheckout, getMetaCookies } from "@/lib/ad-tracking";
 
 const InlinePayment = lazy(() => import("@/components/InlinePayment"));
 
@@ -187,7 +187,7 @@ function BookingPageInner() {
             setTimeSlot(data.timeSlot || timeSlot);
             setPeople(data.people || people);
             setStatus("paid");
-            trackPurchase(Number(data.totalPrice || 0));
+            trackPurchase(Number(data.totalPrice || 0), "GBP", sumupRef);
           } else {
             setErrorMsg(data.error || "Payment verification failed.");
             setStatus("error");
@@ -227,7 +227,7 @@ function BookingPageInner() {
           // The Stripe webhook creates the booking if this request never lands.
         }).finally(() => {
           setStatus("paid");
-          trackPurchase(finalPrice);
+          trackPurchase(finalPrice, "GBP", piId);
           // Clean up URL
           const url = new URL(window.location.href);
           url.searchParams.delete("payment_intent");
@@ -522,6 +522,7 @@ function BookingPageInner() {
             discountCode: appliedDiscount?.code,
             giftCardCode: giftCardBalance !== null ? giftCardCode : null,
             adSource,
+            ...getMetaCookies(),
           }),
         });
         const data = await res.json();
@@ -560,19 +561,20 @@ function BookingPageInner() {
           discountCode: appliedDiscount?.code,
           giftCardCode: giftCardBalance !== null ? giftCardCode : null,
           adSource,
+          ...getMetaCookies(),
         }),
       });
       const data = await res.json();
       if (data.free) {
         setBookingId(data.bookingId || "");
         setStatus("paid");
-        trackPurchase(0);
+        trackPurchase(0, "GBP", data.bookingId);
         return;
       }
       if (data.clientSecret) {
         setClientSecret(data.clientSecret);
         setPaymentIntentId(data.paymentIntentId);
-        trackInitiateCheckout(finalPrice);
+        trackInitiateCheckout(finalPrice, "GBP", data.paymentIntentId);
         const modeRes = await fetch("/api/stripe-mode");
         const modeData = await modeRes.json();
         setPublishableKey(modeData.publishableKey || "");
@@ -758,14 +760,14 @@ function BookingPageInner() {
                             setErrorMsg("Your payment went through and your booking is saved, but this slot is now over capacity. We'll be in touch shortly to confirm or arrange an alternative.");
                           }
                           setStatus("paid");
-                          trackPurchase(finalPrice);
+                          trackPurchase(finalPrice, "GBP", paymentIntentId);
                         } else if (attempt < 2) {
                           // Retry after short delay
                           setTimeout(() => confirmBooking(attempt + 1), 1000);
                         } else {
                           // The Stripe webhook creates the booking as a fallback.
                           setStatus("paid");
-                          trackPurchase(finalPrice);
+                          trackPurchase(finalPrice, "GBP", paymentIntentId);
                         }
                       } catch {
                         if (attempt < 2) {
@@ -773,7 +775,7 @@ function BookingPageInner() {
                         } else {
                           // The Stripe webhook creates the booking as a fallback.
                           setStatus("paid");
-                          trackPurchase(finalPrice);
+                          trackPurchase(finalPrice, "GBP", paymentIntentId);
                         }
                       }
                     }

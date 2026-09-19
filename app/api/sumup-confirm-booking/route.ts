@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySumUpPayment } from "@/lib/payment";
 import { supabaseAdmin } from "@/lib/supabase";
+import { sendCapiEvent, metaContextFromRequest } from "@/lib/capi";
 import {
   createPaidBooking,
   sendCustomerConfirmation,
@@ -87,6 +88,20 @@ export async function POST(req: NextRequest) {
       // Instead, send notifications directly here.
       await sendNotificationsAndLoyalty(booking);
 
+      // Server-side Purchase — event_id matches the browser event fired on
+      // the booking page after the SumUp redirect (checkoutRef).
+      const meta = metaContextFromRequest(req, body);
+      await sendCapiEvent({
+        eventName: "Purchase",
+        eventId: checkoutRef,
+        email: booking.email,
+        name: booking.name,
+        phone: booking.phone,
+        value: booking.total_price,
+        sourceUrl: "https://theslimestudio.co.uk/booking",
+        ...meta,
+      });
+
       return NextResponse.json({
         success: true,
         bookingId: updated.id,
@@ -124,6 +139,18 @@ export async function POST(req: NextRequest) {
     const result = await createPaidBooking(fallbackDetails);
 
     if (result.bookingId) {
+      const meta = metaContextFromRequest(req, body);
+      await sendCapiEvent({
+        eventName: "Purchase",
+        eventId: checkoutRef,
+        email: fallbackDetails.email,
+        name: fallbackDetails.name,
+        phone: fallbackDetails.phone,
+        value: fallbackDetails.totalPrice,
+        sourceUrl: "https://theslimestudio.co.uk/booking",
+        ...meta,
+      });
+
       if (result.created) {
         console.warn(`[sumup-confirm] Recovered booking ${result.bookingId} for ${checkoutRef} — pending booking was missing.`);
       }

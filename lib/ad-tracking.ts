@@ -8,6 +8,18 @@ declare global {
   }
 }
 
+// Read Meta's click/browser cookies — _fbc wraps the fbclid from the ad click
+// and is the strongest signal for matching conversions back to ads.
+export function getMetaCookies(): { fbp?: string; fbc?: string } {
+  if (typeof document === "undefined") return {};
+  const cookies = document.cookie.split(";").map((c) => c.trim());
+  const get = (key: string) => {
+    const c = cookies.find((c) => c.startsWith(key + "="));
+    return c ? decodeURIComponent(c.slice(key.length + 1)) : undefined;
+  };
+  return { fbp: get("_fbp"), fbc: get("_fbc") };
+}
+
 export type TrackEventName =
   | "PageView"
   | "Purchase"
@@ -19,12 +31,14 @@ export type TrackEventName =
 
 export function trackEvent(
   event: TrackEventName,
-  params?: Record<string, any>
+  params?: Record<string, any>,
+  eventId?: string
 ): void {
   if (typeof window === "undefined") return;
 
   if (window.fbq) {
-    window.fbq("track", event, params);
+    // eventID lets Meta dedupe this against the matching Conversions API event
+    window.fbq("track", event, params, eventId ? { eventID: eventId } : undefined);
   }
 
   if (window.gtag) {
@@ -49,11 +63,15 @@ export function trackEvent(
 }
 
 export function trackPurchase(value: number, currency = "GBP", transactionId?: string) {
-  trackEvent("Purchase", {
-    value,
-    currency,
-    ...(transactionId ? { transaction_id: transactionId } : {}),
-  });
+  trackEvent(
+    "Purchase",
+    {
+      value,
+      currency,
+      ...(transactionId ? { transaction_id: transactionId } : {}),
+    },
+    transactionId
+  );
 }
 
 export function trackLead(value?: number, currency = "GBP") {
@@ -70,11 +88,15 @@ export function trackAddToCart(value: number, currency = "GBP", contentName?: st
   });
 }
 
-export function trackInitiateCheckout(value: number, currency = "GBP") {
-  trackEvent("InitiateCheckout", {
-    value,
-    currency,
-  });
+export function trackInitiateCheckout(value: number, currency = "GBP", eventId?: string) {
+  trackEvent(
+    "InitiateCheckout",
+    {
+      value,
+      currency,
+    },
+    eventId
+  );
 }
 
 export function trackViewContent(contentName: string, value?: number, currency = "GBP") {

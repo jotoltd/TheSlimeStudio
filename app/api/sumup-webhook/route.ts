@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySumUpPayment } from "@/lib/payment";
 import { supabaseAdmin } from "@/lib/supabase";
+import { sendCapiEvent } from "@/lib/capi";
 import {
   createPaidBooking,
   sendCustomerConfirmation,
@@ -80,6 +81,15 @@ export async function POST(req: NextRequest) {
           .update({ payment_status: "paid" })
           .eq("id", eventBooking.id);
 
+        await sendCapiEvent({
+          eventName: "Purchase",
+          eventId: `event_${eventBooking.id}`,
+          email: eventBooking.email,
+          name: eventBooking.name,
+          value: eventBooking.total_price,
+          sourceUrl: "https://theslimestudio.co.uk/events",
+        });
+
         // Send confirmation email
         try {
           const { data: event } = await supabaseAdmin
@@ -156,6 +166,17 @@ export async function POST(req: NextRequest) {
       }
 
       console.warn(`[sumup-webhook] Recovered booking ${booking.id} for ${checkoutRef} — client never confirmed.`);
+
+      await sendCapiEvent({
+        eventName: "Purchase",
+        eventId: checkoutRef,
+        email: booking.email,
+        name: booking.name,
+        phone: booking.phone,
+        value: booking.total_price,
+        sourceUrl: "https://theslimestudio.co.uk/booking",
+      });
+
       return NextResponse.json({ received: true, recovered: true, bookingId: booking.id });
     }
 

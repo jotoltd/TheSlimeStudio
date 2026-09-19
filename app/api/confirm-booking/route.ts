@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getStripeAsync } from "@/lib/stripe";
 import { createPaidBooking } from "@/lib/create-booking";
 import { supabaseAdmin } from "@/lib/supabase";
+import { sendCapiEvent, metaContextFromRequest } from "@/lib/capi";
 
 export const runtime = "nodejs";
 
@@ -69,6 +70,21 @@ export async function POST(req: NextRequest) {
   if (!result.bookingId) {
     return NextResponse.json({ error: result.error || "Failed to create booking" }, { status: 500 });
   }
+
+  // Server-side Purchase event — event_id matches the browser pixel event
+  // (paymentIntentId) so Meta dedupes if both arrive.
+  const meta = metaContextFromRequest(req, body);
+  await sendCapiEvent({
+    eventName: "Purchase",
+    eventId: paymentIntentId,
+    email, name, phone,
+    value: totalPrice,
+    sourceUrl: "https://theslimestudio.co.uk/booking",
+    clientIp: intent.metadata?.cip || meta.clientIp,
+    userAgent: intent.metadata?.cua || meta.userAgent,
+    fbp: intent.metadata?.fbp || body.fbp,
+    fbc: intent.metadata?.fbc || body.fbc,
+  });
 
   // Redeem gift card if provided
   if (giftCardCode && result.bookingId) {

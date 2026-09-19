@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { getSumUpKey, isSumUpConfigured } from "@/lib/payment";
 import { supabaseAdmin } from "@/lib/supabase";
+import { sendCapiEvent, metaContextFromRequest } from "@/lib/capi";
 
 export const runtime = "nodejs";
 
@@ -184,6 +185,16 @@ export async function POST(req: NextRequest) {
       console.error("SumUp checkout: no URL returned", data);
       return NextResponse.json({ error: "Failed to get checkout URL from SumUp" }, { status: 500 });
     }
+
+    const meta = metaContextFromRequest(req, body);
+    await sendCapiEvent({
+      eventName: "InitiateCheckout",
+      eventId: checkoutRef,
+      email, name, phone,
+      value: totalPrice,
+      sourceUrl: "https://theslimestudio.co.uk/booking",
+      ...meta,
+    });
 
     return NextResponse.json({
       url: checkoutUrl,

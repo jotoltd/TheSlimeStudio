@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { getMetaCookies, trackPurchase } from "@/lib/ad-tracking";
 
 type EventInstance = {
   id: string;
@@ -49,6 +50,16 @@ export default function EventDetailClient({
   const bookedTotal = searchParams.get("total");
   const bookedDate = searchParams.get("date");
   const bookedTime = searchParams.get("time");
+  const bookedSid = searchParams.get("sid");
+
+  // Browser Purchase event — eventID matches the server-side Conversions API
+  // event (Stripe session id) so Meta dedupes the pair.
+  useEffect(() => {
+    if (booked && bookedSid) {
+      trackPurchase(parseFloat(bookedTotal || "0") || 0, "GBP", bookedSid);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [selectedInstance, setSelectedInstance] = useState<EventInstance | null>(null);
   const [bookingQty, setBookingQty] = useState(1);
@@ -107,6 +118,7 @@ export default function EventDetailClient({
           phone: phone.trim() || undefined,
           quantity: bookingQty,
           adSource,
+          ...getMetaCookies(),
         }),
       });
       const data = await res.json();
