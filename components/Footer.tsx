@@ -82,6 +82,7 @@ export default function Footer() {
         <div className="flex flex-wrap justify-between items-center gap-3 pt-6 text-[0.85rem] text-ink-soft">
           <p>{c.footer_copyright}</p>
           <div className="flex gap-4 items-center">
+            <Link href="/privacy" className="text-[0.8rem] text-ink-soft/60 hover:text-ink transition-colors">Privacy</Link>
             <Link href="/admin" className="text-[0.8rem] text-ink-soft/60 hover:text-ink transition-colors">Admin</Link>
             <SocialLinks size={18} />
           </div>
