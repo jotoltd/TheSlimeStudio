@@ -33,6 +33,24 @@ function landingPageViews(actions: MetaAction[] | undefined): number {
   return a ? Number(a.value) : 0;
 }
 
+// Turns Meta's targeting JSON into "Holt +25mi · ages 18–65 · Parenting, Family Day"
+function describeTargeting(t: any): string {
+  if (!t) return "";
+  const parts: string[] = [];
+  const geo = t.geo_locations;
+  if (geo?.cities?.length) {
+    const c = geo.cities[0];
+    const miles = c.distance_unit === "kilometer" ? Math.round(Number(c.radius) * 0.621371) : c.radius;
+    parts.push(`${c.name || "Custom area"} +${miles}mi`);
+  } else if (geo?.countries?.length) {
+    parts.push(geo.countries.includes("GB") ? "All UK" : geo.countries.join(", "));
+  }
+  if (t.age_min || t.age_max) parts.push(`ages ${t.age_min || 18}–${t.age_max || "65+"}`);
+  const interests = (t.flexible_spec || []).flatMap((s: any) => s.interests || []).map((i: any) => i.name);
+  if (interests.length) parts.push(interests.join(", "));
+  return parts.join(" · ");
+}
+
 function checkAdmin(req: NextRequest): boolean {
   const token = req.cookies.get("admin_token")?.value;
   return !!(token && verifyToken(token));
@@ -57,7 +75,7 @@ export async function GET(req: NextRequest) {
   let metaError: string | null = null;
   const safe = <T,>(p: Promise<T[]>) => p.catch((e) => { metaError = e.message; return [] as T[]; });
 
-  const [today, week, month, campaigns, adsets, ads, daily, byAgeGender, byRegion, manageCampaigns, manageAdsets, adCreatives] = await Promise.all([
+  const [today, week, month, campaigns, adsets, ads, daily, byAgeGender, byRegion, byPlacement, manageCampaigns, manageAdsets, adCreatives] = await Promise.all([
     safe(metaGet(metaToken, `${accountId}/insights`, { fields, date_preset: "today" }) as Promise<InsightRow[]>),
     safe(metaGet(metaToken, `${accountId}/insights`, { fields, date_preset: "last_7d" }) as Promise<InsightRow[]>),
     safe(metaGet(metaToken, `${accountId}/insights`, { fields, date_preset: "last_30d" }) as Promise<InsightRow[]>),
@@ -67,8 +85,9 @@ export async function GET(req: NextRequest) {
     safe(metaGet(metaToken, `${accountId}/insights`, { fields: `spend,clicks,actions`, date_preset: "last_30d", time_increment: "1" }) as Promise<InsightRow[]>),
     safe(metaGet(metaToken, `${accountId}/insights`, { fields: `impressions,reach,spend,actions`, date_preset: "last_30d", breakdowns: "age,gender" }) as Promise<InsightRow[]>),
     safe(metaGet(metaToken, `${accountId}/insights`, { fields: `impressions,reach,spend`, date_preset: "last_30d", breakdowns: "region" }) as Promise<InsightRow[]>),
+    safe(metaGet(metaToken, `${accountId}/insights`, { fields: `impressions,clicks,spend,actions`, date_preset: "last_30d", breakdowns: "publisher_platform,platform_position" }) as Promise<InsightRow[]>),
     safe(metaGet(metaToken, `${accountId}/campaigns`, { fields: "name,status,effective_status,daily_budget,objective" })),
-    safe(metaGet(metaToken, `${accountId}/adsets`, { fields: "name,status,effective_status,daily_budget,campaign{name}" })),
+    safe(metaGet(metaToken, `${accountId}/adsets`, { fields: "name,status,effective_status,daily_budget,campaign{name},targeting,optimization_goal,promoted_object" })),
     safe(metaGet(metaToken, `${accountId}/ads`, { fields: "name,status,effective_status,creative{thumbnail_url}" })),
   ]);
 
@@ -127,6 +146,13 @@ export async function GET(req: NextRequest) {
         reach: Number(r.reach || 0),
         spend: Number(r.spend || 0),
       })).sort((a, b) => b.impressions - a.impressions).slice(0, 10),
+      placements: (byPlacement as any[]).map((r) => ({
+        platform: r.publisher_platform, position: r.platform_position,
+        impressions: Number(r.impressions || 0),
+        clicks: Number(r.clicks || 0),
+        spend: Number(r.spend || 0),
+        purchases: countPurchases(r.actions),
+      })).sort((a, b) => b.impressions - a.impressions),
     },
     campaigns: campaigns.map((r) => ({ name: r.campaign_name, ...summarize([r]) })),
     adsets: adsets.map((r) => ({ name: r.adset_name, ...summarize([r]) })),
@@ -139,6 +165,8 @@ export async function GET(req: NextRequest) {
       adsets: (manageAdsets as any[]).map((a) => ({
         id: a.id, name: a.name, status: a.status, effectiveStatus: a.effective_status,
         dailyBudget: a.daily_budget ? Number(a.daily_budget) / 100 : null, campaignName: a.campaign?.name,
+        targeting: describeTargeting(a.targeting),
+        optimisesFor: a.promoted_object?.custom_event_type || a.optimization_goal || null,
       })),
       ads: (adCreatives as any[]).map((a) => ({
         id: a.id, name: a.name, status: a.status, effectiveStatus: a.effective_status,

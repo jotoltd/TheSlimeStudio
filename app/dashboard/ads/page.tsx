@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 type Summary = { spend: number; impressions: number; reach: number; clicks: number; lpv: number; purchases: number };
 type NamedRow = Summary & { name?: string; thumbnail?: string | null };
 type DailyPoint = { date: string; spend: number; clicks: number; purchases: number };
-type ManagedEntity = { id: string; name: string; status: string; effectiveStatus: string; dailyBudget: number | null; campaignName?: string; thumbnail?: string | null };
+type ManagedEntity = { id: string; name: string; status: string; effectiveStatus: string; dailyBudget: number | null; campaignName?: string; thumbnail?: string | null; targeting?: string; optimisesFor?: string | null };
 type AdBooking = { id: string; name: string; email: string; date: string; total_price: number; payment_status: string; notes: string; created_at: string };
 
 type Data = {
@@ -20,6 +20,7 @@ type Data = {
   audience: {
     ageGender: { age: string; gender: string; impressions: number; reach: number; spend: number; purchases: number }[];
     regions: { region: string; impressions: number; reach: number; spend: number }[];
+    placements: { platform: string; position: string; impressions: number; clicks: number; spend: number; purchases: number }[];
   };
   adBookings: AdBooking[];
   attributedRevenue: number;
@@ -43,6 +44,15 @@ function adLabel(notes: string): string {
 }
 
 const fmt = (n: number) => `£${n.toFixed(2)}`;
+
+function placementLabel(platform: string, position: string): string {
+  const p = platform.charAt(0).toUpperCase() + platform.slice(1);
+  const pos = position
+    .replace(/^(instagram|facebook|threads)_?/i, "")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (ch) => ch.toUpperCase());
+  return pos && pos !== "Feed" ? `${p} ${pos}` : `${p} Feed`;
+}
 
 export default function AdsPage() {
   const [data, setData] = useState<Data | null>(null);
@@ -214,6 +224,40 @@ export default function AdsPage() {
             </div>
           )}
 
+          {/* Where ads appear — placements */}
+          {data.audience?.placements?.length > 0 && (
+            <div className="bg-white rounded-[20px] p-8 shadow-sm mb-8">
+              <h2 className="font-display text-[1.1rem] mb-1">Where your ads appear</h2>
+              <p className="text-[0.75rem] text-ink-soft mb-5">Last 30 days · 🎉 = purchases Meta attributes to that placement</p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-[0.85rem]">
+                  <thead>
+                    <tr className="text-left text-[0.7rem] text-ink-soft uppercase tracking-wider border-b border-ink/[0.08]">
+                      <th className="pb-2 pr-4">Placement</th>
+                      <th className="pb-2 pr-4 text-right">Views</th>
+                      <th className="pb-2 pr-4 text-right">Clicks</th>
+                      <th className="pb-2 pr-4 text-right">Click rate</th>
+                      <th className="pb-2 pr-4 text-right">Spend</th>
+                      <th className="pb-2 text-right">Bookings</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.audience.placements.map((p) => (
+                      <tr key={`${p.platform}-${p.position}`} className="border-b border-ink/[0.05] last:border-0">
+                        <td className="py-2.5 pr-4 font-medium">{placementLabel(p.platform, p.position)}</td>
+                        <td className="py-2.5 pr-4 text-right">{p.impressions.toLocaleString()}</td>
+                        <td className="py-2.5 pr-4 text-right">{p.clicks}</td>
+                        <td className="py-2.5 pr-4 text-right">{p.impressions > 0 ? `${((p.clicks / p.impressions) * 100).toFixed(1)}%` : "—"}</td>
+                        <td className="py-2.5 pr-4 text-right">{fmt(p.spend)}</td>
+                        <td className="py-2.5 text-right">{p.purchases > 0 ? `${p.purchases} 🎉` : "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {/* Manage campaigns */}
           <div className="bg-white rounded-[20px] p-8 shadow-sm mb-8">
             <h2 className="font-display text-[1.1rem] mb-2">Manage</h2>
@@ -230,6 +274,7 @@ export default function AdsPage() {
                     </span>
                   </div>
                   {"campaignName" in e && e.campaignName && <div className="text-[0.7rem] text-ink-soft">{e.campaignName}</div>}
+                  {e.targeting && <div className="text-[0.7rem] text-ink-soft">🎯 {e.targeting}{e.optimisesFor ? ` · optimising for ${e.optimisesFor === "PURCHASE" ? "Purchases" : e.optimisesFor}` : ""}</div>}
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   {e.dailyBudget != null && (
@@ -273,7 +318,10 @@ export default function AdsPage() {
 
           {/* Attributed bookings */}
           <div className="bg-white rounded-[20px] p-8 shadow-sm">
-            <h2 className="font-display text-[1.1rem] mb-6">Bookings from Ads</h2>
+            <h2 className="font-display text-[1.1rem] mb-2">Bookings from Ads</h2>
+            <p className="text-[0.75rem] text-ink-soft mb-6">
+              Real bookings from your database — this is the accurate count. Ads Manager may show fewer purchases because Meta can't always connect a booking back to the original ad click (different device, ad blockers, long gaps).
+            </p>
             {data.adBookings.length === 0 ? (
               <div className="text-center py-8 text-ink-soft text-[0.9rem]">No ad-attributed bookings yet.</div>
             ) : (
