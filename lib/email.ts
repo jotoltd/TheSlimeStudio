@@ -19,6 +19,18 @@ export async function logEmail(recipient: string, subject: string, type: string,
 export const EMAIL_FROM = "The Slime Studio <noreply@theslimestudio.co.uk>";
 export const CONTACT_EMAIL = "studio@theslimestudio.co.uk";
 
+// Turns "[Ad: Facebook/Instagram Ad, utm:ig/My Campaign]" into "Instagram Ad — campaign My Campaign"
+export function adSourceLabel(adSource: string): string {
+  const inner = adSource.replace(/^\[Ad:\s*/i, "").replace(/\]\s*$/, "").trim();
+  const m = inner.match(/utm:([a-z]+)(?:\/([^\],]+))?/i);
+  if (m) {
+    const map: Record<string, string> = { ig: "Instagram", instagram: "Instagram", fb: "Facebook", facebook: "Facebook", meta: "Meta", google: "Google", tiktok: "TikTok", snapchat: "Snapchat" };
+    const platform = map[m[1].toLowerCase()] || m[1];
+    return `${platform} Ad${m[2] ? ` — campaign "${m[2]}"` : ""}`;
+  }
+  return inner;
+}
+
 function emailWrapper(content: string): string {
   return `
     <div style="font-family: 'Poppins', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
@@ -141,6 +153,7 @@ export async function sendEventBookingEmails(opts: {
   quantity: number;
   totalPrice: number;
   pricingModel: string;
+  adSource?: string | null;
 }) {
   const resend = getResend();
   if (!resend) {
@@ -180,6 +193,7 @@ export async function sendEventBookingEmails(opts: {
           <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Email:</strong> ${opts.email}</p>
           <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>${opts.pricingModel === "per_person" ? "People" : "Tickets"}:</strong> ${opts.quantity}</p>
           <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Total:</strong> &pound;${opts.totalPrice.toFixed(2)}</p>
+          ${opts.adSource ? `<p style="margin: 8px 0 4px; color: #1877f2; font-size: 0.9rem;"><strong>📣 Source:</strong> ${adSourceLabel(opts.adSource)}</p>` : ""}
         </div>
       `),
     });

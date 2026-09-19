@@ -6,6 +6,7 @@ import {
   CONTACT_EMAIL,
   logEmail,
   bookingConfirmationHtml,
+  adSourceLabel,
 } from "@/lib/email";
 
 export type BookingDetails = {
@@ -180,6 +181,7 @@ export async function sendAdminNotification(d: BookingDetails, overCapacity: boo
       <p><strong>People:</strong> ${d.people}</p>
       <p><strong>Total:</strong> £${Number(d.totalPrice).toFixed(2)}</p>
       <p><strong>Payment:</strong> Paid</p>
+      ${d.adSource ? `<p style="color:#1877f2"><strong>📣 Source:</strong> ${adSourceLabel(d.adSource)}</p>` : ""}
     `,
   });
   await logEmail(CONTACT_EMAIL, `New Booking — ${d.name}`, "admin_notification", "sent");

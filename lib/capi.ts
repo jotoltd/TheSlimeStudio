@@ -42,7 +42,12 @@ export async function sendCapiEvent(input: CapiEventInput): Promise<void> {
 
   try {
     const userData: Record<string, unknown> = {};
-    if (input.email) userData.em = [sha256(input.email)];
+    if (input.email) {
+      userData.em = [sha256(input.email)];
+      // Stable per-customer ID so Meta can match this event to the same
+      // person across browser/server and repeat bookings.
+      userData.external_id = [sha256(input.email)];
+    }
     if (input.phone) userData.ph = [sha256(normalisePhone(input.phone))];
     if (input.name) {
       const parts = input.name.trim().split(/\s+/);

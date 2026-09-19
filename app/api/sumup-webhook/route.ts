@@ -114,6 +114,7 @@ export async function POST(req: NextRequest) {
               quantity: eventBooking.quantity,
               totalPrice: eventBooking.total_price,
               pricingModel: event.pricing_model,
+              adSource: eventBooking.notes,
             });
           }
         } catch (e) {

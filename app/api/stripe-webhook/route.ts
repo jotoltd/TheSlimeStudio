@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
           try {
             const { data: booking } = await supabaseAdmin
               .from("special_event_bookings")
-              .select("name, email, quantity, total_price, event_id, instance_id")
+              .select("name, email, quantity, total_price, event_id, instance_id, notes")
               .eq("id", session.metadata.event_booking_id)
               .single();
             if (booking) {
@@ -100,6 +100,7 @@ export async function POST(req: NextRequest) {
                   quantity: booking.quantity,
                   totalPrice: booking.total_price,
                   pricingModel: event.pricing_model,
+                  adSource: booking.notes,
                 });
               }
             }

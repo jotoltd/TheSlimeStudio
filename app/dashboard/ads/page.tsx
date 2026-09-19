@@ -3,16 +3,20 @@
 import { useEffect, useState } from "react";
 
 type Summary = { spend: number; impressions: number; reach: number; clicks: number; lpv: number; purchases: number };
-type NamedRow = Summary & { name?: string };
+type NamedRow = Summary & { name?: string; thumbnail?: string | null };
+type DailyPoint = { date: string; spend: number; clicks: number; purchases: number };
+type ManagedEntity = { id: string; name: string; status: string; effectiveStatus: string; dailyBudget: number | null; campaignName?: string; thumbnail?: string | null };
 type AdBooking = { id: string; name: string; email: string; date: string; total_price: number; payment_status: string; notes: string; created_at: string };
 
 type Data = {
   configured: boolean;
   metaError: string | null;
   summary: { today: Summary; week: Summary; month: Summary };
+  daily: DailyPoint[];
   campaigns: NamedRow[];
   adsets: NamedRow[];
   ads: NamedRow[];
+  manage: { campaigns: ManagedEntity[]; adsets: ManagedEntity[]; ads: ManagedEntity[] };
   adBookings: AdBooking[];
   attributedRevenue: number;
 };
@@ -34,19 +38,46 @@ function adLabel(notes: string): string {
   return "Meta Ad";
 }
 
+const fmt = (n: number) => `£${n.toFixed(2)}`;
+
 export default function AdsPage() {
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
+  const [actionMsg, setActionMsg] = useState("");
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [budgetEdits, setBudgetEdits] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    fetch("/api/admin/ads-insights")
-      .then((r) => r.json())
-      .then(setData)
-      .catch(() => setData(null))
-      .finally(() => setLoading(false));
-  }, []);
+  async function load() {
+    setLoading(true);
+    try {
+      const r = await fetch("/api/admin/ads-insights");
+      setData(await r.json());
+    } catch {
+      setData(null);
+    }
+    setLoading(false);
+  }
 
-  const fmt = (n: number) => `£${n.toFixed(2)}`;
+  useEffect(() => { load(); }, []);
+
+  async function control(id: string, payload: { status?: string; dailyBudget?: number }) {
+    setBusyId(id); setActionMsg("");
+    try {
+      const r = await fetch("/api/admin/ads-insights", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, ...payload }),
+      });
+      const json = await r.json();
+      if (!r.ok) setActionMsg(json.error || "Action failed");
+      else await load();
+    } catch {
+      setActionMsg("Network error");
+    }
+    setBusyId(null);
+  }
+
+  const maxSpend = Math.max(...(data?.daily || []).map((d) => d.spend), 0.01);
 
   return (
     <div className="py-8 md:py-10 px-5 md:px-10">
@@ -97,6 +128,26 @@ export default function AdsPage() {
             </div>
           </div>
 
+          {/* Daily trend */}
+          {data.daily.length > 0 && (
+            <div className="bg-white rounded-[20px] p-8 shadow-sm mb-8">
+              <h2 className="font-display text-[1.1rem] mb-6">Daily — Last 30 Days</h2>
+              <div className="flex items-end gap-[3px] h-32">
+                {data.daily.map((d) => (
+                  <div key={d.date} className="flex-1 flex flex-col items-center justify-end gap-1 min-w-0" title={`${d.date}: ${fmt(d.spend)} · ${d.clicks} clicks · ${d.purchases} bookings`}>
+                    {d.purchases > 0 && <span className="text-[0.6rem] font-medium text-green-600 leading-none">{d.purchases}🎉</span>}
+                    <div className={`w-full rounded-t ${d.spend > 0 ? "bg-gradient-to-t from-bright-lavender to-sky-blue-light" : "bg-ink/[0.06]"}`} style={{ height: `${Math.max((d.spend / maxSpend) * 96, 2)}px` }} />
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-between text-[0.65rem] text-ink-soft mt-2">
+                <span>{data.daily[0]?.date}</span>
+                <span>bars = spend · 🎉 = bookings that day</span>
+                <span>{data.daily[data.daily.length - 1]?.date}</span>
+              </div>
+            </div>
+          )}
+
           {/* Funnel */}
           <div className="bg-white rounded-[20px] p-8 shadow-sm mb-8">
             <h2 className="font-display text-[1.1rem] mb-6">Last 30 Days Funnel</h2>
@@ -112,11 +163,61 @@ export default function AdsPage() {
             </div>
           </div>
 
-          {/* Campaigns / ad sets / ads */}
+          {/* Manage campaigns */}
+          <div className="bg-white rounded-[20px] p-8 shadow-sm mb-8">
+            <h2 className="font-display text-[1.1rem] mb-2">Manage</h2>
+            <p className="text-[0.8rem] text-ink-soft mb-5">Pause or resume campaigns and ad sets, and edit daily budgets — no need to open Ads Manager.</p>
+            {actionMsg && <div className="text-[0.8rem] text-red-600 mb-4">{actionMsg}</div>}
+            {[...data.manage.campaigns.map((c) => ({ ...c, kind: "Campaign" })), ...data.manage.adsets.map((a) => ({ ...a, kind: "Ad set" }))].map((e) => (
+              <div key={e.id} className="flex items-center justify-between gap-3 py-2.5 border-b border-ink/[0.06] last:border-0 flex-wrap">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-[0.9rem] truncate">{e.name}</span>
+                    <span className="text-[0.6rem] bg-ink/[0.06] text-ink-soft px-1.5 py-0.5 rounded-full">{e.kind}</span>
+                    <span className={`text-[0.6rem] px-1.5 py-0.5 rounded-full font-medium ${e.effectiveStatus === "ACTIVE" ? "bg-green-100 text-green-700" : "bg-ink/[0.08] text-ink-soft"}`}>
+                      {e.effectiveStatus === "ACTIVE" ? "Live" : e.effectiveStatus}
+                    </span>
+                  </div>
+                  {"campaignName" in e && e.campaignName && <div className="text-[0.7rem] text-ink-soft">{e.campaignName}</div>}
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {e.dailyBudget != null && (
+                    <span className="flex items-center gap-1">
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={budgetEdits[e.id] ?? `£${e.dailyBudget.toFixed(2)}`}
+                        onChange={(ev) => setBudgetEdits({ ...budgetEdits, [e.id]: ev.target.value })}
+                        className="w-20 px-2 py-1 border border-ink/15 rounded-lg text-[0.75rem] text-right"
+                      />
+                      {budgetEdits[e.id] && budgetEdits[e.id] !== `£${e.dailyBudget.toFixed(2)}` && (
+                        <button
+                          onClick={() => control(e.id, { dailyBudget: parseFloat(budgetEdits[e.id].replace(/[^0-9.]/g, "")) })}
+                          disabled={busyId === e.id}
+                          className="text-[0.7rem] text-sky-blue-light hover:underline disabled:opacity-50"
+                        >
+                          Save
+                        </button>
+                      )}
+                    </span>
+                  )}
+                  <button
+                    onClick={() => control(e.id, { status: e.status === "ACTIVE" ? "PAUSED" : "ACTIVE" })}
+                    disabled={busyId === e.id}
+                    className={`px-3 py-1.5 rounded-lg text-[0.75rem] font-medium disabled:opacity-50 ${e.status === "ACTIVE" ? "bg-orange-100 text-orange-700 hover:bg-orange-200" : "bg-green-100 text-green-700 hover:bg-green-200"}`}
+                  >
+                    {busyId === e.id ? "..." : e.status === "ACTIVE" ? "Pause" : "Resume"}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Campaigns / ad sets / ads breakdown */}
           <div className="grid md:grid-cols-3 gap-6 mb-8">
-            <BreakdownCard title="Campaigns" rows={data.campaigns} fmt={fmt} />
-            <BreakdownCard title="Ad Sets" rows={data.adsets} fmt={fmt} />
-            <BreakdownCard title="Ads" rows={data.ads} fmt={fmt} />
+            <BreakdownCard title="Campaigns" rows={data.campaigns} />
+            <BreakdownCard title="Ad Sets" rows={data.adsets} />
+            <BreakdownCard title="Ads" rows={data.ads} showThumb />
           </div>
 
           {/* Attributed bookings */}
@@ -159,7 +260,7 @@ function FunnelStat({ label, value, highlight }: { label: string; value: number;
   );
 }
 
-function BreakdownCard({ title, rows, fmt }: { title: string; rows: NamedRow[]; fmt: (n: number) => string }) {
+function BreakdownCard({ title, rows, showThumb }: { title: string; rows: NamedRow[]; showThumb?: boolean }) {
   return (
     <div className="bg-white rounded-[20px] p-6 shadow-sm">
       <h2 className="font-display text-[1rem] mb-4">{title}</h2>
@@ -168,13 +269,19 @@ function BreakdownCard({ title, rows, fmt }: { title: string; rows: NamedRow[]; 
       ) : (
         <div className="space-y-3">
           {rows.map((r, i) => (
-            <div key={i}>
-              <div className="flex justify-between text-[0.85rem]">
-                <span className="font-medium truncate mr-2">{r.name || "—"}</span>
-                <span className="text-ink-soft flex-shrink-0">{fmt(r.spend)}</span>
-              </div>
-              <div className="text-[0.72rem] text-ink-soft">
-                {r.clicks} clicks · {r.purchases} purchases{r.purchases > 0 ? ` · ${fmt(r.spend / r.purchases)}/booking` : ""}
+            <div key={i} className="flex items-start gap-3">
+              {showThumb && r.thumbnail && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={r.thumbnail} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="flex justify-between text-[0.85rem]">
+                  <span className="font-medium truncate mr-2">{r.name || "—"}</span>
+                  <span className="text-ink-soft flex-shrink-0">{fmt(r.spend)}</span>
+                </div>
+                <div className="text-[0.72rem] text-ink-soft">
+                  {r.clicks} clicks · {r.purchases} purchases{r.purchases > 0 ? ` · ${fmt(r.spend / r.purchases)}/booking` : ""}
+                </div>
               </div>
             </div>
           ))}

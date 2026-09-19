@@ -33,36 +33,41 @@ function landingPageViews(actions: MetaAction[] | undefined): number {
   return a ? Number(a.value) : 0;
 }
 
-async function metaInsights(token: string, accountId: string, params: Record<string, string>) {
+function checkAdmin(req: NextRequest): boolean {
+  const token = req.cookies.get("admin_token")?.value;
+  return !!(token && verifyToken(token));
+}
+
+async function metaGet(token: string, path: string, params: Record<string, string> = {}) {
   const qs = new URLSearchParams({ ...params, access_token: token });
-  const res = await fetch(`${GRAPH}/${accountId}/insights?${qs}`, { cache: "no-store" });
+  const res = await fetch(`${GRAPH}/${path}?${qs}`, { cache: "no-store" });
   const json = await res.json();
   if (json.error) throw new Error(json.error.message);
-  return (json.data || []) as InsightRow[];
+  return json.data || [];
 }
 
 export async function GET(req: NextRequest) {
-  const token = req.cookies.get("admin_token")?.value;
-  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const payload = verifyToken(token);
-  if (!payload) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const metaToken = process.env.META_ADS_TOKEN;
   const accountId = process.env.META_AD_ACCOUNT_ID || "act_1408400061198101";
   if (!metaToken) return NextResponse.json({ configured: false });
 
   const fields = "spend,impressions,reach,clicks,actions";
-
   let metaError: string | null = null;
-  const safe = (p: Promise<InsightRow[]>) => p.catch((e) => { metaError = e.message; return [] as InsightRow[]; });
+  const safe = <T,>(p: Promise<T[]>) => p.catch((e) => { metaError = e.message; return [] as T[]; });
 
-  const [today, week, month, campaigns, adsets, ads] = await Promise.all([
-    safe(metaInsights(metaToken, accountId, { fields, date_preset: "today" })),
-    safe(metaInsights(metaToken, accountId, { fields, date_preset: "last_7d" })),
-    safe(metaInsights(metaToken, accountId, { fields, date_preset: "last_30d" })),
-    safe(metaInsights(metaToken, accountId, { level: "campaign", fields: `campaign_name,${fields}`, date_preset: "last_30d" })),
-    safe(metaInsights(metaToken, accountId, { level: "adset", fields: `adset_name,${fields}`, date_preset: "last_30d" })),
-    safe(metaInsights(metaToken, accountId, { level: "ad", fields: `ad_name,${fields}`, date_preset: "last_30d" })),
+  const [today, week, month, campaigns, adsets, ads, daily, manageCampaigns, manageAdsets, adCreatives] = await Promise.all([
+    safe(metaGet(metaToken, `${accountId}/insights`, { fields, date_preset: "today" }) as Promise<InsightRow[]>),
+    safe(metaGet(metaToken, `${accountId}/insights`, { fields, date_preset: "last_7d" }) as Promise<InsightRow[]>),
+    safe(metaGet(metaToken, `${accountId}/insights`, { fields, date_preset: "last_30d" }) as Promise<InsightRow[]>),
+    safe(metaGet(metaToken, `${accountId}/insights`, { level: "campaign", fields: `campaign_name,${fields}`, date_preset: "last_30d" }) as Promise<InsightRow[]>),
+    safe(metaGet(metaToken, `${accountId}/insights`, { level: "adset", fields: `adset_name,${fields}`, date_preset: "last_30d" }) as Promise<InsightRow[]>),
+    safe(metaGet(metaToken, `${accountId}/insights`, { level: "ad", fields: `ad_name,${fields}`, date_preset: "last_30d" }) as Promise<InsightRow[]>),
+    safe(metaGet(metaToken, `${accountId}/insights`, { fields: `spend,clicks,actions`, date_preset: "last_30d", time_increment: "1" }) as Promise<InsightRow[]>),
+    safe(metaGet(metaToken, `${accountId}/campaigns`, { fields: "name,status,effective_status,daily_budget,objective" })),
+    safe(metaGet(metaToken, `${accountId}/adsets`, { fields: "name,status,effective_status,daily_budget,campaign{name}" })),
+    safe(metaGet(metaToken, `${accountId}/ads`, { fields: "name,status,effective_status,creative{thumbnail_url}" })),
   ]);
 
   const summarize = (rows: InsightRow[]) => ({
@@ -73,6 +78,12 @@ export async function GET(req: NextRequest) {
     lpv: rows.reduce((s, r) => s + landingPageViews(r.actions), 0),
     purchases: rows.reduce((s, r) => s + countPurchases(r.actions), 0),
   });
+
+  const thumbnailByAdName: Record<string, string> = {};
+  for (const ad of adCreatives as any[]) {
+    const thumb = ad.creative?.thumbnail_url;
+    if (ad.name && thumb) thumbnailByAdName[ad.name] = thumb;
+  }
 
   // Real bookings attributed to ads, from our own DB
   const { data: adBookings } = await supabaseAdmin
@@ -94,10 +105,60 @@ export async function GET(req: NextRequest) {
       week: summarize(week),
       month: summarize(month),
     },
+    daily: daily.map((r) => ({
+      date: r.date_start,
+      spend: Number(r.spend || 0),
+      clicks: Number(r.clicks || 0),
+      purchases: countPurchases(r.actions),
+    })),
     campaigns: campaigns.map((r) => ({ name: r.campaign_name, ...summarize([r]) })),
     adsets: adsets.map((r) => ({ name: r.adset_name, ...summarize([r]) })),
-    ads: ads.map((r) => ({ name: r.ad_name, ...summarize([r]) })),
+    ads: ads.map((r) => ({ name: r.ad_name, thumbnail: thumbnailByAdName[r.ad_name || ""] || null, ...summarize([r]) })),
+    manage: {
+      campaigns: (manageCampaigns as any[]).map((c) => ({
+        id: c.id, name: c.name, status: c.status, effectiveStatus: c.effective_status,
+        dailyBudget: c.daily_budget ? Number(c.daily_budget) / 100 : null, objective: c.objective,
+      })),
+      adsets: (manageAdsets as any[]).map((a) => ({
+        id: a.id, name: a.name, status: a.status, effectiveStatus: a.effective_status,
+        dailyBudget: a.daily_budget ? Number(a.daily_budget) / 100 : null, campaignName: a.campaign?.name,
+      })),
+      ads: (adCreatives as any[]).map((a) => ({
+        id: a.id, name: a.name, status: a.status, effectiveStatus: a.effective_status,
+        thumbnail: a.creative?.thumbnail_url || null,
+      })),
+    },
     adBookings: adBookings || [],
     attributedRevenue,
   });
+}
+
+export async function POST(req: NextRequest) {
+  if (!checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const metaToken = process.env.META_ADS_TOKEN;
+  if (!metaToken) return NextResponse.json({ error: "Ads API not configured" }, { status: 500 });
+
+  const body = await req.json();
+  const { id, status, dailyBudget } = body as { id?: string; status?: string; dailyBudget?: number };
+  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+
+  const params: Record<string, string> = { access_token: metaToken };
+  if (status) {
+    if (!["ACTIVE", "PAUSED"].includes(status)) return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    params.status = status;
+  }
+  if (dailyBudget != null) {
+    if (dailyBudget < 1) return NextResponse.json({ error: "Budget must be at least £1" }, { status: 400 });
+    params.daily_budget = String(Math.round(dailyBudget * 100));
+  }
+
+  const res = await fetch(`${GRAPH}/${id}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams(params),
+  });
+  const json = await res.json();
+  if (json.error) return NextResponse.json({ error: json.error.message }, { status: 400 });
+  return NextResponse.json({ success: true });
 }
