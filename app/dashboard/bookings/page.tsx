@@ -13,6 +13,59 @@ function todayISO() {
   return d.toISOString().split("T")[0];
 }
 
+const AD_PLATFORMS: Record<string, string> = {
+  ig: "Instagram", instagram: "Instagram",
+  fb: "Facebook", facebook: "Facebook",
+  meta: "Meta",
+  google: "Google",
+  tiktok: "TikTok",
+  snapchat: "Snapchat",
+};
+
+const AD_COLORS: Record<string, string> = {
+  Instagram: "bg-pink-100 text-pink-700",
+  Facebook: "bg-blue-100 text-blue-700",
+  Meta: "bg-blue-100 text-blue-700",
+  Google: "bg-amber-100 text-amber-800",
+  TikTok: "bg-ink/10 text-ink",
+  Snapchat: "bg-yellow-100 text-yellow-800",
+};
+
+function parseAdSource(notes: string | null | undefined): { label: string; platform: string; campaign: string | null; detail: string } | null {
+  if (!notes || !notes.startsWith("[Ad:")) return null;
+  const inner = notes.slice(4).replace(/\]\s*$/, "").trim();
+  const parts = inner.split(",").map((p) => p.trim());
+  const utm = parts.find((p) => p.startsWith("utm:"));
+  const utmValue = utm ? utm.slice(4) : null;
+  const utmSource = utmValue ? utmValue.split("/")[0].toLowerCase() : null;
+  const campaign = utmValue && utmValue.includes("/") ? utmValue.split("/").slice(1).join("/") : null;
+
+  let platform: string;
+  if (utmSource) {
+    platform = AD_PLATFORMS[utmSource] || utmSource.charAt(0).toUpperCase() + utmSource.slice(1);
+  } else if (parts.some((p) => p === "Google Ad")) {
+    platform = "Google";
+  } else if (parts.some((p) => p.includes("Facebook/Instagram"))) {
+    platform = "Meta";
+  } else {
+    platform = "Unknown";
+  }
+
+  return { label: `${platform} Ad`, platform, campaign, detail: inner };
+}
+
+function AdSourceBadge({ notes, className = "" }: { notes: string | null | undefined; className?: string }) {
+  const ad = parseAdSource(notes);
+  if (!ad) return null;
+  const color = AD_COLORS[ad.platform] || "bg-purple-100 text-purple-700";
+  const title = ad.campaign ? `${ad.detail} · campaign: ${ad.campaign}` : ad.detail;
+  return (
+    <span className={`text-[0.6rem] ${color} px-1.5 py-0.5 rounded-full font-medium ${className}`} title={title}>
+      {ad.label}
+    </span>
+  );
+}
+
 export default function BookingsAdminPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -309,7 +362,7 @@ export default function BookingsAdminPage() {
 
   const filteredBookings = bookings.filter((b) => {
     const q = searchQuery.toLowerCase().trim();
-    if (q && !b.name.toLowerCase().includes(q) && !b.email.toLowerCase().includes(q) && !b.date.includes(q) && !(b.phone || "").toLowerCase().includes(q)) return false;
+    if (q && !b.name.toLowerCase().includes(q) && !b.email.toLowerCase().includes(q) && !b.date.includes(q) && !(b.phone || "").toLowerCase().includes(q) && !(b.notes || "").toLowerCase().includes(q)) return false;
     if (payFilter !== "all") {
       const status = b.payment_status || "unpaid";
       if (status !== payFilter) return false;
@@ -609,9 +662,7 @@ export default function BookingsAdminPage() {
                                       <div className="flex items-center gap-2 flex-wrap">
                                         <span className="font-medium text-ink">{eb.name}</span>
                                         <span className={`text-[0.65rem] px-1.5 py-0.5 rounded-full ${eb.payment_status === "paid" ? "bg-green-100 text-green-700" : eb.payment_status === "cancelled" ? "bg-red-100 text-red-700" : eb.payment_status === "refunded" ? "bg-orange-100 text-orange-700" : "bg-orange-100 text-orange-700"}`}>{eb.payment_status}</span>
-                                        {eb.notes && eb.notes.startsWith("[Ad:") && (
-                                          <span className="text-[0.6rem] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-medium" title={eb.notes}>Meta Ad</span>
-                                        )}
+                                        <AdSourceBadge notes={eb.notes} />
                                       </div>
                                       <div className="text-ink-soft">{eb.email} · {eb.quantity} {inst.event?.pricing_model === "per_person" ? "people" : "tickets"} · £{Number(eb.total_price).toFixed(2)}</div>
                                     </div>
@@ -719,9 +770,7 @@ export default function BookingsAdminPage() {
                         <div className="text-[0.9rem] font-medium text-ink">
                           {b.name}
                           {b.is_party && <span className="ml-1.5 text-[0.6rem] bg-bright-lavender/20 px-1.5 py-0.5 rounded-full align-middle">Party</span>}
-                          {b.notes && b.notes.startsWith("[Ad:") && (
-                            <span className="ml-1.5 text-[0.6rem] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full align-middle font-medium" title={b.notes}>Meta Ad</span>
-                          )}
+                          <AdSourceBadge notes={b.notes} className="ml-1.5 align-middle" />
                         </div>
                         <div className="text-[0.8rem] text-ink-soft">{b.email}</div>
                         {b.phone && <div className="text-[0.75rem] text-ink-soft">{b.phone}</div>}
@@ -976,9 +1025,7 @@ function BookingCard({ b, onEdit, onCancel, cancelling }: { b: Booking; onEdit: 
       <div className="space-y-1 mb-3">
         <div className="text-[0.9rem] font-medium">
           {b.name} <span className="text-[0.75rem] text-ink-soft font-normal">· {b.people} {b.people === 1 ? "person" : "people"}</span>
-          {b.notes && b.notes.startsWith("[Ad:") && (
-            <span className="ml-1.5 text-[0.6rem] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full align-middle font-medium" title={b.notes}>Meta Ad</span>
-          )}
+          <AdSourceBadge notes={b.notes} className="ml-1.5 align-middle" />
         </div>
         <div className="text-[0.8rem] text-ink-soft">{b.email}</div>
         {b.phone && <div className="text-[0.8rem] text-ink-soft">{b.phone}</div>}
