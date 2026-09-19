@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
   let metaError: string | null = null;
   const safe = <T,>(p: Promise<T[]>) => p.catch((e) => { metaError = e.message; return [] as T[]; });
 
-  const [today, week, month, campaigns, adsets, ads, daily, manageCampaigns, manageAdsets, adCreatives] = await Promise.all([
+  const [today, week, month, campaigns, adsets, ads, daily, byAgeGender, byRegion, manageCampaigns, manageAdsets, adCreatives] = await Promise.all([
     safe(metaGet(metaToken, `${accountId}/insights`, { fields, date_preset: "today" }) as Promise<InsightRow[]>),
     safe(metaGet(metaToken, `${accountId}/insights`, { fields, date_preset: "last_7d" }) as Promise<InsightRow[]>),
     safe(metaGet(metaToken, `${accountId}/insights`, { fields, date_preset: "last_30d" }) as Promise<InsightRow[]>),
@@ -65,6 +65,8 @@ export async function GET(req: NextRequest) {
     safe(metaGet(metaToken, `${accountId}/insights`, { level: "adset", fields: `adset_name,${fields}`, date_preset: "last_30d" }) as Promise<InsightRow[]>),
     safe(metaGet(metaToken, `${accountId}/insights`, { level: "ad", fields: `ad_name,${fields}`, date_preset: "last_30d" }) as Promise<InsightRow[]>),
     safe(metaGet(metaToken, `${accountId}/insights`, { fields: `spend,clicks,actions`, date_preset: "last_30d", time_increment: "1" }) as Promise<InsightRow[]>),
+    safe(metaGet(metaToken, `${accountId}/insights`, { fields: `impressions,reach,spend,actions`, date_preset: "last_30d", breakdowns: "age,gender" }) as Promise<InsightRow[]>),
+    safe(metaGet(metaToken, `${accountId}/insights`, { fields: `impressions,reach,spend`, date_preset: "last_30d", breakdowns: "region" }) as Promise<InsightRow[]>),
     safe(metaGet(metaToken, `${accountId}/campaigns`, { fields: "name,status,effective_status,daily_budget,objective" })),
     safe(metaGet(metaToken, `${accountId}/adsets`, { fields: "name,status,effective_status,daily_budget,campaign{name}" })),
     safe(metaGet(metaToken, `${accountId}/ads`, { fields: "name,status,effective_status,creative{thumbnail_url}" })),
@@ -111,6 +113,21 @@ export async function GET(req: NextRequest) {
       clicks: Number(r.clicks || 0),
       purchases: countPurchases(r.actions),
     })),
+    audience: {
+      ageGender: (byAgeGender as any[]).map((r) => ({
+        age: r.age, gender: r.gender,
+        impressions: Number(r.impressions || 0),
+        reach: Number(r.reach || 0),
+        spend: Number(r.spend || 0),
+        purchases: countPurchases(r.actions),
+      })).sort((a, b) => b.impressions - a.impressions),
+      regions: (byRegion as any[]).map((r) => ({
+        region: r.region,
+        impressions: Number(r.impressions || 0),
+        reach: Number(r.reach || 0),
+        spend: Number(r.spend || 0),
+      })).sort((a, b) => b.impressions - a.impressions).slice(0, 10),
+    },
     campaigns: campaigns.map((r) => ({ name: r.campaign_name, ...summarize([r]) })),
     adsets: adsets.map((r) => ({ name: r.adset_name, ...summarize([r]) })),
     ads: ads.map((r) => ({ name: r.ad_name, thumbnail: thumbnailByAdName[r.ad_name || ""] || null, ...summarize([r]) })),

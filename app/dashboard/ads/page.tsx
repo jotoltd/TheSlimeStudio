@@ -17,6 +17,10 @@ type Data = {
   adsets: NamedRow[];
   ads: NamedRow[];
   manage: { campaigns: ManagedEntity[]; adsets: ManagedEntity[]; ads: ManagedEntity[] };
+  audience: {
+    ageGender: { age: string; gender: string; impressions: number; reach: number; spend: number; purchases: number }[];
+    regions: { region: string; impressions: number; reach: number; spend: number }[];
+  };
   adBookings: AdBooking[];
   attributedRevenue: number;
 };
@@ -162,6 +166,53 @@ export default function AdsPage() {
               7 days: {fmt(data.summary.week.spend)} spend · {data.summary.week.clicks} clicks · {data.summary.week.purchases} purchases
             </div>
           </div>
+
+          {/* Audience breakdown */}
+          {(data.audience?.ageGender?.length > 0 || data.audience?.regions?.length > 0) && (
+            <div className="grid md:grid-cols-2 gap-6 mb-8">
+              <div className="bg-white rounded-[20px] p-8 shadow-sm">
+                <h2 className="font-display text-[1.1rem] mb-1">Who's seeing your ads</h2>
+                <p className="text-[0.75rem] text-ink-soft mb-5">Age & gender · last 30 days · 🎉 = bookings</p>
+                <div className="space-y-2.5">
+                  {data.audience.ageGender.map((r) => {
+                    const max = data.audience.ageGender[0]?.impressions || 1;
+                    return (
+                      <div key={`${r.age}-${r.gender}`}>
+                        <div className="flex justify-between text-[0.8rem] mb-1">
+                          <span className="font-medium">{r.age} · {r.gender === "female" ? "Women" : r.gender === "male" ? "Men" : "Other"}</span>
+                          <span className="text-ink-soft">{r.impressions.toLocaleString()} views{r.purchases > 0 ? ` · ${r.purchases}🎉` : ""}</span>
+                        </div>
+                        <div className="h-2 bg-ink/[0.06] rounded-full overflow-hidden">
+                          <div className="h-full rounded-full bg-gradient-to-r from-bright-lavender to-sky-blue-light" style={{ width: `${(r.impressions / max) * 100}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="bg-white rounded-[20px] p-8 shadow-sm">
+                <h2 className="font-display text-[1.1rem] mb-1">Where they're seeing them</h2>
+                <p className="text-[0.75rem] text-ink-soft mb-5">Regions · last 30 days</p>
+                <div className="space-y-2.5">
+                  {data.audience.regions.map((r) => {
+                    const max = data.audience.regions[0]?.impressions || 1;
+                    return (
+                      <div key={r.region}>
+                        <div className="flex justify-between text-[0.8rem] mb-1">
+                          <span className="font-medium truncate mr-2">{r.region}</span>
+                          <span className="text-ink-soft flex-shrink-0">{r.impressions.toLocaleString()} views · {fmt(r.spend)}</span>
+                        </div>
+                        <div className="h-2 bg-ink/[0.06] rounded-full overflow-hidden">
+                          <div className="h-full rounded-full bg-gradient-to-r from-bright-lavender to-sky-blue-light" style={{ width: `${(r.impressions / max) * 100}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {data.audience.regions.length === 0 && <div className="text-ink-soft text-[0.85rem]">No region data yet.</div>}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Manage campaigns */}
           <div className="bg-white rounded-[20px] p-8 shadow-sm mb-8">
