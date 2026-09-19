@@ -7,7 +7,7 @@ import { ToastProvider } from "@/components/Toast";
 import {
   HomeIcon, DollarIcon, CalendarIcon, ClockIcon, ShoppingBagIcon,
   PackageIcon, MailIcon, UsersIcon, SettingsIcon, FileTextIcon,
-  InboxIcon, DownloadIcon, GiftIcon, PhotoIcon, TagIcon,
+  InboxIcon, DownloadIcon, GiftIcon, PhotoIcon, TagIcon, TrendingUpIcon,
 } from "@/components/AdminIcons";
 
 const navSections = [
@@ -16,6 +16,7 @@ const navSections = [
     items: [
       { href: "/dashboard", label: "Dashboard", Icon: HomeIcon },
       { href: "/dashboard/revenue", label: "Revenue", Icon: DollarIcon },
+      { href: "/dashboard/ads", label: "Ads", Icon: TrendingUpIcon },
     ],
   },
   {
