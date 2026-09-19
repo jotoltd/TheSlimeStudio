@@ -6,7 +6,7 @@ type Summary = { spend: number; impressions: number; reach: number; clicks: numb
 type NamedRow = Summary & { name?: string; thumbnail?: string | null };
 type DailyPoint = { date: string; spend: number; clicks: number; purchases: number };
 type ManagedEntity = { id: string; name: string; status: string; effectiveStatus: string; dailyBudget: number | null; campaignName?: string; thumbnail?: string | null; targeting?: string; optimisesFor?: string | null };
-type AdBooking = { id: string; name: string; email: string; date: string; total_price: number; payment_status: string; notes: string; created_at: string };
+type AdBooking = { id: string; name: string; email: string; date: string; total_price: number; payment_status: string; notes: string; created_at: string; kind?: "session" | "event" };
 
 type Data = {
   configured: boolean;
@@ -330,6 +330,7 @@ export default function AdsPage() {
                   <div key={b.id} className="flex items-center justify-between gap-3 py-2 border-b border-ink/[0.06] last:border-0 flex-wrap">
                     <div className="min-w-0">
                       <span className="font-medium text-[0.9rem]">{b.name}</span>
+                      {b.kind === "event" && <span className="ml-2 text-[0.6rem] bg-bright-lavender/20 text-ink px-1.5 py-0.5 rounded-full font-medium">Event</span>}
                       <span className={`ml-2 text-[0.6rem] px-1.5 py-0.5 rounded-full font-medium ${PLATFORM_COLORS[adLabel(b.notes).split(" ")[0]] || "bg-blue-100 text-blue-700"}`}>
                         {adLabel(b.notes)}
                       </span>

@@ -109,15 +109,28 @@ export async function GET(req: NextRequest) {
     if (ad.name && thumb) thumbnailByAdName[ad.name] = thumb;
   }
 
-  // Real bookings attributed to ads, from our own DB
-  const { data: adBookings } = await supabaseAdmin
-    .from("bookings")
-    .select("id, name, email, date, time_slot, total_price, payment_status, notes, created_at")
-    .ilike("notes", "[Ad:%")
-    .order("created_at", { ascending: false })
-    .limit(50);
+  // Real bookings attributed to ads, from our own DB — sessions + special events
+  const [{ data: adBookings }, { data: adEventBookings }] = await Promise.all([
+    supabaseAdmin
+      .from("bookings")
+      .select("id, name, email, date, time_slot, total_price, payment_status, notes, created_at")
+      .ilike("notes", "[Ad:%")
+      .order("created_at", { ascending: false })
+      .limit(50),
+    supabaseAdmin
+      .from("special_event_bookings")
+      .select("id, name, email, quantity, total_price, payment_status, notes, created_at")
+      .ilike("notes", "[Ad:%")
+      .order("created_at", { ascending: false })
+      .limit(50),
+  ]);
 
-  const attributedRevenue = (adBookings || [])
+  const allAdBookings = [
+    ...(adBookings || []).map((b) => ({ ...b, kind: "session" as const })),
+    ...(adEventBookings || []).map((b) => ({ ...b, date: b.created_at, kind: "event" as const })),
+  ].sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
+
+  const attributedRevenue = allAdBookings
     .filter((b) => b.payment_status === "paid")
     .reduce((s, b) => s + Number(b.total_price), 0);
 
@@ -176,7 +189,7 @@ export async function GET(req: NextRequest) {
         thumbnail: a.creative?.thumbnail_url || null,
       })),
     },
-    adBookings: adBookings || [],
+    adBookings: allAdBookings,
     attributedRevenue,
   });
 }
