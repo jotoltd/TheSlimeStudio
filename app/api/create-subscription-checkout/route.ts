@@ -44,6 +44,10 @@ export async function POST(req: NextRequest) {
           quantity: 1,
         },
       ],
+      payment_intent_data: {
+        description: `Subscription — ${boxName} — First Month`,
+        metadata: { type: "subscription", subscriberId },
+      },
       metadata: {
         subscriberId,
         type: "subscription",

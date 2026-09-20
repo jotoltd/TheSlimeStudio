@@ -145,7 +145,8 @@ async function createStripeCheckout(booking: any, event: any, instance: any, tot
       "metadata[cua]": (meta?.userAgent || "").slice(0, 400),
       customer_email: booking.email,
       "payment_intent_data[receipt_email]": booking.email,
-      "payment_intent_data[description]": `${event.title} — ${instance.date} at ${instance.start_time}`,
+      "payment_intent_data[description]": `Special Event — ${event.title} — ${instance.date} at ${instance.start_time}`,
+      "payment_intent_data[metadata][type]": "special_event",
     }).toString(),
   });
 

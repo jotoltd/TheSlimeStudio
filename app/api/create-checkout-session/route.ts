@@ -49,6 +49,12 @@ export async function POST(req: NextRequest) {
           quantity: 1,
         },
       ],
+      payment_intent_data: {
+        description: isParty
+          ? `Birthday Party — ${people} children — ${date} at ${timeSlot}`
+          : `Session Booking — ${people} ${people === 1 ? "person" : "people"} — ${date} at ${timeSlot}`,
+        metadata: { type: isParty ? "party" : "booking", bookingId },
+      },
       metadata: {
         bookingId,
         type: isParty ? "party" : "booking",

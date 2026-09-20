@@ -103,6 +103,10 @@ export async function POST(req: NextRequest) {
         success_url: `${origin}/gift-card/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${origin}/gift-card?cancelled=true`,
         customer_email: purchaserEmail,
+        payment_intent_data: {
+          description: `Gift Card — £${amount.toFixed(2)} — ${code}`,
+          metadata: { type: "gift_card", gift_card_code: code },
+        },
         metadata: {
           type: "gift_card",
           gift_card_code: code,

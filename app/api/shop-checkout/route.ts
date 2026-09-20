@@ -158,7 +158,12 @@ export async function POST(req: NextRequest) {
       success_url: `${origin}/shop/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/shop/checkout?cancelled=true`,
       customer_email: customerEmail,
+      payment_intent_data: {
+        description: `Shop Order — ${orderNumber}`,
+        metadata: { type: "shop_order", order_number: orderNumber },
+      },
       metadata: {
+        type: "shop_order",
         order_number: orderNumber,
         customer_name: customerName,
         customer_phone: customerPhone || "",
