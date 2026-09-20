@@ -91,8 +91,42 @@ export async function GET(req: NextRequest) {
     safe(metaGet(metaToken, `${accountId}/insights`, { fields: `impressions,clicks,spend,actions`, date_preset: "last_30d", breakdowns: "publisher_platform,platform_position" }) as Promise<InsightRow[]>),
     safe(metaGet(metaToken, `${accountId}/campaigns`, { fields: "name,status,effective_status,daily_budget,objective" })),
     safe(metaGet(metaToken, `${accountId}/adsets`, { fields: "name,status,effective_status,daily_budget,campaign{name},targeting,optimization_goal,promoted_object" })),
-    safe(metaGet(metaToken, `${accountId}/ads`, { fields: "name,status,effective_status,creative{thumbnail_url}" })),
+    safe(metaGet(metaToken, `${accountId}/ads`, { fields: "name,status,effective_status,creative{thumbnail_url,effective_object_story_id,effective_instagram_media_id,instagram_permalink_url}" })),
   ]);
+
+  // Comments left on the ads — FB post comments need a Page token; IG media
+  // comments work with the system user token directly.
+  const comments: { adName: string; platform: string; author: string; text: string; time: string; replyUrl: string | null }[] = [];
+  let fbCommentsUnavailable = false;
+  for (const ad of adCreatives as any[]) {
+    const cr = ad.creative || {};
+    if (cr.effective_instagram_media_id) {
+      try {
+        const igComments = await metaGet(metaToken, `${cr.effective_instagram_media_id}/comments`, { fields: "text,username,timestamp", limit: "25" });
+        for (const cm of igComments as any[]) {
+          comments.push({ adName: ad.name, platform: "Instagram", author: cm.username || "?", text: cm.text || "", time: cm.timestamp || "", replyUrl: cr.instagram_permalink_url || null });
+        }
+      } catch {}
+    }
+    if (cr.effective_object_story_id) {
+      try {
+        const pageId = cr.effective_object_story_id.split("_")[0];
+        const ptRes = await fetch(`${GRAPH}/${pageId}?${new URLSearchParams({ fields: "access_token", access_token: metaToken })}`, { cache: "no-store" });
+        const pt = await ptRes.json();
+        const pageToken = pt.access_token;
+        if (!pageToken) throw new Error("no page token");
+        const qs = new URLSearchParams({ fields: "message,from{name},created_time", limit: "25", access_token: pageToken });
+        const res = await fetch(`${GRAPH}/${cr.effective_object_story_id}/comments?${qs}`, { cache: "no-store" });
+        const json = await res.json();
+        for (const cm of json.data || []) {
+          comments.push({ adName: ad.name, platform: "Facebook", author: cm.from?.name || "?", text: cm.message || "", time: cm.created_time || "", replyUrl: `https://www.facebook.com/${cr.effective_object_story_id}` });
+        }
+      } catch {
+        fbCommentsUnavailable = true;
+      }
+    }
+  }
+  comments.sort((a, b) => (b.time || "").localeCompare(a.time || ""));
 
   const summarize = (rows: InsightRow[]) => ({
     spend: rows.reduce((s, r) => s + Number(r.spend || 0), 0),
@@ -191,6 +225,8 @@ export async function GET(req: NextRequest) {
     },
     adBookings: allAdBookings,
     attributedRevenue,
+    comments,
+    fbCommentsUnavailable,
   });
 }
 

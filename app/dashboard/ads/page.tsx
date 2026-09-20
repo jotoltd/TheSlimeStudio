@@ -24,6 +24,8 @@ type Data = {
   };
   adBookings: AdBooking[];
   attributedRevenue: number;
+  comments: { adName: string; platform: string; author: string; text: string; time: string; replyUrl: string | null }[];
+  fbCommentsUnavailable?: boolean;
 };
 
 const PLATFORM_COLORS: Record<string, string> = {
@@ -314,6 +316,41 @@ export default function AdsPage() {
             <BreakdownCard title="Campaigns" rows={data.campaigns} />
             <BreakdownCard title="Ad Sets" rows={data.adsets} />
             <BreakdownCard title="Ads" rows={data.ads} showThumb />
+          </div>
+
+          {/* Comments on ads */}
+          <div className="bg-white rounded-[20px] p-8 shadow-sm mb-8">
+            <h2 className="font-display text-[1.1rem] mb-2">Comments on your ads</h2>
+            <p className="text-[0.75rem] text-ink-soft mb-5">
+              Questions people leave on your ads — answering them wins bookings. Reply on Facebook/Instagram.
+            </p>
+            {data.fbCommentsUnavailable && (
+              <div className="text-[0.75rem] text-orange-600 bg-orange-50 rounded-lg px-3 py-2 mb-4">
+                Facebook comments unavailable — the Facebook Page needs assigning to the API system user in Business Settings.
+              </div>
+            )}
+            {data.comments.length === 0 ? (
+              <div className="text-center py-8 text-ink-soft text-[0.9rem]">No comments on your ads yet.</div>
+            ) : (
+              <div className="space-y-3">
+                {data.comments.map((cm, i) => (
+                  <div key={i} className="flex items-start justify-between gap-3 py-2 border-b border-ink/[0.06] last:border-0">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-[0.85rem]">{cm.author}</span>
+                        <span className={`text-[0.6rem] px-1.5 py-0.5 rounded-full font-medium ${cm.platform === "Instagram" ? "bg-pink-100 text-pink-700" : "bg-blue-100 text-blue-700"}`}>{cm.platform}</span>
+                        <span className="text-[0.65rem] text-ink-soft">on {cm.adName}</span>
+                      </div>
+                      <div className="text-[0.85rem] text-ink mt-0.5">{cm.text}</div>
+                      <div className="text-[0.7rem] text-ink-soft">{cm.time ? new Date(cm.time).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : ""}</div>
+                    </div>
+                    {cm.replyUrl && (
+                      <a href={cm.replyUrl} target="_blank" rel="noreferrer" className="text-[0.75rem] text-sky-blue-light hover:underline flex-shrink-0">Reply →</a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Attributed bookings */}
