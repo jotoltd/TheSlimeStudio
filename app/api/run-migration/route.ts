@@ -10,6 +10,7 @@ ALTER TABLE public.subscribers ADD COLUMN IF NOT EXISTS stripe_session_id TEXT;
 ALTER TABLE public.subscribers ADD COLUMN IF NOT EXISTS payment_status TEXT DEFAULT 'unpaid';
 ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS stripe_mode TEXT DEFAULT 'test';
 ALTER TABLE public.special_event_bookings ADD COLUMN IF NOT EXISTS notes TEXT;
+ALTER TABLE public.gift_cards ADD COLUMN IF NOT EXISTS ad_source TEXT;
 
 -- RLS policies for enquiries (anon can insert and select)
 ALTER TABLE public.enquiries ENABLE ROW LEVEL SECURITY;

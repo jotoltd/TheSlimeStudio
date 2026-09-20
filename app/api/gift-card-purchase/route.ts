@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { amount, purchaserName, purchaserEmail, recipientName, recipientEmail, message, paymentMethod, customerId } = body as {
+  const { amount, purchaserName, purchaserEmail, recipientName, recipientEmail, message, paymentMethod, customerId, adSource } = body as {
     amount: number;
     purchaserName: string;
     purchaserEmail: string;
@@ -15,6 +15,7 @@ export async function POST(req: NextRequest) {
     message?: string;
     paymentMethod: "stripe" | "sumup";
     customerId?: string;
+    adSource?: string;
   };
 
   if (!amount || amount < 10) {
@@ -63,6 +64,17 @@ export async function POST(req: NextRequest) {
   const expiryDate = new Date();
   expiryDate.setMonth(expiryDate.getMonth() + 3);
 
+  // Insert with ad_source; retry without it if the column hasn't been added yet
+  const insertCard = async (record: Record<string, any>) => {
+    const withSource = { ...record, ad_source: typeof adSource === "string" && adSource.startsWith("[Ad:") ? adSource : null };
+    const { error } = await supabaseAdmin.from("gift_cards").insert(withSource);
+    if (error && String(error.message).includes("ad_source")) {
+      const { error: retry } = await supabaseAdmin.from("gift_cards").insert(record);
+      return retry;
+    }
+    return error;
+  };
+
   // Create Stripe checkout session
   if (paymentMethod === "stripe") {
     const stripe = await getStripeAsync();
@@ -104,7 +116,7 @@ export async function POST(req: NextRequest) {
       });
 
       // Create pending gift card record
-      const { error: insertError } = await supabaseAdmin.from("gift_cards").insert({
+      const insertError = await insertCard({
         code,
         balance: amount,
         initial_value: amount,
@@ -165,7 +177,7 @@ export async function POST(req: NextRequest) {
       const checkoutData = await res.json();
 
       // Create pending gift card record
-      const { error: insertError } = await supabaseAdmin.from("gift_cards").insert({
+      const insertError = await insertCard({
         code,
         balance: amount,
         initial_value: amount,

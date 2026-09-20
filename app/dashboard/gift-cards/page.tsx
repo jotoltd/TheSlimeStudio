@@ -18,6 +18,7 @@ type GiftCard = {
   purchased_at: string;
   redeemed_at: string | null;
   payment_reference: string | null;
+  ad_source?: string | null;
   customer_id: string | null;
   customer_name?: string | null;
   customer_email?: string | null;
@@ -36,6 +37,43 @@ type Redemption = {
   shop_order_id: string | null;
   redeemed_at: string;
 };
+
+const AD_PLATFORMS: Record<string, string> = {
+  ig: "Instagram", fb: "Facebook", facebook: "Facebook", instagram: "Instagram",
+  google: "Google", gclid: "Google", tiktok: "TikTok", tt: "TikTok", snapchat: "Snapchat",
+};
+
+const AD_COLORS: Record<string, string> = {
+  Instagram: "bg-pink-100 text-pink-700",
+  Facebook: "bg-blue-100 text-blue-700",
+  Meta: "bg-purple-100 text-purple-700",
+  Google: "bg-green-100 text-green-700",
+  TikTok: "bg-ink/10 text-ink",
+  Snapchat: "bg-yellow-100 text-yellow-800",
+};
+
+function parseAdSource(notes: string | null | undefined): { label: string; platform: string; detail: string } | null {
+  if (!notes || !notes.startsWith("[Ad:")) return null;
+  const inner = notes.slice(4).replace(/\]\s*$/, "").trim();
+  const parts = inner.split(",").map((p) => p.trim());
+  const utm = parts.find((p) => p.startsWith("utm:"));
+  const utmSource = utm ? utm.slice(4).split("/")[0].toLowerCase() : null;
+  const platform = utmSource
+    ? (AD_PLATFORMS[utmSource] || utmSource)
+    : parts.some((p) => p === "Google Ad") ? "Google"
+    : parts.some((p) => p.includes("Facebook/Instagram")) ? "Meta" : "Unknown";
+  return { label: `${platform} Ad`, platform, detail: inner };
+}
+
+function AdSourceBadge({ notes }: { notes: string | null | undefined }) {
+  const ad = parseAdSource(notes);
+  if (!ad) return null;
+  return (
+    <span className={`block mt-0.5 w-fit text-[0.6rem] ${AD_COLORS[ad.platform] || "bg-purple-100 text-purple-700"} px-1.5 py-0.5 rounded-full font-medium`} title={ad.detail}>
+      {ad.label}
+    </span>
+  );
+}
 
 export default function GiftCardsPage() {
   const [giftCards, setGiftCards] = useState<GiftCard[]>([]);
@@ -532,6 +570,10 @@ export default function GiftCardsPage() {
                       </td>
                       <td className="px-4 py-3 text-ink-soft text-xs">
                         {new Date(c.purchased_at).toLocaleDateString("en-GB")}
+                        <span className="block text-[0.7rem]">
+                          {new Date(c.purchased_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                        <AdSourceBadge notes={c.ad_source} />
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-2">

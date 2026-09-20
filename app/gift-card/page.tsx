@@ -94,6 +94,7 @@ export default function GiftCardPage() {
           message: message.trim() || undefined,
           paymentMethod: paymentProvider,
           customerId,
+          adSource: localStorage.getItem("adSource"),
         }),
       });
 
