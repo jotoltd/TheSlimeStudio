@@ -17,6 +17,9 @@ export default function DashboardPage() {
   const [revenueMonth, setRevenueMonth] = useState(0);
   const [customerCount, setCustomerCount] = useState(0);
   const [totalRevenue, setTotalRevenue] = useState(0);
+  const [monthBreakdown, setMonthBreakdown] = useState({ bookings: 0, events: 0, shop: 0, cards: 0 });
+  const [adMonth, setAdMonth] = useState({ count: 0, revenue: 0 });
+  const [todayEvents, setTodayEvents] = useState<{ id: string; name: string; quantity: number; total_price: number; title: string; start_time: string }[]>([]);
 
   useEffect(() => {
     loadData();
@@ -37,6 +40,7 @@ export default function DashboardPage() {
     setBookingCount(bCount || 0);
 
     const todayStr = new Date().toISOString().split("T")[0];
+    const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split("T")[0];
     const weekStart = new Date();
     weekStart.setDate(weekStart.getDate() - 7);
     const weekStartStr = weekStart.toISOString().split("T")[0];
@@ -62,6 +66,75 @@ export default function DashboardPage() {
       setRevenueMonth(allBookings.filter((b) => b.date >= monthStartStr && b.payment_status === "paid").reduce((sum, b) => sum + Number(b.total_price), 0));
     }
 
+    // Revenue from other sources: special events, shop orders, gift card sales
+    const { data: evb } = await supabase
+      .from("special_event_bookings")
+      .select("id, name, quantity, total_price, payment_status, instance_id, event_id, notes");
+    const { data: evi } = await supabase.from("special_event_instances").select("id, date, start_time");
+    const { data: evts } = await supabase.from("special_events").select("id, title");
+    const { data: orders } = await supabase.from("shop_orders").select("total, payment_status, created_at");
+    const { data: cards } = await supabase.from("gift_cards").select("initial_value, purchased_at, ad_source");
+
+    const instMap = new Map((evi || []).map((i: any) => [i.id, i]));
+    const titleMap = new Map((evts || []).map((e: any) => [e.id, e.title]));
+    const paidEv = (evb || []).filter((b: any) => b.payment_status === "paid");
+    const dayStr = (iso: string) => (iso || "").split("T")[0];
+
+    const evRev = (from: string, to?: string) =>
+      paidEv.filter((b: any) => {
+        const d = instMap.get(b.instance_id)?.date;
+        return d && d >= from && (!to || d < to);
+      }).reduce((s: number, b: any) => s + Number(b.total_price || 0), 0);
+    const shopRev = (from: string) =>
+      (orders || []).filter((o: any) => o.payment_status === "paid" && dayStr(o.created_at) >= from)
+        .reduce((s: number, o: any) => s + Number(o.total || 0), 0);
+    const cardRev = (from: string) =>
+      (cards || []).filter((c: any) => dayStr(c.purchased_at) >= from)
+        .reduce((s: number, c: any) => s + Number(c.initial_value || 0), 0);
+
+    const bookingRev = (from: string) =>
+      (bks || []).filter((b: Booking) => b.date >= from && b.payment_status === "paid")
+        .reduce((s: number, b: Booking) => s + Number(b.total_price), 0);
+
+    setRevenueToday((prev) => prev + evRev(todayStr, tomorrowStr) + shopRev(todayStr) + cardRev(todayStr));
+    setRevenueWeek((prev) => prev + evRev(weekStartStr) + shopRev(weekStartStr) + cardRev(weekStartStr));
+    setRevenueMonth((prev) => prev + evRev(monthStartStr) + shopRev(monthStartStr) + cardRev(monthStartStr));
+
+    setMonthBreakdown({
+      bookings: bookingRev(monthStartStr),
+      events: evRev(monthStartStr),
+      shop: shopRev(monthStartStr),
+      cards: cardRev(monthStartStr),
+    });
+
+    // Ad-driven revenue this month (bookings + event bookings + gift cards tagged with an ad source)
+    const adTagged = (n: string | null | undefined) => !!n && n.startsWith("[Ad:");
+    const adBookings = (bks || []).filter((b: any) => b.payment_status === "paid" && b.date >= monthStartStr && adTagged(b.notes));
+    const adEvents = paidEv.filter((b: any) => adTagged(b.notes) && (instMap.get(b.instance_id)?.date || "") >= monthStartStr);
+    const adCards = (cards || []).filter((c: any) => adTagged(c.ad_source) && dayStr(c.purchased_at) >= monthStartStr);
+    setAdMonth({
+      count: adBookings.length + adEvents.length + adCards.length,
+      revenue:
+        adBookings.reduce((s: number, b: any) => s + Number(b.total_price || 0), 0) +
+        adEvents.reduce((s: number, b: any) => s + Number(b.total_price || 0), 0) +
+        adCards.reduce((s: number, c: any) => s + Number(c.initial_value || 0), 0),
+    });
+
+    // Today's special event bookings
+    setTodayEvents(
+      paidEv
+        .filter((b: any) => instMap.get(b.instance_id)?.date === todayStr)
+        .map((b: any) => ({
+          id: b.id,
+          name: b.name,
+          quantity: b.quantity,
+          total_price: b.total_price,
+          title: titleMap.get(b.event_id) || "Special Event",
+          start_time: instMap.get(b.instance_id)?.start_time || "",
+        }))
+        .sort((a, b) => a.start_time.localeCompare(b.start_time))
+    );
+
     const { count: custCount } = await supabase.from("customers").select("*", { count: "exact", head: true });
     setCustomerCount(custCount || 0);
 
@@ -70,7 +143,13 @@ export default function DashboardPage() {
       .select("total_price")
       .eq("payment_status", "paid");
     const allRevenue = (paidBookings || []).reduce((sum: number, b: { total_price: number }) => sum + Number(b.total_price), 0);
-    setTotalRevenue(allRevenue);
+    const allEventRevenue = ((await supabase.from("special_event_bookings").select("total_price").eq("payment_status", "paid")).data || [])
+      .reduce((sum: number, b: { total_price: number }) => sum + Number(b.total_price), 0);
+    const allShopRevenue = ((await supabase.from("shop_orders").select("total").eq("payment_status", "paid")).data || [])
+      .reduce((sum: number, o: { total: number }) => sum + Number(o.total), 0);
+    const allCardRevenue = ((await supabase.from("gift_cards").select("initial_value")).data || [])
+      .reduce((sum: number, c: { initial_value: number }) => sum + Number(c.initial_value), 0);
+    setTotalRevenue(allRevenue + allEventRevenue + allShopRevenue + allCardRevenue);
 
     setLoadingData(false);
   }
@@ -135,6 +214,30 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Money in — this month, by source */}
+      <div className="bg-white rounded-[20px] p-6 md:p-7 shadow-sm mb-8">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="font-display text-[1.1rem]">Money In — This Month</h2>
+          <Link href="/dashboard/ads" className="text-[0.8rem] text-bright-lavender hover:underline">Ad stats →</Link>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          {[
+            { label: "Bookings", value: monthBreakdown.bookings },
+            { label: "Special events", value: monthBreakdown.events },
+            { label: "Shop orders", value: monthBreakdown.shop },
+            { label: "Gift cards", value: monthBreakdown.cards },
+            { label: `From ads (${adMonth.count})`, value: adMonth.revenue, highlight: true },
+          ].map((s) => (
+            <div key={s.label} className={`rounded-xl px-4 py-3 ${s.highlight ? "bg-pink-50" : "bg-ink/[0.03]"}`}>
+              <div className="text-[0.65rem] text-ink-soft uppercase tracking-wider mb-1">{s.label}</div>
+              <div className={`font-display text-[1.1rem] ${s.highlight ? "text-pink-600" : ""}`}>
+                {loadingData ? "--" : `£${s.value.toFixed(2)}`}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5 mb-8">
         <Link href="/dashboard/bookings" className="bg-white rounded-[20px] p-5 md:p-6 shadow-sm hover:-translate-y-1 hover:shadow-md transition-all group">
@@ -147,7 +250,7 @@ export default function DashboardPage() {
         </Link>
         <Link href="/dashboard/customers" className="bg-white rounded-[20px] p-5 md:p-6 shadow-sm hover:-translate-y-1 hover:shadow-md transition-all group">
           <div className="flex items-center justify-between mb-3">
-            <div className="w-10 h-10 rounded-xl bg-bright-lavender/15 grid place-items-center text-lg">�</div>
+            <div className="w-10 h-10 rounded-xl bg-bright-lavender/15 grid place-items-center text-lg">👥</div>
             <span className="text-[0.7rem] text-ink-soft uppercase tracking-wider">Total</span>
           </div>
           <div className="font-display text-[1.6rem] md:text-[1.8rem]">{loadingData ? "--" : customerCount}</div>
@@ -227,14 +330,30 @@ export default function DashboardPage() {
         <div className="bg-white rounded-[20px] p-7 shadow-sm">
           <div className="flex justify-between items-center mb-5">
             <h2 className="font-display text-[1.1rem]">Today's Sessions</h2>
-            <span className="text-[0.8rem] text-ink-soft">{todayBookings.length} booked</span>
+            <span className="text-[0.8rem] text-ink-soft">{todayBookings.length + todayEvents.length} booked</span>
           </div>
           {loadingData ? (
             <div className="text-center py-8 text-ink-soft text-[0.9rem]">Loading...</div>
-          ) : todayBookings.length === 0 ? (
+          ) : todayBookings.length === 0 && todayEvents.length === 0 ? (
             <div className="text-center py-8 text-ink-soft text-[0.9rem]">No sessions booked today.</div>
           ) : (
             <ul className="space-y-3">
+              {todayEvents.map((e) => (
+                <li key={e.id} className="flex items-center justify-between border-b border-ink/[0.06] pb-3 last:border-0 last:pb-0">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-bright-lavender/15 grid place-items-center font-display text-[0.75rem]">
+                      {e.start_time.slice(0, 5)}
+                    </div>
+                    <div>
+                      <div className="text-[0.9rem] font-medium">{e.name}</div>
+                      <div className="text-[0.8rem] text-ink-soft">
+                        <span className="inline-block bg-bright-lavender/15 text-bright-lavender px-1.5 py-0.5 rounded-full text-[0.65rem] font-medium mr-1">Event</span>
+                        {e.title} · {e.quantity} {e.quantity === 1 ? "ticket" : "tickets"} · £{Number(e.total_price).toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+                </li>
+              ))}
               {todayBookings.map((b) => (
                 <li key={b.id} className="flex items-center justify-between border-b border-ink/[0.06] pb-3 last:border-0 last:pb-0">
                   <div className="flex items-center gap-3">
@@ -298,6 +417,14 @@ export default function DashboardPage() {
               <Link href="/dashboard/bookings" className="bg-canary-yellow/20 rounded-xl p-4 text-center hover:bg-canary-yellow/30 transition-colors">
                 <div className="text-xl mb-1">📅</div>
                 <div className="text-[0.8rem] font-medium">View Bookings</div>
+              </Link>
+              <Link href="/dashboard/ads" className="bg-pink-100 rounded-xl p-4 text-center hover:bg-pink-200/60 transition-colors">
+                <div className="text-xl mb-1">📣</div>
+                <div className="text-[0.8rem] font-medium">Ad Stats</div>
+              </Link>
+              <Link href="/dashboard/gift-cards" className="bg-green-100 rounded-xl p-4 text-center hover:bg-green-200/60 transition-colors">
+                <div className="text-xl mb-1">🎁</div>
+                <div className="text-[0.8rem] font-medium">Gift Cards</div>
               </Link>
             </div>
           </div>
