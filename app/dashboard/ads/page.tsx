@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 
-type Summary = { spend: number; impressions: number; reach: number; clicks: number; lpv: number; purchases: number };
+type Summary = { spend: number; impressions: number; reach: number; clicks: number; lpv: number; purchases: number; frequency?: number };
+type AdPreview = { name: string; status: string; thumbnail: string | null; kind: string; headline: string | null; body: string | null; link: string | null };
+type Alert = { level: "warning" | "info"; message: string };
 type NamedRow = Summary & { name?: string; thumbnail?: string | null };
 type DailyPoint = { date: string; spend: number; clicks: number; purchases: number };
 type ManagedEntity = { id: string; name: string; status: string; effectiveStatus: string; dailyBudget: number | null; campaignName?: string; thumbnail?: string | null; targeting?: string; optimisesFor?: string | null };
@@ -11,7 +13,10 @@ type AdBooking = { id: string; name: string; email: string; date: string; total_
 type Data = {
   configured: boolean;
   metaError: string | null;
-  summary: { today: Summary; week: Summary; month: Summary };
+  summary: { today: Summary; week: Summary; prevWeek: Summary; month: Summary };
+  deltas: { spend: number | null; clicks: number | null; purchases: number | null };
+  adPreviews: AdPreview[];
+  alerts: Alert[];
   daily: DailyPoint[];
   campaigns: NamedRow[];
   adsets: NamedRow[];
@@ -116,17 +121,28 @@ export default function AdsPage() {
             </div>
           )}
 
+          {/* Smart alerts */}
+          {data.alerts?.length > 0 && (
+            <div className="space-y-2 mb-8">
+              {data.alerts.map((a, i) => (
+                <div key={i} className={`rounded-xl px-4 py-3 text-[0.85rem] ${a.level === "warning" ? "bg-red-50 border border-red-200 text-red-800" : "bg-blue-50 border border-blue-200 text-blue-800"}`}>
+                  {a.level === "warning" ? "⚠️ " : "ℹ️ "}{a.message}
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Headline stats — last 30 days */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5 mb-8">
             <div className="bg-white rounded-[20px] p-6 shadow-sm border-l-4 border-red-400">
               <div className="text-[0.75rem] text-ink-soft uppercase tracking-wider mb-2">Ad Spend · 30d</div>
               <div className="font-display text-[1.8rem]">{fmt(data.summary.month.spend)}</div>
-              <div className="text-[0.75rem] text-ink-soft mt-1">Today: {fmt(data.summary.today.spend)}</div>
+              <div className="text-[0.75rem] text-ink-soft mt-1">Today: {fmt(data.summary.today.spend)} <Delta value={data.deltas?.spend} invert /></div>
             </div>
             <div className="bg-white rounded-[20px] p-6 shadow-sm border-l-4 border-green-400">
               <div className="text-[0.75rem] text-ink-soft uppercase tracking-wider mb-2">Ad Booking Revenue</div>
               <div className="font-display text-[1.8rem] text-green-600">{fmt(data.attributedRevenue)}</div>
-              <div className="text-[0.75rem] text-ink-soft mt-1">{data.adBookings.length} ad bookings</div>
+              <div className="text-[0.75rem] text-ink-soft mt-1">{data.adBookings.length} ad bookings <Delta value={data.deltas?.purchases} /></div>
             </div>
             <div className="bg-white rounded-[20px] p-6 shadow-sm border-l-4 border-bright-lavender">
               <div className="text-[0.75rem] text-ink-soft uppercase tracking-wider mb-2">Return on Spend</div>
@@ -176,6 +192,7 @@ export default function AdsPage() {
             </div>
             <div className="text-[0.75rem] text-ink-soft mt-4">
               7 days: {fmt(data.summary.week.spend)} spend · {data.summary.week.clicks} clicks · {data.summary.week.purchases} purchases
+              {(data.summary.month.frequency || 0) > 0 && ` · each person sees your ads ~${(data.summary.month.frequency || 0).toFixed(1)}×`}
             </div>
           </div>
 
@@ -318,6 +335,33 @@ export default function AdsPage() {
             <BreakdownCard title="Ads" rows={data.ads} showThumb />
           </div>
 
+          {/* What your ads look like */}
+          {data.adPreviews?.length > 0 && (
+            <div className="bg-white rounded-[20px] p-8 shadow-sm mb-8">
+              <h2 className="font-display text-[1.1rem] mb-5">What your ads look like</h2>
+              <div className="grid md:grid-cols-2 gap-5">
+                {data.adPreviews.map((p, i) => (
+                  <div key={i} className="border border-ink/[0.08] rounded-2xl overflow-hidden">
+                    {p.thumbnail && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={p.thumbnail} alt="" className="w-full h-40 object-cover" />
+                    )}
+                    <div className="p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="font-medium text-[0.85rem]">{p.name}</span>
+                        <span className={`text-[0.6rem] px-1.5 py-0.5 rounded-full font-medium ${p.status === "ACTIVE" ? "bg-green-100 text-green-700" : "bg-ink/[0.08] text-ink-soft"}`}>{p.status === "ACTIVE" ? "Live" : p.status}</span>
+                        <span className="text-[0.6rem] bg-ink/[0.06] text-ink-soft px-1.5 py-0.5 rounded-full">{p.kind}</span>
+                      </div>
+                      {p.headline && <div className="text-[0.9rem] font-medium">{p.headline}</div>}
+                      {p.body && <div className="text-[0.75rem] text-ink-soft mt-1 line-clamp-3">{p.body}</div>}
+                      {p.link && <div className="text-[0.7rem] text-sky-blue-light mt-2 truncate">→ {p.link}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Comments on ads */}
           <div className="bg-white rounded-[20px] p-8 shadow-sm mb-8">
             <h2 className="font-display text-[1.1rem] mb-2">Comments on your ads</h2>
@@ -385,6 +429,17 @@ export default function AdsPage() {
         </>
       )}
     </div>
+  );
+}
+
+function Delta({ value, invert }: { value: number | null | undefined; invert?: boolean }) {
+  if (value == null || value === 0) return null;
+  const up = value > 0;
+  const good = invert ? !up : up;
+  return (
+    <span className={`ml-1 font-medium ${good ? "text-green-600" : "text-red-500"}`}>
+      {up ? "↑" : "↓"}{Math.abs(value) >= 1 ? `${(Math.abs(value) * 100).toFixed(0)}%` : Math.abs(value)} vs last wk
+    </span>
   );
 }
 

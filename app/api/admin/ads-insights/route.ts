@@ -12,6 +12,7 @@ type InsightRow = {
   impressions?: string;
   reach?: string;
   clicks?: string;
+  frequency?: string;
   actions?: MetaAction[];
   campaign_name?: string;
   adset_name?: string;
@@ -74,13 +75,20 @@ export async function GET(req: NextRequest) {
   const accountId = process.env.META_AD_ACCOUNT_ID || "act_1408400061198101";
   if (!metaToken) return NextResponse.json({ configured: false });
 
-  const fields = "spend,impressions,reach,clicks,actions";
+  const fields = "spend,impressions,reach,clicks,actions,frequency";
+
+  // Previous 7-day window for week-over-week comparisons
+  const fmtDate = (d: Date) => d.toISOString().split("T")[0];
+  const now = new Date();
+  const prevSince = fmtDate(new Date(now.getTime() - 14 * 86400000));
+  const prevUntil = fmtDate(new Date(now.getTime() - 8 * 86400000));
   let metaError: string | null = null;
   const safe = <T,>(p: Promise<T[]>) => p.catch((e) => { metaError = e.message; return [] as T[]; });
 
-  const [today, week, month, campaigns, adsets, ads, daily, byAgeGender, byRegion, byPlacement, manageCampaigns, manageAdsets, adCreatives] = await Promise.all([
+  const [today, week, prevWeek, month, campaigns, adsets, ads, daily, byAgeGender, byRegion, byPlacement, manageCampaigns, manageAdsets, adCreatives] = await Promise.all([
     safe(metaGet(metaToken, `${accountId}/insights`, { fields, date_preset: "today" }) as Promise<InsightRow[]>),
     safe(metaGet(metaToken, `${accountId}/insights`, { fields, date_preset: "last_7d" }) as Promise<InsightRow[]>),
+    safe(metaGet(metaToken, `${accountId}/insights`, { fields, time_range: JSON.stringify({ since: prevSince, until: prevUntil }) }) as Promise<InsightRow[]>),
     safe(metaGet(metaToken, `${accountId}/insights`, { fields, date_preset: "last_30d" }) as Promise<InsightRow[]>),
     safe(metaGet(metaToken, `${accountId}/insights`, { level: "campaign", fields: `campaign_name,${fields}`, date_preset: "last_30d" }) as Promise<InsightRow[]>),
     safe(metaGet(metaToken, `${accountId}/insights`, { level: "adset", fields: `adset_name,${fields}`, date_preset: "last_30d" }) as Promise<InsightRow[]>),
@@ -91,7 +99,7 @@ export async function GET(req: NextRequest) {
     safe(metaGet(metaToken, `${accountId}/insights`, { fields: `impressions,clicks,spend,actions`, date_preset: "last_30d", breakdowns: "publisher_platform,platform_position" }) as Promise<InsightRow[]>),
     safe(metaGet(metaToken, `${accountId}/campaigns`, { fields: "name,status,effective_status,daily_budget,objective" })),
     safe(metaGet(metaToken, `${accountId}/adsets`, { fields: "name,status,effective_status,daily_budget,campaign{name},targeting,optimization_goal,promoted_object" })),
-    safe(metaGet(metaToken, `${accountId}/ads`, { fields: "name,status,effective_status,creative{thumbnail_url,effective_object_story_id,effective_instagram_media_id,instagram_permalink_url}" })),
+    safe(metaGet(metaToken, `${accountId}/ads`, { fields: "name,status,effective_status,creative{thumbnail_url,object_story_spec,effective_object_story_id,effective_instagram_media_id,instagram_permalink_url}" })),
   ]);
 
   // Comments left on the ads — FB post comments need a Page token; IG media
@@ -135,7 +143,52 @@ export async function GET(req: NextRequest) {
     clicks: rows.reduce((s, r) => s + Number(r.clicks || 0), 0),
     lpv: rows.reduce((s, r) => s + landingPageViews(r.actions), 0),
     purchases: rows.reduce((s, r) => s + countPurchases(r.actions), 0),
+    frequency: rows.length ? rows.reduce((s, r) => s + Number(r.frequency || 0), 0) / rows.length : 0,
   });
+
+  const weekSummary = summarize(week);
+  const prevWeekSummary = summarize(prevWeek);
+  const deltas = {
+    spend: prevWeekSummary.spend ? (weekSummary.spend - prevWeekSummary.spend) / prevWeekSummary.spend : null,
+    clicks: prevWeekSummary.clicks ? (weekSummary.clicks - prevWeekSummary.clicks) / prevWeekSummary.clicks : null,
+    purchases: prevWeekSummary.purchases ? weekSummary.purchases - prevWeekSummary.purchases : null,
+  };
+
+  // Ad creative previews — what customers actually see
+  const adPreviews = (adCreatives as any[]).map((ad) => {
+    const spec = ad.creative?.object_story_spec || {};
+    const vd = spec.video_data || {};
+    const ld = spec.link_data || {};
+    return {
+      name: ad.name,
+      status: ad.effective_status,
+      thumbnail: ad.creative?.thumbnail_url || null,
+      kind: vd.video_id ? "video" : "image",
+      headline: vd.title || ld.name || null,
+      body: vd.message || ld.message || null,
+      link: vd.call_to_action?.value?.link || ld.link || null,
+    };
+  });
+
+  // Smart alerts — surface problems without needing to check
+  const alerts: { level: "warning" | "info"; message: string }[] = [];
+  for (const ad of adCreatives as any[]) {
+    if (["PENDING_REVIEW", "IN_PROCESS"].includes(ad.effective_status)) {
+      alerts.push({ level: "info", message: `"${ad.name}" is waiting for Meta's review.` });
+    }
+    if (["DISAPPROVED", "WITH_ISSUES"].includes(ad.effective_status)) {
+      alerts.push({ level: "warning", message: `"${ad.name}" has a problem — check it in Ads Manager.` });
+    }
+  }
+  for (const c of manageCampaigns as any[]) {
+    if (c.status === "PAUSED") alerts.push({ level: "info", message: `Campaign "${c.name}" is paused — your ads aren't running.` });
+  }
+  if (weekSummary.frequency > 3.5) {
+    alerts.push({ level: "warning", message: `Ad fatigue: people are seeing your ads ${weekSummary.frequency.toFixed(1)}× on average this week — time for fresh creative.` });
+  }
+  if (weekSummary.spend > 10 && weekSummary.purchases === 0) {
+    alerts.push({ level: "warning", message: `${weekSummary.spend.toFixed(2)} spent this week with no attributed bookings — review the ads or landing page.` });
+  }
 
   const thumbnailByAdName: Record<string, string> = {};
   for (const ad of adCreatives as any[]) {
@@ -173,9 +226,13 @@ export async function GET(req: NextRequest) {
     metaError,
     summary: {
       today: summarize(today),
-      week: summarize(week),
+      week: weekSummary,
+      prevWeek: prevWeekSummary,
       month: summarize(month),
     },
+    deltas,
+    adPreviews,
+    alerts,
     daily: daily.map((r) => ({
       date: r.date_start,
       spend: Number(r.spend || 0),
