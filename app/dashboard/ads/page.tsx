@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 
-type Summary = { spend: number; impressions: number; reach: number; clicks: number; lpv: number; purchases: number; frequency?: number };
+type Summary = { spend: number; impressions: number; reach: number; clicks: number; lpv: number; purchases: number; frequency?: number; purchaseValue?: number };
 type AdPreview = { name: string; status: string; thumbnail: string | null; kind: string; headline: string | null; body: string | null; link: string | null };
 type Alert = { level: "warning" | "info"; message: string };
-type NamedRow = Summary & { name?: string; thumbnail?: string | null };
+type NamedRow = Summary & { name?: string; thumbnail?: string | null; quality?: string | null; qualityGood?: boolean | null; video?: { plays: number; completionRate: number; avgWatch: number } | null };
 type DailyPoint = { date: string; spend: number; clicks: number; purchases: number };
 type ManagedEntity = { id: string; name: string; status: string; effectiveStatus: string; dailyBudget: number | null; campaignName?: string; thumbnail?: string | null; targeting?: string; optimisesFor?: string | null };
 type AdBooking = { id: string; name: string; email: string; date: string; total_price: number; payment_status: string; notes: string; created_at: string; kind?: "session" | "event" };
@@ -27,6 +27,8 @@ type Data = {
     regions: { region: string; impressions: number; reach: number; spend: number }[];
     placements: { platform: string; position: string; impressions: number; clicks: number; spend: number; purchases: number }[];
   };
+  attributionSplit: { clicked: number; sawOnly: number };
+  devices: { device: string; impressions: number; clicks: number; purchases: number }[];
   adBookings: AdBooking[];
   attributedRevenue: number;
   comments: { adName: string; platform: string; author: string; text: string; time: string; replyUrl: string | null }[];
@@ -190,9 +192,16 @@ export default function AdsPage() {
               <FunnelStat label="Page Views" value={data.summary.month.lpv} />
               <FunnelStat label="Purchases" value={data.summary.month.purchases} highlight />
             </div>
-            <div className="text-[0.75rem] text-ink-soft mt-4">
-              7 days: {fmt(data.summary.week.spend)} spend · {data.summary.week.clicks} clicks · {data.summary.week.purchases} purchases
-              {(data.summary.month.frequency || 0) > 0 && ` · each person sees your ads ~${(data.summary.month.frequency || 0).toFixed(1)}×`}
+            <div className="text-[0.75rem] text-ink-soft mt-4 space-y-1">
+              <div>
+                7 days: {fmt(data.summary.week.spend)} spend · {data.summary.week.clicks} clicks · {data.summary.week.purchases} purchases
+                {(data.summary.month.frequency || 0) > 0 && ` · each person sees your ads ~${(data.summary.month.frequency || 0).toFixed(1)}×`}
+              </div>
+              {(data.summary.month.purchaseValue || 0) > 0 && (
+                <div>
+                  Meta estimates {fmt(data.summary.month.purchaseValue || 0)} in purchases — {data.attributionSplit?.clicked ?? 0} from people who clicked · {data.attributionSplit?.sawOnly ?? 0} from people who only saw the ad
+                </div>
+              )}
             </div>
           </div>
 
@@ -239,6 +248,27 @@ export default function AdsPage() {
                   })}
                   {data.audience.regions.length === 0 && <div className="text-ink-soft text-[0.85rem]">No region data yet.</div>}
                 </div>
+                {data.devices?.length > 0 && (
+                  <div className="mt-6 pt-5 border-t border-ink/[0.08]">
+                    <h3 className="font-display text-[0.9rem] mb-3">Devices</h3>
+                    <div className="space-y-2">
+                      {data.devices.map((d) => {
+                        const max = data.devices[0]?.impressions || 1;
+                        return (
+                          <div key={d.device}>
+                            <div className="flex justify-between text-[0.8rem] mb-1">
+                              <span className="font-medium capitalize">{d.device.replace(/_/g, " ")}</span>
+                              <span className="text-ink-soft">{d.impressions.toLocaleString()} views{d.purchases > 0 ? ` · ${d.purchases}🎉` : ""}</span>
+                            </div>
+                            <div className="h-2 bg-ink/[0.06] rounded-full overflow-hidden">
+                              <div className="h-full rounded-full bg-bright-lavender" style={{ width: `${(d.impressions / max) * 100}%` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -473,6 +503,18 @@ function BreakdownCard({ title, rows, showThumb }: { title: string; rows: NamedR
                 </div>
                 <div className="text-[0.72rem] text-ink-soft">
                   {r.clicks} clicks · {r.purchases} purchases{r.purchases > 0 ? ` · ${fmt(r.spend / r.purchases)}/booking` : ""}
+                </div>
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                  {r.quality && (
+                    <span className={`text-[0.6rem] px-1.5 py-0.5 rounded-full font-medium ${r.qualityGood ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                      Meta rating: {r.quality}
+                    </span>
+                  )}
+                  {r.video && (
+                    <span className="text-[0.65rem] text-ink-soft">
+                      ▶ {r.video.plays.toLocaleString()} plays · {r.video.completionRate}% watch to the end
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

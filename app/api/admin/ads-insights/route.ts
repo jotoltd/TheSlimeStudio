@@ -14,6 +14,13 @@ type InsightRow = {
   clicks?: string;
   frequency?: string;
   actions?: MetaAction[];
+  action_values?: MetaAction[];
+  video_play_actions?: MetaAction[];
+  video_p100_watched_actions?: MetaAction[];
+  video_avg_time_watched_actions?: MetaAction[];
+  quality_ranking?: string;
+  engagement_rate_ranking?: string;
+  conversion_rate_ranking?: string;
   campaign_name?: string;
   adset_name?: string;
   ad_name?: string;
@@ -75,7 +82,8 @@ export async function GET(req: NextRequest) {
   const accountId = process.env.META_AD_ACCOUNT_ID || "act_1408400061198101";
   if (!metaToken) return NextResponse.json({ configured: false });
 
-  const fields = "spend,impressions,reach,clicks,actions,frequency";
+  const fields = "spend,impressions,reach,clicks,actions,action_values,frequency";
+  const adLevelFields = `${fields},video_play_actions,video_p100_watched_actions,video_avg_time_watched_actions,quality_ranking,engagement_rate_ranking,conversion_rate_ranking`;
 
   // Previous 7-day window for week-over-week comparisons
   const fmtDate = (d: Date) => d.toISOString().split("T")[0];
@@ -85,21 +93,23 @@ export async function GET(req: NextRequest) {
   let metaError: string | null = null;
   const safe = <T,>(p: Promise<T[]>) => p.catch((e) => { metaError = e.message; return [] as T[]; });
 
-  const [today, week, prevWeek, month, campaigns, adsets, ads, daily, byAgeGender, byRegion, byPlacement, manageCampaigns, manageAdsets, adCreatives] = await Promise.all([
+  const [today, week, prevWeek, month, campaigns, adsets, ads, daily, byAgeGender, byRegion, byPlacement, byDevice, attribution, manageCampaigns, manageAdsets, adCreatives] = await Promise.all([
     safe(metaGet(metaToken, `${accountId}/insights`, { fields, date_preset: "today" }) as Promise<InsightRow[]>),
     safe(metaGet(metaToken, `${accountId}/insights`, { fields, date_preset: "last_7d" }) as Promise<InsightRow[]>),
     safe(metaGet(metaToken, `${accountId}/insights`, { fields, time_range: JSON.stringify({ since: prevSince, until: prevUntil }) }) as Promise<InsightRow[]>),
     safe(metaGet(metaToken, `${accountId}/insights`, { fields, date_preset: "last_30d" }) as Promise<InsightRow[]>),
     safe(metaGet(metaToken, `${accountId}/insights`, { level: "campaign", fields: `campaign_name,${fields}`, date_preset: "last_30d" }) as Promise<InsightRow[]>),
     safe(metaGet(metaToken, `${accountId}/insights`, { level: "adset", fields: `adset_name,${fields}`, date_preset: "last_30d" }) as Promise<InsightRow[]>),
-    safe(metaGet(metaToken, `${accountId}/insights`, { level: "ad", fields: `ad_name,${fields}`, date_preset: "last_30d" }) as Promise<InsightRow[]>),
+    safe(metaGet(metaToken, `${accountId}/insights`, { level: "ad", fields: `ad_name,${adLevelFields}`, date_preset: "last_30d" }) as Promise<InsightRow[]>),
     safe(metaGet(metaToken, `${accountId}/insights`, { fields: `spend,clicks,actions`, date_preset: "last_30d", time_increment: "1" }) as Promise<InsightRow[]>),
     safe(metaGet(metaToken, `${accountId}/insights`, { fields: `impressions,reach,spend,actions`, date_preset: "last_30d", breakdowns: "age,gender" }) as Promise<InsightRow[]>),
     safe(metaGet(metaToken, `${accountId}/insights`, { fields: `impressions,reach,spend`, date_preset: "last_30d", breakdowns: "region" }) as Promise<InsightRow[]>),
     safe(metaGet(metaToken, `${accountId}/insights`, { fields: `impressions,clicks,spend,actions`, date_preset: "last_30d", breakdowns: "publisher_platform,platform_position" }) as Promise<InsightRow[]>),
+    safe(metaGet(metaToken, `${accountId}/insights`, { fields: `impressions,clicks,actions`, date_preset: "last_30d", breakdowns: "impression_device" }) as Promise<InsightRow[]>),
+    safe(metaGet(metaToken, `${accountId}/insights`, { fields: `actions,action_values`, date_preset: "last_30d", action_attribution_windows: '["1d_view","7d_click"]' }) as Promise<InsightRow[]>),
     safe(metaGet(metaToken, `${accountId}/campaigns`, { fields: "name,status,effective_status,daily_budget,objective" })),
     safe(metaGet(metaToken, `${accountId}/adsets`, { fields: "name,status,effective_status,daily_budget,campaign{name},targeting,optimization_goal,promoted_object" })),
-    safe(metaGet(metaToken, `${accountId}/ads`, { fields: "name,status,effective_status,creative{thumbnail_url,object_story_spec,effective_object_story_id,effective_instagram_media_id,instagram_permalink_url}" })),
+    safe(metaGet(metaToken, `${accountId}/ads`, { fields: "name,status,effective_status,issues_info,creative{thumbnail_url,object_story_spec,effective_object_story_id,effective_instagram_media_id,instagram_permalink_url}" })),
   ]);
 
   // Comments left on the ads — FB post comments need a Page token; IG media
@@ -143,8 +153,30 @@ export async function GET(req: NextRequest) {
     clicks: rows.reduce((s, r) => s + Number(r.clicks || 0), 0),
     lpv: rows.reduce((s, r) => s + landingPageViews(r.actions), 0),
     purchases: rows.reduce((s, r) => s + countPurchases(r.actions), 0),
+    purchaseValue: rows.reduce((s, r) => s + Number(r.action_values?.find((a) => a.action_type === "purchase")?.value || 0), 0),
     frequency: rows.length ? rows.reduce((s, r) => s + Number(r.frequency || 0), 0) / rows.length : 0,
   });
+
+  const actVal = (list: MetaAction[] | undefined, type: string) => {
+    const a = list?.find((x) => x.action_type === type);
+    return a ? Number(a.value) : 0;
+  };
+
+  // Meta's plain-English ad grades
+  const rankLabel = (r?: string) => {
+    if (!r || r === "UNKNOWN") return null;
+    if (r.startsWith("ABOVE_AVERAGE")) return { text: "Above average", good: true };
+    if (r === "AVERAGE") return { text: "Average", good: true };
+    if (r.startsWith("BELOW_AVERAGE")) return { text: "Below average", good: false };
+    return null;
+  };
+
+  // Click-through vs view-through purchases (explains Meta vs DB count gaps)
+  const attrPurchase = (attribution as any[])[0]?.actions?.find((a: any) => a.action_type === "purchase") || {};
+  const attributionSplit = {
+    clicked: Number(attrPurchase["7d_click"] || 0),
+    sawOnly: Number(attrPurchase["1d_view"] || 0),
+  };
 
   const weekSummary = summarize(week);
   const prevWeekSummary = summarize(prevWeek);
@@ -179,6 +211,15 @@ export async function GET(req: NextRequest) {
     if (["DISAPPROVED", "WITH_ISSUES"].includes(ad.effective_status)) {
       alerts.push({ level: "warning", message: `"${ad.name}" has a problem — check it in Ads Manager.` });
     }
+    const issue = (ad.issues_info || [])[0];
+    if (issue && issue.level === "ERROR") {
+      alerts.push({ level: "warning", message: `Delivery issue on "${ad.name}": ${issue.error_summary || issue.error_message || "check Ads Manager"}.` });
+    }
+  }
+  for (const a of ads as any[]) {
+    if (a.conversion_rate_ranking?.startsWith("BELOW_AVERAGE")) {
+      alerts.push({ level: "info", message: `Meta rates "${a.ad_name}" below average for turning clicks into bookings — consider testing new copy or a different audience.` });
+    }
   }
   for (const c of manageCampaigns as any[]) {
     if (c.status === "PAUSED") alerts.push({ level: "info", message: `Campaign "${c.name}" is paused — your ads aren't running.` });
@@ -187,7 +228,7 @@ export async function GET(req: NextRequest) {
     alerts.push({ level: "warning", message: `Ad fatigue: people are seeing your ads ${weekSummary.frequency.toFixed(1)}× on average this week — time for fresh creative.` });
   }
   if (weekSummary.spend > 10 && weekSummary.purchases === 0) {
-    alerts.push({ level: "warning", message: `${weekSummary.spend.toFixed(2)} spent this week with no attributed bookings — review the ads or landing page.` });
+    alerts.push({ level: "warning", message: `£${weekSummary.spend.toFixed(2)} spent this week with no attributed bookings — review the ads or landing page.` });
   }
 
   const thumbnailByAdName: Record<string, string> = {};
@@ -263,7 +304,27 @@ export async function GET(req: NextRequest) {
     },
     campaigns: campaigns.map((r) => ({ name: r.campaign_name, ...summarize([r]) })),
     adsets: adsets.map((r) => ({ name: r.adset_name, ...summarize([r]) })),
-    ads: ads.map((r) => ({ name: r.ad_name, thumbnail: thumbnailByAdName[r.ad_name || ""] || null, ...summarize([r]) })),
+    ads: ads.map((r) => {
+      const plays = actVal(r.video_play_actions, "video_view");
+      const completes = actVal(r.video_p100_watched_actions, "video_view");
+      const avgWatch = actVal(r.video_avg_time_watched_actions, "video_view");
+      const rank = rankLabel(r.conversion_rate_ranking);
+      return {
+        name: r.ad_name,
+        thumbnail: thumbnailByAdName[r.ad_name || ""] || null,
+        ...summarize([r]),
+        quality: rank?.text || null,
+        qualityGood: rank?.good ?? null,
+        video: plays > 0 ? { plays, completionRate: Math.round((completes / plays) * 100), avgWatch } : null,
+      };
+    }),
+    attributionSplit,
+    devices: (byDevice as any[]).map((r) => ({
+      device: r.impression_device,
+      impressions: Number(r.impressions || 0),
+      clicks: Number(r.clicks || 0),
+      purchases: countPurchases(r.actions),
+    })).sort((a, b) => b.impressions - a.impressions),
     manage: {
       campaigns: (manageCampaigns as any[]).map((c) => ({
         id: c.id, name: c.name, status: c.status, effectiveStatus: c.effective_status,
