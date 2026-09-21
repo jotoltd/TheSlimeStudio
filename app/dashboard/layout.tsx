@@ -7,7 +7,7 @@ import { ToastProvider } from "@/components/Toast";
 import {
   HomeIcon, DollarIcon, CalendarIcon, ClockIcon, ShoppingBagIcon,
   PackageIcon, MailIcon, UsersIcon, SettingsIcon, FileTextIcon,
-  InboxIcon, DownloadIcon, GiftIcon, PhotoIcon, TagIcon, TrendingUpIcon,
+  InboxIcon, DownloadIcon, GiftIcon, PhotoIcon, TagIcon, TrendingUpIcon, BellIcon,
 } from "@/components/AdminIcons";
 
 const navSections = [
@@ -15,6 +15,7 @@ const navSections = [
     label: "Overview",
     items: [
       { href: "/dashboard", label: "Dashboard", Icon: HomeIcon },
+      { href: "/dashboard/notifications", label: "Notifications", Icon: BellIcon, badge: true },
       { href: "/dashboard/revenue", label: "Revenue", Icon: DollarIcon },
       { href: "/dashboard/ads", label: "Ads", Icon: TrendingUpIcon },
     ],
@@ -59,6 +60,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [authed, setAuthed] = useState(false);
   const [adminName, setAdminName] = useState("Admin");
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [unread, setUnread] = useState(0);
 
   useEffect(() => {
     fetch("/api/session").then(async (res) => {
@@ -71,6 +73,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }
     });
   }, [router]);
+
+  // Poll unread notifications count
+  useEffect(() => {
+    if (!authed) return;
+    const load = () =>
+      fetch("/api/admin/notifications")
+        .then((r) => r.json())
+        .then((d) => setUnread(d.unread || 0))
+        .catch(() => {});
+    load();
+    const t = setInterval(load, 60000);
+    return () => clearInterval(t);
+  }, [authed, pathname]);
 
   async function handleLogout() {
     await fetch("/api/logout", { method: "POST" });
@@ -98,17 +113,31 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <Link href="/dashboard" className="font-display text-[1.1rem] text-white">
             Slime Studio
           </Link>
-          <button
-            onClick={() => setMobileOpen(!mobileOpen)}
-            className="w-9 h-9 rounded-full bg-white/15 text-white grid place-items-center transition-colors hover:bg-white/25"
-            aria-label="Toggle menu"
-          >
+          <div className="flex items-center gap-2">
+            <Link
+              href="/dashboard/notifications"
+              className="relative w-9 h-9 rounded-full bg-white/15 text-white grid place-items-center transition-colors hover:bg-white/25"
+              aria-label="Notifications"
+            >
+              <BellIcon size={17} />
+              {unread > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#ff2d78] text-white text-[0.6rem] font-semibold grid place-items-center">
+                  {unread > 99 ? "99+" : unread}
+                </span>
+              )}
+            </Link>
+            <button
+              onClick={() => setMobileOpen(!mobileOpen)}
+              className="w-9 h-9 rounded-full bg-white/15 text-white grid place-items-center transition-colors hover:bg-white/25"
+              aria-label="Toggle menu"
+            >
             {mobileOpen ? (
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
             ) : (
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
             )}
           </button>
+          </div>
         </div>
 
         {/* Sidebar */}
@@ -150,6 +179,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         >
                           <Icon size={18} className={active ? "text-ink" : "text-white/50"} />
                           {item.label}
+                          {item.href === "/dashboard/notifications" && unread > 0 && (
+                            <span className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-[#ff2d78] text-white text-[0.65rem] font-semibold grid place-items-center">
+                              {unread > 99 ? "99+" : unread}
+                            </span>
+                          )}
                         </Link>
                       </li>
                     );
