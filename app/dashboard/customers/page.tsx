@@ -167,7 +167,7 @@ export default function CustomersPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-ink-soft text-xs">
-                      {new Date(c.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                      {new Date(c.created_at).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                     </td>
                   </tr>
                 ))}
@@ -251,14 +251,14 @@ export default function CustomersPage() {
               <div className="flex justify-between text-sm">
                 <span className="text-ink-soft">Joined</span>
                 <span className="text-ink font-medium">
-                  {new Date(selected.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
+                  {new Date(selected.created_at).toLocaleString("en-GB", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-ink-soft">Terms Agreed</span>
                 <span className="text-ink font-medium">
                   {selected.terms_agreed_at
-                    ? new Date(selected.terms_agreed_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+                    ? new Date(selected.terms_agreed_at).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
                     : "Not yet"}
                 </span>
               </div>

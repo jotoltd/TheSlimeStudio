@@ -664,7 +664,7 @@ export default function BookingsAdminPage() {
                                         <span className={`text-[0.65rem] px-1.5 py-0.5 rounded-full ${eb.payment_status === "paid" ? "bg-green-100 text-green-700" : eb.payment_status === "cancelled" ? "bg-red-100 text-red-700" : eb.payment_status === "refunded" ? "bg-orange-100 text-orange-700" : "bg-orange-100 text-orange-700"}`}>{eb.payment_status}</span>
                                         <AdSourceBadge notes={eb.notes} />
                                       </div>
-                                      <div className="text-ink-soft">{eb.email} · {eb.quantity} {inst.event?.pricing_model === "per_person" ? "people" : "tickets"} · £{Number(eb.total_price).toFixed(2)}</div>
+                                      <div className="text-ink-soft">{eb.email} · {eb.quantity} {inst.event?.pricing_model === "per_person" ? "people" : "tickets"} · £{Number(eb.total_price).toFixed(2)} · booked {new Date(eb.created_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</div>
                                     </div>
                                     <div className="flex items-center gap-2 flex-shrink-0">
                                       <a href={`mailto:${eb.email}`} className="text-sky-blue-light hover:underline text-[0.7rem]">Email</a>
@@ -776,7 +776,7 @@ export default function BookingsAdminPage() {
                         {b.phone && <div className="text-[0.75rem] text-ink-soft">{b.phone}</div>}
                         {b.notes && !b.notes.startsWith("[Ad:") && <div className="text-[0.7rem] text-ink-soft mt-0.5 italic">📝 {b.notes.length > 30 ? b.notes.slice(0, 30) + "…" : b.notes}</div>}
                       </td>
-                      <td className="py-3.5 pr-4 text-[0.8rem] text-ink-soft">{new Date(b.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</td>
+                      <td className="py-3.5 pr-4 text-[0.8rem] text-ink-soft">{new Date(b.created_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</td>
                       <td className="py-3.5 pr-4">
                         <select
                           value={b.attendance_status || "pending"}
@@ -999,7 +999,7 @@ export default function BookingsAdminPage() {
 }
 
 function BookingCard({ b, onEdit, onCancel, cancelling }: { b: Booking; onEdit: () => void; onCancel: () => void; cancelling: boolean }) {
-  const bookedDate = new Date(b.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  const bookedDate = new Date(b.created_at).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
   const sessionDate = new Date(b.date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
   return (
     <div className={`border rounded-xl p-4 hover:border-ink/15 transition-colors ${b.is_party ? "border-bright-lavender/30 bg-bright-lavender/[0.03]" : "border-ink/[0.08]"}`}>

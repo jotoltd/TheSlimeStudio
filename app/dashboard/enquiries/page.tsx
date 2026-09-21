@@ -91,7 +91,7 @@ export default function EnquiriesAdminPage() {
                     <div>
                       <div className="text-[0.95rem] font-medium">{e.name || "--"}</div>
                       <div className="text-[0.8rem] text-ink-soft mt-0.5">
-                        {e.enquiry_type || "General"} · {e.created_at ? new Date(e.created_at).toLocaleDateString("en-GB") : "--"}
+                        {e.enquiry_type || "General"} · {e.created_at ? new Date(e.created_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "--"}
                       </div>
                     </div>
                     <select

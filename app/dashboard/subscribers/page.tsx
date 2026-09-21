@@ -126,7 +126,7 @@ export default function SubscribersPage() {
                         <td className="py-3 pr-4">
                           <span className={`px-2 py-0.5 rounded-full text-[0.75rem] font-medium ${s.payment_status === "paid" ? "bg-green-100 text-green-700" : "bg-ink/5 text-ink-soft"}`}>{s.payment_status || "unpaid"}</span>
                         </td>
-                        <td className="py-3 pr-4 text-[0.9rem]">{new Date(s.created_at).toLocaleDateString("en-GB")}</td>
+                        <td className="py-3 pr-4 text-[0.9rem]">{new Date(s.created_at).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</td>
                         <td className="py-3">
                           <div className="flex gap-2">
                             <button onClick={() => startEdit(s)} className="px-3 py-1.5 rounded-lg bg-sky-blue-light/30 text-ink text-[0.8rem] hover:bg-sky-blue-light/50 transition-colors">Edit</button>

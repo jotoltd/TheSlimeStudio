@@ -182,6 +182,7 @@ export async function sendAdminNotification(d: BookingDetails, overCapacity: boo
       <p><strong>Total:</strong> £${Number(d.totalPrice).toFixed(2)}</p>
       <p><strong>Payment:</strong> Paid</p>
       ${d.adSource ? `<p style="color:#1877f2"><strong>📣 Source:</strong> ${adSourceLabel(d.adSource)}</p>` : ""}
+      <p style="color:#888;font-size:0.85em"><strong>Received:</strong> ${new Date().toLocaleString("en-GB", { timeZone: "Europe/London", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</p>
     `,
   });
   await logEmail(CONTACT_EMAIL, `New Booking — ${d.name}`, "admin_notification", "sent");

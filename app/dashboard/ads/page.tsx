@@ -416,7 +416,7 @@ export default function AdsPage() {
                         <span className="text-[0.65rem] text-ink-soft">on {cm.adName}</span>
                       </div>
                       <div className="text-[0.85rem] text-ink mt-0.5">{cm.text}</div>
-                      <div className="text-[0.7rem] text-ink-soft">{cm.time ? new Date(cm.time).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : ""}</div>
+                      <div className="text-[0.7rem] text-ink-soft">{cm.time ? new Date(cm.time).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : ""}</div>
                     </div>
                     {cm.replyUrl && (
                       <a href={cm.replyUrl} target="_blank" rel="noreferrer" className="text-[0.75rem] text-sky-blue-light hover:underline flex-shrink-0">Reply →</a>
@@ -445,7 +445,7 @@ export default function AdsPage() {
                       <span className={`ml-2 text-[0.6rem] px-1.5 py-0.5 rounded-full font-medium ${PLATFORM_COLORS[adLabel(b.notes).split(" ")[0]] || "bg-blue-100 text-blue-700"}`}>
                         {adLabel(b.notes)}
                       </span>
-                      <div className="text-[0.75rem] text-ink-soft">{b.email} · session {new Date(b.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} · booked {new Date(b.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</div>
+                      <div className="text-[0.75rem] text-ink-soft">{b.email} · session {new Date(b.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} · booked {new Date(b.created_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</div>
                     </div>
                     <div className="text-right flex-shrink-0">
                       <div className="font-display text-[0.95rem]">£{Number(b.total_price).toFixed(2)}</div>

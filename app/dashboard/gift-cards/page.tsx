@@ -684,7 +684,7 @@ export default function GiftCardsPage() {
                       <div>
                         <div className="font-medium text-ink">£{r.amount.toFixed(2)}</div>
                         <div className="text-[0.75rem] text-ink-soft">
-                          {r.booking_id ? "Booking" : "Shop Order"} · {new Date(r.redeemed_at).toLocaleDateString("en-GB")}
+                          {r.booking_id ? "Booking" : "Shop Order"} · {new Date(r.redeemed_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                         </div>
                       </div>
                     </div>

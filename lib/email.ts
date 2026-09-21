@@ -194,6 +194,7 @@ export async function sendEventBookingEmails(opts: {
           <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>${opts.pricingModel === "per_person" ? "People" : "Tickets"}:</strong> ${opts.quantity}</p>
           <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Total:</strong> &pound;${opts.totalPrice.toFixed(2)}</p>
           ${opts.adSource ? `<p style="margin: 8px 0 4px; color: #1877f2; font-size: 0.9rem;"><strong>📣 Source:</strong> ${adSourceLabel(opts.adSource)}</p>` : ""}
+          <p style="margin: 8px 0 4px; color: #888; font-size: 0.8rem;"><strong>Received:</strong> ${new Date().toLocaleString("en-GB", { timeZone: "Europe/London", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</p>
         </div>
       `),
     });

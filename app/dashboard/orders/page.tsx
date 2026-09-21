@@ -117,7 +117,7 @@ export default function OrdersPage() {
                       <PaymentMethodBadge reference={o.stripe_session_id} />
                     </td>
                     <td className="py-3 pr-4 text-[0.8rem] text-ink-soft">
-                      {new Date(o.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                      {new Date(o.created_at).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                     </td>
                     <td className="py-3">
                       <button
@@ -146,7 +146,7 @@ export default function OrdersPage() {
               <div>
                 <h3 className="font-display text-[1.3rem]">{selectedOrder.order_number}</h3>
                 <p className="text-[0.8rem] text-ink-soft">
-                  {new Date(selectedOrder.created_at).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+                  {new Date(selectedOrder.created_at).toLocaleString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                 </p>
               </div>
               <button onClick={() => setSelectedOrder(null)} className="w-8 h-8 rounded-full hover:bg-ink/5 grid place-items-center text-ink/60">✕</button>
