@@ -51,6 +51,17 @@ export default function NotificationsPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  async function dismiss(id: string, e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setItems((prev) => prev.filter((i) => i.id !== id));
+    fetch("/api/admin/notifications", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dismiss: id }),
+    }).catch(() => {});
+  }
+
   async function markAllRead() {
     const res = await fetch("/api/admin/notifications", { method: "POST" });
     const data = await res.json();
@@ -107,7 +118,17 @@ export default function NotificationsPage() {
                   </div>
                   <div className="text-[0.8rem] text-ink-soft mt-0.5 truncate">{n.detail}</div>
                 </div>
-                <div className="text-[0.72rem] text-ink-soft shrink-0 pt-1">{timeAgo(n.at)}</div>
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  <div className="text-[0.72rem] text-ink-soft pt-1">{timeAgo(n.at)}</div>
+                  <button
+                    onClick={(e) => dismiss(n.id, e)}
+                    className="text-ink-soft/50 hover:text-ink text-[0.9rem] leading-none px-1"
+                    aria-label="Dismiss"
+                    title="Dismiss"
+                  >
+                    ×
+                  </button>
+                </div>
               </Link>
             );
           })}

@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 export const runtime = "nodejs";
 
 const LAST_SEEN_KEY = "admin_notif_last_seen";
+const DISMISSED_KEY = "admin_notif_dismissed";
 
 type Notification = {
   id: string;
@@ -16,8 +17,9 @@ type Notification = {
 
 export async function GET() {
   try {
-    const [lastSeenRes, bookingsRes, eventsRes, ordersRes, cardsRes, enquiriesRes] = await Promise.all([
+    const [lastSeenRes, dismissedRes, bookingsRes, eventsRes, ordersRes, cardsRes, enquiriesRes] = await Promise.all([
       supabaseAdmin.from("site_content").select("value").eq("key", LAST_SEEN_KEY).maybeSingle(),
+      supabaseAdmin.from("site_content").select("value").eq("key", DISMISSED_KEY).maybeSingle(),
       supabaseAdmin
         .from("bookings")
         .select("id, name, date, time_slot, people, total_price, payment_status, created_at")
@@ -120,20 +122,55 @@ export async function GET() {
       });
     }
 
-    items.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+    // Hide individually dismissed items
+    let dismissed: string[] = [];
+    try {
+      dismissed = JSON.parse(dismissedRes.data?.value || "[]");
+    } catch {}
+    const visible = items.filter((i) => !dismissed.includes(i.id));
+
+    visible.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
 
     const lastSeenMs = lastSeen ? new Date(lastSeen).getTime() : 0;
-    const unread = items.filter((i) => new Date(i.at).getTime() > lastSeenMs).length;
+    const unread = visible.filter((i) => new Date(i.at).getTime() > lastSeenMs).length;
 
-    return NextResponse.json({ items: items.slice(0, 40), unread, lastSeen });
+    return NextResponse.json({ items: visible.slice(0, 40), unread, lastSeen });
   } catch (err) {
     console.error("[notifications] error:", err);
     return NextResponse.json({ error: "Failed to load notifications" }, { status: 500 });
   }
 }
 
-// POST — mark everything as read
-export async function POST() {
+// POST — body {dismiss: "item-id"} hides one item; empty body marks all read
+export async function POST(req: Request) {
+  let dismiss: string | undefined;
+  try {
+    const body = await req.json();
+    if (typeof body?.dismiss === "string") dismiss = body.dismiss;
+  } catch {
+    // no body — mark-all-read request
+  }
+
+  if (dismiss) {
+    const { data } = await supabaseAdmin
+      .from("site_content")
+      .select("value")
+      .eq("key", DISMISSED_KEY)
+      .maybeSingle();
+    let dismissed: string[] = [];
+    try {
+      dismissed = JSON.parse(data?.value || "[]");
+    } catch {}
+    if (!dismissed.includes(dismiss)) dismissed.push(dismiss);
+    // Keep the list bounded — oldest dismissals fall off
+    dismissed = dismissed.slice(-500);
+    const { error } = await supabaseAdmin
+      .from("site_content")
+      .upsert({ key: DISMISSED_KEY, value: JSON.stringify(dismissed) }, { onConflict: "key" });
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true });
+  }
+
   const now = new Date().toISOString();
   const { error } = await supabaseAdmin
     .from("site_content")
