@@ -113,6 +113,16 @@ export default function BookingsAdminPage() {
 
   useEffect(() => { loadBookings(); }, [filter]);
 
+  // Deep links from notifications: ?filter=all&q=name
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const f = params.get("filter");
+    if (f === "all" || f === "past" || f === "upcoming") setFilter(f);
+    const q = params.get("q");
+    if (q) setSearchQuery(q);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Load event instances and bookings for the visible calendar month
   useEffect(() => {
     const start = `${calYear}-${String(calMonthIdx + 1).padStart(2, "0")}-01`;

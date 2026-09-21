@@ -126,6 +126,13 @@ export default function GiftCardsPage() {
     setLoading(false);
   };
 
+  // Deep link from notifications: ?search=<code>
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get("search");
+    if (q) setSearch(q);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => { load(); }, [page, search]);
 
   function resetForm() {

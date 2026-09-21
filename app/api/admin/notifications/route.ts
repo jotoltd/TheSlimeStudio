@@ -68,7 +68,7 @@ export async function GET() {
         type: cancelled ? "cancellation" : "booking",
         title: cancelled ? `Booking cancelled — ${b.name || "Customer"}` : `New booking — ${b.name || "Customer"}`,
         detail: `${b.people || "?"} people · ${b.date || ""} at ${b.time_slot || ""} · £${Number(b.total_price || 0).toFixed(2)}${cancelled ? ` (${b.payment_status})` : ""}`,
-        href: "/dashboard/bookings",
+        href: `/dashboard/bookings?filter=all&q=${encodeURIComponent(b.name || "")}`,
         at: b.created_at,
       });
     }
@@ -81,7 +81,7 @@ export async function GET() {
         type: cancelled ? "cancellation" : "event_booking",
         title: cancelled ? `Event booking cancelled — ${eb.name || "Customer"}` : `Event booking — ${eb.name || "Customer"}`,
         detail: `${title} · ${eb.quantity || 1} ticket${eb.quantity === 1 ? "" : "s"} · £${Number(eb.total_price || 0).toFixed(2)}`,
-        href: "/dashboard/bookings",
+        href: "/dashboard/bookings?filter=all",
         at: eb.created_at,
       });
     }
@@ -93,7 +93,7 @@ export async function GET() {
         type: "shop_order",
         title: `Shop order — ${o.customer_name || "Customer"}`,
         detail: `£${Number(o.total || 0).toFixed(2)}`,
-        href: "/dashboard/orders",
+        href: `/dashboard/orders?order=${o.id}`,
         at: o.created_at,
       });
     }
@@ -104,7 +104,7 @@ export async function GET() {
         type: "gift_card",
         title: `Gift card sold — £${Number(g.initial_value || 0).toFixed(0)}`,
         detail: `${g.code} · ${g.purchaser_name || "Customer"}`,
-        href: "/dashboard/gift-cards",
+        href: `/dashboard/gift-cards?search=${encodeURIComponent(g.code)}`,
         at: g.purchased_at || g.created_at,
       });
     }

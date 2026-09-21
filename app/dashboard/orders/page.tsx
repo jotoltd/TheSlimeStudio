@@ -16,7 +16,15 @@ export default function OrdersPage() {
   async function loadOrders() {
     setLoading(true);
     const { data } = await supabase.from("shop_orders").select("*").order("created_at", { ascending: false });
-    if (data) setOrders(data as ShopOrder[]);
+    if (data) {
+      setOrders(data as ShopOrder[]);
+      // Deep link from notifications: ?order=<id> opens the order detail
+      const target = new URLSearchParams(window.location.search).get("order");
+      if (target) {
+        const found = (data as ShopOrder[]).find((o) => o.id === target);
+        if (found) setSelectedOrder(found);
+      }
+    }
     setLoading(false);
   }
 
