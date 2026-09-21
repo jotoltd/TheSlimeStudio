@@ -94,6 +94,7 @@ export default function NotificationsPage() {
               <Link
                 key={n.id}
                 href={n.href}
+                onClick={() => fetch("/api/admin/notifications", { method: "POST" }).catch(() => {})}
                 className={`flex items-start gap-4 px-5 py-4 hover:bg-cream/60 transition-colors ${unread ? "bg-sky-blue-light/[0.07]" : ""}`}
               >
                 <div className={`w-10 h-10 rounded-full ${s.bg} grid place-items-center text-[1.05rem] shrink-0`}>
