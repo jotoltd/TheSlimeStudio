@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { supabase, type SubscriptionSettings } from "@/lib/supabase";
 import { useContent } from "@/lib/useContent";
+import { trackPurchase } from "@/lib/ad-tracking";
 
 function SubscribePageInner() {
   const searchParams = useSearchParams();
@@ -24,6 +25,15 @@ function SubscribePageInner() {
     if (urlStatus === "paid") setPaid(true);
     if (urlStatus === "cancelled") setCancelled(true);
   }, [searchParams]);
+
+  // Track the paid subscription once the price is known
+  const purchaseTracked = useState(() => ({ done: false }))[0];
+  useEffect(() => {
+    if (paid && settings?.price && !purchaseTracked.done) {
+      purchaseTracked.done = true;
+      trackPurchase(Number(settings.price), "GBP", searchParams.get("session_id") || undefined);
+    }
+  }, [paid, settings]);
 
   useEffect(() => {
     supabase

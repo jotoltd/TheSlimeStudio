@@ -62,6 +62,8 @@ export function trackEvent(
   }
 }
 
+const GOOGLE_ADS_SEND_TO = "AW-18466024911/uMtICLeZq4AdEM_bpOVE";
+
 export function trackPurchase(value: number, currency = "GBP", transactionId?: string) {
   trackEvent(
     "Purchase",
@@ -72,6 +74,15 @@ export function trackPurchase(value: number, currency = "GBP", transactionId?: s
     },
     transactionId
   );
+  // Google Ads conversion — transaction_id stops double-counting on refresh
+  if (typeof window !== "undefined" && window.gtag) {
+    window.gtag("event", "conversion", {
+      send_to: GOOGLE_ADS_SEND_TO,
+      value,
+      currency,
+      transaction_id: transactionId || "",
+    });
+  }
 }
 
 export function trackLead(value?: number, currency = "GBP") {

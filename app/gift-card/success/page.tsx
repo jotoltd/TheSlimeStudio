@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { trackPurchase } from "@/lib/ad-tracking";
 
 export default function GiftCardSuccessPage() {
   const searchParams = useSearchParams();
@@ -9,6 +10,7 @@ export default function GiftCardSuccessPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [giftCard, setGiftCard] = useState<{ code: string; amount: number; expiryDate: string | null } | null>(null);
+  const tracked = useRef(false);
 
   useEffect(() => {
     async function loadGiftCard() {
@@ -25,6 +27,10 @@ export default function GiftCardSuccessPage() {
           setError(data.error);
         } else if (data.giftCard) {
           setGiftCard(data.giftCard);
+          if (!tracked.current) {
+            tracked.current = true;
+            trackPurchase(Number(data.giftCard.amount) || 0, "GBP", data.giftCard.code);
+          }
         }
       } catch (err) {
         setError("Failed to load gift card details");
