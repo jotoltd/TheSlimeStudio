@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { trackEvent } from "@/lib/ad-tracking";
 
@@ -17,12 +17,17 @@ type AdSettings = {
   snapchat_pixel_enabled: boolean;
 };
 
+const CONSENT_KEY = "cookieConsent";
+
 let pixelsLoaded = false;
+let consentChecked = false;
 
 export default function AdPixels() {
+  const [showBanner, setShowBanner] = useState(false);
+
   useEffect(() => {
-    if (pixelsLoaded) return;
-    pixelsLoaded = true;
+    if (consentChecked) return;
+    consentChecked = true;
 
     // Capture ad attribution from URL on any landing page (fbclid = Meta ad, gclid = Google ad, utm_source)
     if (typeof window !== "undefined") {
@@ -41,6 +46,18 @@ export default function AdPixels() {
       }
     }
 
+    const consent = localStorage.getItem(CONSENT_KEY);
+    if (consent === "accepted") {
+      loadPixels();
+    } else if (consent !== "rejected") {
+      setShowBanner(true);
+    }
+  }, []);
+
+  function loadPixels() {
+    if (pixelsLoaded) return;
+    pixelsLoaded = true;
+
     supabase
       .from("site_settings")
       .select("fb_pixel_id, fb_pixel_enabled, ga_measurement_id, ga_enabled, tiktok_pixel_id, tiktok_pixel_enabled, google_ads_id, google_ads_enabled, snapchat_pixel_id, snapchat_pixel_enabled")
@@ -50,10 +67,12 @@ export default function AdPixels() {
         if (!data) return;
         const s = data as AdSettings;
 
+        if (s.ga_enabled && s.ga_measurement_id) {
+          injectGoogleAnalytics(s.ga_measurement_id);
+        }
         if (s.fb_pixel_enabled && s.fb_pixel_id) {
           injectFacebookPixel(s.fb_pixel_id);
         }
-
         if (s.tiktok_pixel_enabled && s.tiktok_pixel_id) {
           injectTikTokPixel(s.tiktok_pixel_id);
         }
@@ -66,9 +85,58 @@ export default function AdPixels() {
 
         trackEvent("PageView");
       });
-  }, []);
+  }
 
-  return null;
+  function choose(consent: "accepted" | "rejected") {
+    localStorage.setItem(CONSENT_KEY, consent);
+    setShowBanner(false);
+    if (consent === "accepted") loadPixels();
+  }
+
+  if (!showBanner) return null;
+
+  return (
+    <div className="fixed bottom-0 left-0 right-0 z-[9999] bg-ink text-cream shadow-[0_-4px_24px_rgba(0,0,0,0.25)]">
+      <div className="mx-auto max-w-5xl px-4 py-4 flex flex-col sm:flex-row items-center gap-3 sm:gap-6">
+        <p className="text-sm leading-snug text-center sm:text-left flex-1">
+          We use cookies for analytics and to measure how our adverts perform.{" "}
+          <a href="/privacy" className="underline underline-offset-2 hover:opacity-80">
+            Privacy policy
+          </a>
+        </p>
+        <div className="flex gap-3 shrink-0">
+          <button
+            onClick={() => choose("rejected")}
+            className="px-4 py-2 rounded-full text-sm font-semibold border border-cream/40 hover:bg-white/10 transition-colors"
+          >
+            Reject
+          </button>
+          <button
+            onClick={() => choose("accepted")}
+            className="px-5 py-2 rounded-full text-sm font-semibold bg-[#ff2d78] text-white hover:opacity-90 transition-opacity"
+          >
+            Accept
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function injectGoogleAnalytics(measurementId: string) {
+  if (typeof window === "undefined") return;
+  const script = document.createElement("script");
+  script.async = true;
+  script.src = `https://www.googletagmanager.com/gtag/js?id=${measurementId}`;
+  document.head.appendChild(script);
+
+  window.dataLayer = window.dataLayer || [];
+  function gtag(...args: any[]) {
+    (window as any).dataLayer.push(args);
+  }
+  (window as any).gtag = gtag;
+  gtag("js", new Date());
+  gtag("config", measurementId);
 }
 
 function injectFacebookPixel(pixelId: string) {

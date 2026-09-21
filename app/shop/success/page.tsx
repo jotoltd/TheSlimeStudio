@@ -33,7 +33,7 @@ function SuccessContent() {
           .then(({ data }) => {
             if (data) {
               setOrder(data as ShopOrder);
-              trackPurchase(Number((data as ShopOrder).total), "GBP", (data as ShopOrder).id);
+              trackPurchase(Number((data as ShopOrder).total), "GBP", (data as ShopOrder).id, (data as ShopOrder).customer_email);
             }
             setLoading(false);
           });
@@ -47,7 +47,7 @@ function SuccessContent() {
         .then(({ data }) => {
           if (data) {
             setOrder(data as ShopOrder);
-            trackPurchase(Number((data as ShopOrder).total), "GBP", (data as ShopOrder).id);
+            trackPurchase(Number((data as ShopOrder).total), "GBP", (data as ShopOrder).id, (data as ShopOrder).customer_email);
           }
           setLoading(false);
         });

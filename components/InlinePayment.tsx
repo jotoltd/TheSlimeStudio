@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { loadStripe, type Stripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { stashPurchaseEmail } from "@/lib/ad-tracking";
 
 let stripePromise: Promise<Stripe | null> | null = null;
 let stripePromiseKey: string = "";
@@ -18,11 +19,13 @@ function loadStripeInstance(key: string): Promise<Stripe | null> {
 function PaymentForm({
   clientSecret,
   amount,
+  email,
   onSuccess,
   onCancel,
 }: {
   clientSecret: string;
   amount: number;
+  email?: string;
   onSuccess: () => void;
   onCancel: () => void;
 }) {
@@ -36,6 +39,9 @@ function PaymentForm({
     if (!stripe || !elements) return;
     setProcessing(true);
     setErrMsg("");
+
+    // Keep the email for the post-3DS-redirect conversion event
+    if (email) stashPurchaseEmail(email);
 
     const { error } = await stripe.confirmPayment({
       elements,
@@ -84,12 +90,14 @@ export default function InlinePayment({
   clientSecret,
   publishableKey,
   amount,
+  email,
   onSuccess,
   onCancel,
 }: {
   clientSecret: string;
   publishableKey: string;
   amount: number;
+  email?: string;
   onSuccess: () => void;
   onCancel: () => void;
 }) {
@@ -124,6 +132,7 @@ export default function InlinePayment({
       <PaymentForm
         clientSecret={clientSecret}
         amount={amount}
+        email={email}
         onSuccess={onSuccess}
         onCancel={onCancel}
       />

@@ -187,7 +187,7 @@ function BookingPageInner() {
             setTimeSlot(data.timeSlot || timeSlot);
             setPeople(data.people || people);
             setStatus("paid");
-            trackPurchase(Number(data.totalPrice || 0), "GBP", sumupRef);
+            trackPurchase(Number(data.totalPrice || 0), "GBP", sumupRef, data.email);
           } else {
             setErrorMsg(data.error || "Payment verification failed.");
             setStatus("error");
@@ -227,7 +227,7 @@ function BookingPageInner() {
           // The Stripe webhook creates the booking if this request never lands.
         }).finally(() => {
           setStatus("paid");
-          trackPurchase(finalPrice, "GBP", piId);
+          trackPurchase(finalPrice, "GBP", piId, email || undefined);
           // Clean up URL
           const url = new URL(window.location.href);
           url.searchParams.delete("payment_intent");
@@ -568,7 +568,7 @@ function BookingPageInner() {
       if (data.free) {
         setBookingId(data.bookingId || "");
         setStatus("paid");
-        trackPurchase(0, "GBP", data.bookingId);
+        trackPurchase(0, "GBP", data.bookingId, email || undefined);
         return;
       }
       if (data.clientSecret) {
@@ -728,6 +728,7 @@ function BookingPageInner() {
                   clientSecret={clientSecret}
                   publishableKey={publishableKey}
                   amount={finalPrice}
+                  email={email}
                   onSuccess={() => {
                     // Payment succeeded — NOW create the booking in the database
                     // Retry up to 3 times in case of network issues
@@ -760,14 +761,14 @@ function BookingPageInner() {
                             setErrorMsg("Your payment went through and your booking is saved, but this slot is now over capacity. We'll be in touch shortly to confirm or arrange an alternative.");
                           }
                           setStatus("paid");
-                          trackPurchase(finalPrice, "GBP", paymentIntentId);
+                          trackPurchase(finalPrice, "GBP", paymentIntentId, email || undefined);
                         } else if (attempt < 2) {
                           // Retry after short delay
                           setTimeout(() => confirmBooking(attempt + 1), 1000);
                         } else {
                           // The Stripe webhook creates the booking as a fallback.
                           setStatus("paid");
-                          trackPurchase(finalPrice, "GBP", paymentIntentId);
+                          trackPurchase(finalPrice, "GBP", paymentIntentId, email || undefined);
                         }
                       } catch {
                         if (attempt < 2) {
@@ -775,7 +776,7 @@ function BookingPageInner() {
                         } else {
                           // The Stripe webhook creates the booking as a fallback.
                           setStatus("paid");
-                          trackPurchase(finalPrice, "GBP", paymentIntentId);
+                          trackPurchase(finalPrice, "GBP", paymentIntentId, email || undefined);
                         }
                       }
                     }

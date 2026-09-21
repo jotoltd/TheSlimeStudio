@@ -64,7 +64,24 @@ export function trackEvent(
 
 const GOOGLE_ADS_SEND_TO = "AW-18466024911/uMtICLeZq4AdEM_bpOVE";
 
-export function trackPurchase(value: number, currency = "GBP", transactionId?: string) {
+// Stash the customer's email before a hosted-checkout redirect (Stripe/SumUp)
+// so the post-redirect page can still attach it to the conversion.
+const PURCHASE_EMAIL_KEY = "pp_email";
+
+export function stashPurchaseEmail(email: string) {
+  if (typeof window === "undefined" || !email) return;
+  localStorage.setItem(PURCHASE_EMAIL_KEY, email);
+}
+
+function popPurchaseEmail(): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  const email = localStorage.getItem(PURCHASE_EMAIL_KEY);
+  if (email) localStorage.removeItem(PURCHASE_EMAIL_KEY);
+  return email || undefined;
+}
+
+export function trackPurchase(value: number, currency = "GBP", transactionId?: string, email?: string) {
+  const resolvedEmail = email || popPurchaseEmail();
   trackEvent(
     "Purchase",
     {
@@ -74,13 +91,15 @@ export function trackPurchase(value: number, currency = "GBP", transactionId?: s
     },
     transactionId
   );
-  // Google Ads conversion — transaction_id stops double-counting on refresh
+  // Google Ads conversion — transaction_id stops double-counting on refresh.
+  // user_data enables enhanced conversions: gtag hashes the email client-side.
   if (typeof window !== "undefined" && window.gtag) {
     window.gtag("event", "conversion", {
       send_to: GOOGLE_ADS_SEND_TO,
       value,
       currency,
       transaction_id: transactionId || "",
+      ...(resolvedEmail ? { user_data: { email: resolvedEmail } } : {}),
     });
   }
 }

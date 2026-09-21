@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 import "./globals.css";
 import MaintenanceGate from "@/components/MaintenanceGate";
 import { CartProvider } from "@/components/CartContext";
@@ -96,18 +95,7 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap"
           rel="stylesheet"
         />
-        <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-QWN7QR5WH9"
-          strategy="afterInteractive"
-        />
-        <Script id="ga4-init" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-QWN7QR5WH9');
-          `}
-        </Script>
+
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

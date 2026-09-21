@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { getMetaCookies, trackPurchase } from "@/lib/ad-tracking";
+import { getMetaCookies, trackPurchase, stashPurchaseEmail } from "@/lib/ad-tracking";
 
 type EventInstance = {
   id: string;
@@ -125,6 +125,7 @@ export default function EventDetailClient({
       if (data.error) {
         setBookingMsg({ type: "err", text: data.error });
       } else if (data.url) {
+        stashPurchaseEmail(email.trim());
         window.location.href = data.url;
       } else {
         setBookingMsg({ type: "ok", text: "Booking confirmed! Check your email for details." });

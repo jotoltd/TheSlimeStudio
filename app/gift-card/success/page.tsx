@@ -7,21 +7,22 @@ import { trackPurchase } from "@/lib/ad-tracking";
 export default function GiftCardSuccessPage() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("session_id");
+  const sumupRef = searchParams.get("ref");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [giftCard, setGiftCard] = useState<{ code: string; amount: number; expiryDate: string | null } | null>(null);
+  const [giftCard, setGiftCard] = useState<{ code: string; amount: number; expiryDate: string | null; purchaserEmail?: string } | null>(null);
   const tracked = useRef(false);
 
   useEffect(() => {
     async function loadGiftCard() {
-      if (!sessionId) {
+      if (!sessionId && !sumupRef) {
         setError("No session ID found");
         setLoading(false);
         return;
       }
 
       try {
-        const res = await fetch(`/api/gift-card-success?session_id=${sessionId}`);
+        const res = await fetch(`/api/gift-card-success?${sessionId ? `session_id=${sessionId}` : `ref=${sumupRef}`}`);
         const data = await res.json();
         if (data.error) {
           setError(data.error);
@@ -29,7 +30,7 @@ export default function GiftCardSuccessPage() {
           setGiftCard(data.giftCard);
           if (!tracked.current) {
             tracked.current = true;
-            trackPurchase(Number(data.giftCard.amount) || 0, "GBP", data.giftCard.code);
+            trackPurchase(Number(data.giftCard.amount) || 0, "GBP", data.giftCard.code, data.giftCard.purchaserEmail);
           }
         }
       } catch (err) {
@@ -39,7 +40,7 @@ export default function GiftCardSuccessPage() {
     }
 
     loadGiftCard();
-  }, [sessionId]);
+  }, [sessionId, sumupRef]);
 
   if (loading) {
     return (

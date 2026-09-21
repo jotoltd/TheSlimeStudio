@@ -169,6 +169,7 @@ export async function POST(req: NextRequest) {
           checkout_reference: checkoutRef,
           description: `Slime Studio Gift Card - £${amount.toFixed(2)}`,
           merchant_code: process.env.SUMUP_MERCHANT_CODE,
+          redirect_url: `${req.nextUrl.origin}/gift-card/success?ref=${checkoutRef}`,
         }),
       });
 

@@ -6,7 +6,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { supabase, type SubscriptionSettings } from "@/lib/supabase";
 import { useContent } from "@/lib/useContent";
-import { trackPurchase } from "@/lib/ad-tracking";
+import { trackPurchase, stashPurchaseEmail } from "@/lib/ad-tracking";
 
 function SubscribePageInner() {
   const searchParams = useSearchParams();
@@ -83,6 +83,7 @@ function SubscribePageInner() {
       });
       const data = await res.json();
       if (data.url) {
+        stashPurchaseEmail(form.email.trim());
         window.location.href = data.url;
         return;
       }
