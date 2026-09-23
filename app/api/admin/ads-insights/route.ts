@@ -238,7 +238,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Real bookings attributed to ads, from our own DB — sessions + special events
-  const [{ data: adBookings }, { data: adEventBookings }] = await Promise.all([
+  const [{ data: adBookings }, { data: adEventBookings }, { data: googleBookings }, { data: googleEventBookings }, { data: googleGiftCards }, { data: gadsSettings }] = await Promise.all([
     supabaseAdmin
       .from("bookings")
       .select("id, name, email, date, time_slot, total_price, payment_status, notes, created_at")
@@ -251,7 +251,45 @@ export async function GET(req: NextRequest) {
       .ilike("notes", "[Ad:%")
       .order("created_at", { ascending: false })
       .limit(50),
+    supabaseAdmin
+      .from("bookings")
+      .select("id, name, email, date, total_price, payment_status, created_at")
+      .ilike("notes", "%Google Ad%")
+      .order("created_at", { ascending: false })
+      .limit(20),
+    supabaseAdmin
+      .from("special_event_bookings")
+      .select("id, name, email, total_price, payment_status, created_at")
+      .ilike("notes", "%Google Ad%")
+      .order("created_at", { ascending: false })
+      .limit(20),
+    supabaseAdmin
+      .from("gift_cards")
+      .select("id, code, purchaser_name, initial_value, ad_source, created_at")
+      .ilike("ad_source", "%Google%")
+      .order("created_at", { ascending: false })
+      .limit(20),
+    supabaseAdmin
+      .from("site_settings")
+      .select("google_ads_id, google_ads_enabled")
+      .eq("id", 1)
+      .single(),
   ]);
+
+  const googleItems = [
+    ...(googleBookings || []).map((b) => ({ id: b.id, name: b.name, email: b.email, value: Number(b.total_price || 0), status: b.payment_status, kind: "Session", at: b.created_at })),
+    ...(googleEventBookings || []).map((b) => ({ id: b.id, name: b.name, email: b.email, value: Number(b.total_price || 0), status: b.payment_status, kind: "Event", at: b.created_at })),
+    ...(googleGiftCards || []).map((g) => ({ id: g.id, name: g.purchaser_name || "Customer", email: g.code, value: Number(g.initial_value || 0), status: "paid", kind: "Gift card", at: g.created_at })),
+  ].sort((a, b) => (b.at || "").localeCompare(a.at || ""));
+
+  const google = {
+    tagEnabled: !!gadsSettings?.google_ads_enabled,
+    tagId: gadsSettings?.google_ads_id || null,
+    conversionWired: true, // Purchase conversion fires from lib/ad-tracking.ts on every confirmed payment
+    conversions: googleItems.length,
+    revenue: googleItems.filter((i) => i.status === "paid").reduce((s, i) => s + i.value, 0),
+    items: googleItems.slice(0, 10),
+  };
 
   const allAdBookings = [
     ...(adBookings || []).map((b) => ({ ...b, kind: "session" as const })),
@@ -345,6 +383,7 @@ export async function GET(req: NextRequest) {
     attributedRevenue,
     comments,
     fbCommentsUnavailable,
+    google,
   });
 }
 

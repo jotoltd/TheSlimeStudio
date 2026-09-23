@@ -30,6 +30,14 @@ type Data = {
   attributionSplit: { clicked: number; sawOnly: number };
   devices: { device: string; impressions: number; clicks: number; purchases: number }[];
   adBookings: AdBooking[];
+  google?: {
+    tagEnabled: boolean;
+    tagId: string | null;
+    conversionWired: boolean;
+    conversions: number;
+    revenue: number;
+    items: { id: string; name: string; email: string; value: number; status: string; kind: string; at: string }[];
+  };
   attributedRevenue: number;
   comments: { adName: string; platform: string; author: string; text: string; time: string; replyUrl: string | null }[];
   fbCommentsUnavailable?: boolean;
@@ -456,6 +464,64 @@ export default function AdsPage() {
               </div>
             )}
           </div>
+
+          {/* Google Ads */}
+          {data.google && (
+            <div className="bg-white rounded-[20px] p-8 shadow-sm">
+              <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
+                <div>
+                  <h2 className="font-display text-[1.1rem] mb-1">Google Ads</h2>
+                  <p className="text-[0.75rem] text-ink-soft">
+                    Conversion tracking for Google ad campaigns.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-[0.7rem] px-2.5 py-1 rounded-full font-medium ${data.google.tagEnabled ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                    Tag {data.google.tagEnabled ? "live" : "off"}{data.google.tagId ? ` · ${data.google.tagId}` : ""}
+                  </span>
+                  <span className="text-[0.7rem] px-2.5 py-1 rounded-full font-medium bg-green-100 text-green-700">
+                    Purchase conversion wired
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="rounded-xl px-4 py-3 bg-ink/[0.03]">
+                  <div className="text-[0.7rem] text-ink-soft uppercase tracking-wider">Ad-attributed sales</div>
+                  <div className="font-display text-[1.4rem]">{data.google.conversions}</div>
+                </div>
+                <div className="rounded-xl px-4 py-3 bg-green-50">
+                  <div className="text-[0.7rem] text-ink-soft uppercase tracking-wider">Revenue</div>
+                  <div className="font-display text-[1.4rem] text-green-600">{fmt(data.google.revenue)}</div>
+                </div>
+              </div>
+
+              {data.google.items.length > 0 ? (
+                <div className="space-y-2 mb-6">
+                  {data.google.items.map((i) => (
+                    <div key={`${i.kind}-${i.id}`} className="flex items-center justify-between gap-3 py-2 border-b border-ink/[0.06] last:border-0 text-[0.85rem]">
+                      <div className="min-w-0">
+                        <span className="font-medium">{i.name}</span>
+                        <span className="ml-2 text-[0.6rem] bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded-full font-medium">{i.kind}</span>
+                        <div className="text-[0.72rem] text-ink-soft truncate">{i.email} · {new Date(i.at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</div>
+                      </div>
+                      <div className="font-medium flex-shrink-0">£{i.value.toFixed(2)}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-ink-soft text-[0.85rem] mb-4">
+                  No Google ad-attributed sales yet — they'll appear here automatically when someone clicks a Google ad and buys.
+                </div>
+              )}
+
+              <div className="border-t border-ink/[0.08] pt-4">
+                <p className="text-[0.75rem] text-ink-soft">
+                  <strong>Note:</strong> spend, clicks and impressions from Google Ads need an API connection (developer token + OAuth). Conversions are already tracked — this panel shows real sales attributed to Google ads from your own data.
+                </p>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
