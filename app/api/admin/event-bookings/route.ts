@@ -16,6 +16,15 @@ export async function GET(req: NextRequest) {
   const eventId = searchParams.get("event_id");
   const status = searchParams.get("status");
 
+  // Expire abandoned checkouts — Stripe checkout sessions die after 24h,
+  // so a pending row older than that can never complete.
+  const expiryCutoff = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+  await supabaseAdmin
+    .from("special_event_bookings")
+    .update({ payment_status: "expired" })
+    .eq("payment_status", "pending")
+    .lt("created_at", expiryCutoff);
+
   let query = supabaseAdmin
     .from("special_event_bookings")
     .select(`

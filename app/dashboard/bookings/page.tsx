@@ -645,7 +645,8 @@ export default function BookingsAdminPage() {
                     <div className="space-y-2">
                       {(eventInstancesByDate[selectedDate] || []).map((inst: any) => {
                         const instBookings = (eventBookingsByDate[selectedDate] || []).filter((eb: any) => eb.instance_id === inst.id);
-                        const activeBookings = instBookings.filter((eb: any) => eb.payment_status !== "cancelled");
+                        const isStalePending = (eb: any) => eb.payment_status === "pending" && new Date(eb.created_at).getTime() < Date.now() - 86400000;
+                        const activeBookings = instBookings.filter((eb: any) => !["cancelled", "refunded", "expired"].includes(eb.payment_status) && !isStalePending(eb));
                         const totalBooked = activeBookings.reduce((sum: number, eb: any) => sum + eb.quantity, 0);
                         return (
                           <div key={inst.id} className="bg-purple-50 border-2 border-purple-200 rounded-xl p-4">
@@ -671,7 +672,13 @@ export default function BookingsAdminPage() {
                                     <div className="min-w-0">
                                       <div className="flex items-center gap-2 flex-wrap">
                                         <span className="font-medium text-ink">{eb.name}</span>
-                                        <span className={`text-[0.65rem] px-1.5 py-0.5 rounded-full ${eb.payment_status === "paid" ? "bg-green-100 text-green-700" : eb.payment_status === "cancelled" ? "bg-red-100 text-red-700" : eb.payment_status === "refunded" ? "bg-orange-100 text-orange-700" : "bg-orange-100 text-orange-700"}`}>{eb.payment_status}</span>
+                                        <span className={`text-[0.65rem] px-1.5 py-0.5 rounded-full ${
+                                          eb.payment_status === "paid" ? "bg-green-100 text-green-700" :
+                                          eb.payment_status === "cancelled" ? "bg-red-100 text-red-700" :
+                                          eb.payment_status === "refunded" ? "bg-orange-100 text-orange-700" :
+                                          eb.payment_status === "expired" || isStalePending(eb) ? "bg-ink/10 text-ink-soft" :
+                                          "bg-amber-100 text-amber-700"
+                                        }`}>{isStalePending(eb) ? "abandoned" : eb.payment_status === "pending" ? "awaiting payment" : eb.payment_status}</span>
                                         <AdSourceBadge notes={eb.notes} />
                                       </div>
                                       <div className="text-ink-soft">{eb.email} · {eb.quantity} {inst.event?.pricing_model === "per_person" ? "people" : "tickets"} · £{Number(eb.total_price).toFixed(2)} · booked {new Date(eb.created_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</div>
