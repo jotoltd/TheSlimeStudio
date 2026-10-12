@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripeAsync } from "@/lib/stripe";
 import { createPaidBooking, awardLoyaltyStamp } from "@/lib/create-booking";
+import { redeemGiftCard } from "@/lib/gift-cards";
 import { supabaseAdmin } from "@/lib/supabase";
 import { sendCapiEvent, metaContextFromRequest } from "@/lib/capi";
 
@@ -105,16 +106,10 @@ export async function POST(req: NextRequest) {
         // the paid total for older callers.
         const cover = giftCardAmount > 0 ? giftCardAmount : totalPrice;
         const redeemAmount = Math.min(giftCard.balance, cover);
-        const redeemRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/gift-card-redeem`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            code: giftCardCode.trim().toUpperCase(),
-            amount: redeemAmount,
-            bookingId: result.bookingId,
-          }),
-        });
-        if (redeemRes.ok && people > 1) {
+        const red = await redeemGiftCard(giftCardCode, redeemAmount, { bookingId: result.bookingId });
+        if (!red.success) {
+          console.error("Gift card redeem failed:", red.error);
+        } else if (people > 1) {
           // Gift card bookings earn a stamp per slime maker; the booking itself
           // already earned one, so award the remainder.
           await awardLoyaltyStamp(name, email, people - 1);

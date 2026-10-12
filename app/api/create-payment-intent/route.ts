@@ -3,6 +3,8 @@ import { getStripeAsync, getStripeModeAsync } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase";
 import { redeemRewardCode } from "@/lib/loyalty-rewards";
 import { awardLoyaltyStamp } from "@/lib/create-booking";
+import { redeemGiftCard } from "@/lib/gift-cards";
+import { getResend, EMAIL_FROM, bookingConfirmationHtml, logEmail } from "@/lib/email";
 import { sendCapiEvent, metaContextFromRequest } from "@/lib/capi";
 
 export const runtime = "nodejs";
@@ -153,12 +155,19 @@ export async function POST(req: NextRequest) {
 
     // Send confirmation email
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/booking-confirmation`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, date, timeSlot, people, totalPrice: 0, isParty: false }),
-      });
-    } catch {}
+      const r = getResend();
+      if (r) {
+        await r.emails.send({
+          from: EMAIL_FROM,
+          to: email,
+          subject: "Booking Confirmed — The Slime Studio",
+          html: bookingConfirmationHtml({ name, date, timeSlot, people, totalPrice: 0, isParty: false }),
+        });
+        await logEmail(email, "Booking Confirmed — The Slime Studio", "booking_confirmation", "sent");
+      }
+    } catch (e) {
+      console.error("Failed to send confirmation email:", e);
+    }
 
     // If a gift card covered the whole price, redeem it now.
     if (giftCardCode && booking?.id) {
@@ -172,15 +181,8 @@ export async function POST(req: NextRequest) {
         if (giftCard && giftCard.balance > 0) {
           const cover = Number(body.giftCardAmount) > 0 ? Number(body.giftCardAmount) : giftCard.balance;
           const redeemAmount = Math.min(giftCard.balance, cover);
-          await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/gift-card-redeem`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              code: giftCardCode.trim().toUpperCase(),
-              amount: redeemAmount,
-              bookingId: booking.id,
-            }),
-          });
+          const red = await redeemGiftCard(giftCardCode, redeemAmount, { bookingId: booking.id });
+          if (!red.success) console.error("Gift card redeem failed:", red.error);
         }
       } catch (e) {
         console.error("Failed to redeem gift card:", e);

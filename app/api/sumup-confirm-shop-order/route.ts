@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSumUpKey } from "@/lib/payment";
 import { supabaseAdmin } from "@/lib/supabase";
 import { sendOrderConfirmationEmail } from "@/lib/email";
+import { redeemGiftCard } from "@/lib/gift-cards";
 
 export const runtime = "nodejs";
 
@@ -80,15 +81,8 @@ export async function POST(req: NextRequest) {
 
         if (giftCard && giftCard.balance > 0) {
           const redeemAmount = Math.min(giftCard.balance, order.total);
-          await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/gift-card-redeem`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              code: order.gift_card_code.trim().toUpperCase(),
-              amount: redeemAmount,
-              shopOrderId: order.id,
-            }),
-          });
+          const red = await redeemGiftCard(order.gift_card_code, redeemAmount, { shopOrderId: order.id });
+          if (!red.success) console.error("Gift card redeem failed:", red.error);
         }
       } catch (e) {
         console.error("Failed to redeem gift card:", e);

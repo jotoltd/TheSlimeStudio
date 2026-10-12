@@ -10,6 +10,7 @@ import {
   type BookingDetails,
 } from "@/lib/create-booking";
 import { redeemRewardCode } from "@/lib/loyalty-rewards";
+import { redeemGiftCard } from "@/lib/gift-cards";
 
 export const runtime = "nodejs";
 
@@ -168,16 +169,10 @@ export async function POST(req: NextRequest) {
           if (giftCard && giftCard.balance > 0) {
             const cover = Number(body.giftCardAmount) > 0 ? Number(body.giftCardAmount) : fallbackDetails.totalPrice;
             const redeemAmount = Math.min(giftCard.balance, cover);
-            const redeemRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/gift-card-redeem`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                code: body.giftCardCode.trim().toUpperCase(),
-                amount: redeemAmount,
-                bookingId: result.bookingId,
-              }),
-            });
-            if (redeemRes.ok && fallbackDetails.people > 1) {
+            const red = await redeemGiftCard(body.giftCardCode, redeemAmount, { bookingId: result.bookingId });
+            if (!red.success) {
+              console.error("Gift card redeem failed:", red.error);
+            } else if (fallbackDetails.people > 1) {
               // Gift card bookings earn a stamp per slime maker; one was
               // already awarded for the booking itself.
               await awardLoyaltyStamp(fallbackDetails.name, fallbackDetails.email, fallbackDetails.people - 1);

@@ -3,6 +3,7 @@ import { getStripeAsync, getStripeModeAsync, getStripeKeysForMode } from "@/lib/
 import { supabaseAdmin } from "@/lib/supabase";
 import { sendOrderConfirmationEmail } from "@/lib/email";
 import { createPaidBooking } from "@/lib/create-booking";
+import { redeemGiftCard } from "@/lib/gift-cards";
 import { sendCapiEvent } from "@/lib/capi";
 
 export const runtime = "nodejs";
@@ -164,15 +165,8 @@ export async function POST(req: NextRequest) {
 
                 if (giftCard && giftCard.balance > 0) {
                   const redeemAmount = Math.min(giftCard.balance, order.total);
-                  await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/gift-card-redeem`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      code: session.metadata.gift_card_code.trim().toUpperCase(),
-                      amount: redeemAmount,
-                      shopOrderId: order.id,
-                    }),
-                  });
+                  const red = await redeemGiftCard(session.metadata.gift_card_code, redeemAmount, { shopOrderId: order.id });
+                  if (!red.success) console.error("Gift card redeem failed:", red.error);
                 }
               } catch (e) {
                 console.error("Failed to redeem gift card in webhook:", e);
