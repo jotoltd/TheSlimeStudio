@@ -208,6 +208,16 @@ const OVERLAY_OPTIONS = [
   { id: "dark", label: "Dark", swatch: "#1e1b2e" },
 ];
 
+const LOGO_POSITIONS = [
+  { id: "hidden", label: "Hidden" },
+  { id: "tl", label: "Top left" },
+  { id: "tc", label: "Top centre" },
+  { id: "tr", label: "Top right" },
+  { id: "bl", label: "Bottom left" },
+  { id: "bc", label: "Bottom centre" },
+  { id: "br", label: "Bottom right" },
+];
+
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -229,6 +239,7 @@ export default function MarketingPage() {
   const [sizeId, setSizeId] = useState("square");
   const [imgId, setImgId] = useState(TEMPLATES[0].image);
   const [overlayId, setOverlayId] = useState(TEMPLATES[0].overlay);
+  const [logoPos, setLogoPos] = useState("tc");
   const [txt, setTxt] = useState({ headline: TEMPLATES[0].headline, sub: TEMPLATES[0].sub, badge: TEMPLATES[0].badge, cta: TEMPLATES[0].cta });
   const [copied, setCopied] = useState("");
   const tpl = TEMPLATES.find((t) => t.id === tplId)!;
@@ -293,16 +304,17 @@ export default function MarketingPage() {
       ctx.textBaseline = "middle";
       ctx.shadowColor = "rgba(0,0,0,0.35)";
 
-      // Logo — centered on square/story, top-right on wide
+      // Logo — position chosen in the panel
       ctx.shadowBlur = 0;
-      if (wide) {
-        const logoH = 150 * u;
-        const logoW = (logo.width / logo.height) * logoH;
-        ctx.drawImage(logo, w - logoW - 50 * u, 40 * u, logoW, logoH);
-      } else {
-        const logoW = story ? 400 * u : 360 * u;
+      if (logoPos !== "hidden") {
+        const logoW = wide ? 170 * u : story ? 400 * u : 360 * u;
         const logoH = (logo.height / logo.width) * logoW;
-        ctx.drawImage(logo, (w - logoW) / 2, story ? 120 * u : 70 * u, logoW, logoH);
+        const mX = 55 * u;
+        const topY = wide ? 45 * u : story ? 110 * u : 70 * u;
+        const botY = h - logoH - (wide ? 110 : 120) * u; // clear of the URL footer
+        const lx = logoPos.endsWith("l") ? mX : logoPos.endsWith("r") ? w - logoW - mX : (w - logoW) / 2;
+        const ly = logoPos.startsWith("t") ? topY : botY;
+        ctx.drawImage(logo, lx, ly, logoW, logoH);
       }
 
       // Vertical stack: badge -> headline -> sub -> CTA
@@ -387,7 +399,7 @@ export default function MarketingPage() {
     return () => {
       cancelled = true;
     };
-  }, [tpl, size, photo, overlayId, txt]);
+  }, [tpl, size, photo, overlayId, txt, logoPos]);
 
   function download() {
     canvasRef.current?.toBlob((blob) => {
@@ -472,7 +484,7 @@ export default function MarketingPage() {
                 </button>
               ))}
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 mb-4">
               {OVERLAY_OPTIONS.map((o) => (
                 <button
                   key={o.id}
@@ -483,6 +495,20 @@ export default function MarketingPage() {
                 >
                   <span className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: o.swatch }} />
                   {o.label}
+                </button>
+              ))}
+            </div>
+            <div className="text-[0.7rem] uppercase tracking-wider text-ink-soft font-semibold mb-2">Logo</div>
+            <div className="flex flex-wrap gap-2">
+              {LOGO_POSITIONS.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => setLogoPos(p.id)}
+                  className={`px-3 py-2 rounded-xl text-[0.8rem] font-medium transition-all ${
+                    logoPos === p.id ? "bg-ink text-white shadow-sm" : "bg-ink/[0.05] text-ink-soft hover:bg-ink/10"
+                  }`}
+                >
+                  {p.label}
                 </button>
               ))}
             </div>
