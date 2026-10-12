@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import RefCapture from "@/components/RefCapture";
@@ -17,18 +18,24 @@ export default function HomePage() {
       {/* Hero */}
       <header className="relative pt-[40px] pb-[50px] md:pt-[60px] md:pb-[70px] overflow-hidden text-center">
         <div className="absolute inset-0 z-[1]">
-          <img
+          <Image
             src="/images/slime_mixing.jpg.jpeg"
             alt="Children mixing colourful slime at The Slime Studio in Holt, Norfolk"
-            className="w-full h-full object-cover"
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover"
           />
           <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(255,196,251,0.85) 0%, rgba(171,247,220,0.75) 100%)" }} />
         </div>
         <div className="container relative z-[2]">
           <div className="max-w-lg mx-auto">
-            <img
+            <Image
               src="/images/logo.png"
               alt="The Slime Studio — Make Your Own Slime"
+              width={480}
+              height={480}
+              priority
               className="w-full max-w-[240px] md:max-w-[480px] mx-auto mb-6 md:mb-10 object-contain rounded-full shadow-lg"
               style={{ backgroundColor: "#ffffff" }}
             />
@@ -94,8 +101,8 @@ export default function HomePage() {
                 key={step.title}
                 className="reveal bg-white rounded-[16px] md:rounded-[20px] p-4 md:p-9 text-center shadow-sm hover:-translate-y-1.5 hover:shadow-lg transition-all"
               >
-                <div className="w-[56px] h-[56px] md:w-[72px] md:h-[72px] rounded-full overflow-hidden mx-auto mb-3 md:mb-4">
-                  <img src={step.img} alt={step.title} className="w-full h-full object-cover" />
+                <div className="relative w-[56px] h-[56px] md:w-[72px] md:h-[72px] rounded-full overflow-hidden mx-auto mb-3 md:mb-4">
+                  <Image src={step.img} alt={step.title} fill sizes="72px" className="object-cover" />
                 </div>
                 <h3 className="font-display text-[0.9rem] md:text-[1.15rem] mb-1 md:mb-1.5">{step.title}</h3>
                 <p className="text-[0.75rem] md:text-[0.9rem] text-ink-soft">{step.desc}</p>
@@ -162,7 +169,7 @@ export default function HomePage() {
                 key={i}
                 className="reveal relative aspect-square rounded-[20px] overflow-hidden cursor-pointer transition-transform hover:scale-105"
               >
-                <img src={img.src} alt={img.alt} className="w-full h-full object-cover" />
+                <Image src={img.src} alt={img.alt} fill sizes="(max-width: 768px) 50vw, 20vw" className="object-cover" />
               </div>
             ))}
           </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { supabase, type GalleryImage } from "@/lib/supabase";
@@ -60,10 +61,12 @@ export default function GalleryPage() {
                   className="reveal relative aspect-square rounded-[20px] overflow-hidden cursor-pointer transition-transform hover:scale-105 group"
                   onClick={() => setLightbox(img)}
                 >
-                  <img
+                  <Image
                     src={img.image_url}
                     alt={img.caption}
-                    className="w-full h-full object-cover"
+                    fill
+                    sizes="(max-width: 768px) 50vw, 25vw"
+                    className="object-cover"
                   />
                   {img.caption && (
                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-ink/80 to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity">

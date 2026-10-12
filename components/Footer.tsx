@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import SocialLinks from "@/components/SocialLinks";
 import { supabase } from "@/lib/supabase";
@@ -36,9 +37,11 @@ export default function Footer() {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[2fr_1fr_1fr_1fr] gap-6 md:gap-10 pb-8 md:pb-12 border-b border-ink/15">
           <div>
             <div className="flex items-center gap-2.5 mb-4">
-              <img
+              <Image
                 src="/images/header_logo.png"
                 alt="The Slime Studio"
+                width={170}
+                height={53}
                 className="w-[170px] h-auto object-contain"
               />
             </div>

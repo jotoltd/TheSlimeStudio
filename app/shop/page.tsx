@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ProductCard from "@/components/ProductCard";
@@ -162,7 +163,7 @@ export default function ShopPage() {
                   className="relative w-[150px] h-[95px] rounded-xl shadow-lg overflow-hidden flex flex-col items-center justify-center gap-1"
                   style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}
                 >
-                  <img src="/images/header_logo.png" alt="The Slime Studio" className="w-[100px] h-auto object-contain" />
+                  <Image src="/images/header_logo.png" alt="The Slime Studio" width={100} height={31} className="w-[100px] h-auto object-contain" />
                   <span className="font-display text-[0.55rem] tracking-wide text-ink/70 uppercase">Gift Card</span>
                 </div>
                 {/* Bow */}

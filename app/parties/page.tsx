@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Heart } from "@/components/Heart";
@@ -76,10 +77,13 @@ export default function PartiesPage() {
 
       {/* Hero image */}
       <div className="relative w-full aspect-[16/7] md:aspect-[16/5] overflow-hidden bg-ink">
-        <img
+        <Image
           src="/images/pink_slime_stretch.jpg.jpeg"
           alt="Parties at The Slime Studio"
-          className="absolute inset-0 w-full h-full object-cover"
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover"
         />
       </div>
 
@@ -198,8 +202,8 @@ export default function PartiesPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 md:gap-6">
             {INCLUDED.map((item) => (
               <div key={item.label} className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 rounded-full overflow-hidden bg-white grid place-items-center mb-3 shadow-sm">
-                  <img src={item.img} alt={item.label} className="w-full h-full object-cover" />
+                <div className="relative w-16 h-16 rounded-full overflow-hidden bg-white grid place-items-center mb-3 shadow-sm">
+                  <Image src={item.img} alt={item.label} fill sizes="64px" className="object-cover" />
                 </div>
                 <p className="text-[0.85rem] text-ink/80 leading-snug">{item.label}</p>
               </div>

@@ -23,8 +23,8 @@ const config: Config = {
         cream: "#FBF8F5",
       },
       fontFamily: {
-        display: ["Avenir", "Avenir Next", "Poppins", "system-ui", "sans-serif"],
-        body: ["Poppins", "system-ui", "sans-serif"],
+        display: ["Avenir", "Avenir Next", "var(--font-poppins)", "system-ui", "sans-serif"],
+        body: ["var(--font-poppins)", "system-ui", "sans-serif"],
       },
       borderRadius: {
         sm: "12px",

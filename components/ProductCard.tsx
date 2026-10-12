@@ -1,6 +1,7 @@
 "use client";
 
 import type { Product } from "@/lib/supabase";
+import Image from "next/image";
 import { useCart } from "@/components/CartContext";
 
 const categoryLabels: Record<string, string> = {
@@ -44,7 +45,7 @@ export default function ProductCard({ product }: { product: Product }) {
           </span>
         )}
         {product.image_url ? (
-          <img src={product.image_url} alt={product.name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+          <Image src={product.image_url} alt={product.name} fill sizes="(max-width: 768px) 50vw, 33vw" className="object-cover transition-transform duration-300 group-hover:scale-105" />
         ) : (
           <span className="text-[3.5rem]">{categoryEmojis[product.category] || "🫧"}</span>
         )}

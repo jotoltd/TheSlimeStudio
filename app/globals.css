@@ -36,7 +36,7 @@
   }
 
   body {
-    font-family: "Poppins", system-ui, sans-serif;
+    font-family: var(--font-poppins), system-ui, sans-serif;
     color: #2b2350;
     background: #ffc4fb;
     line-height: 1.65;
@@ -58,7 +58,7 @@
   }
 
   h1, h2, h3, h4 {
-    font-family: "Avenir", "Avenir Next", "Poppins", system-ui, sans-serif;
+    font-family: "Avenir", "Avenir Next", var(--font-poppins), system-ui, sans-serif;
     font-weight: 400;
     line-height: 1.15;
   }
@@ -96,7 +96,7 @@
 
   .eyebrow {
     display: inline-block;
-    font-family: "Avenir", "Avenir Next", "Poppins", system-ui, sans-serif;
+    font-family: "Avenir", "Avenir Next", var(--font-poppins), system-ui, sans-serif;
     font-size: 0.8rem;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -114,7 +114,7 @@
     border-radius: 999px;
     background: #ff2d78;
     color: #fff;
-    font-family: "Avenir", "Avenir Next", "Poppins", sans-serif;
+    font-family: "Avenir", "Avenir Next", var(--font-poppins), sans-serif;
     font-size: 1.05rem;
     font-weight: 700;
     border: none;
@@ -211,7 +211,7 @@
     border-radius: 999px;
     background: #3fc9a0;
     color: #fff;
-    font-family: "Avenir", "Avenir Next", "Poppins", sans-serif;
+    font-family: "Avenir", "Avenir Next", var(--font-poppins), sans-serif;
     font-size: 0.9rem;
     font-weight: 600;
     border: none;
@@ -241,7 +241,7 @@
     border-radius: 999px;
     background: transparent;
     color: #2b2350;
-    font-family: "Avenir", "Avenir Next", "Poppins", sans-serif;
+    font-family: "Avenir", "Avenir Next", var(--font-poppins), sans-serif;
     font-size: 0.9rem;
     font-weight: 500;
     border: 2px solid rgba(43, 35, 80, 0.15);

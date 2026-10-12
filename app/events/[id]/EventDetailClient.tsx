@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { getMetaCookies, trackPurchase, stashPurchaseEmail } from "@/lib/ad-tracking";
 
@@ -241,8 +242,8 @@ export default function EventDetailClient({
         {/* Event hero */}
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-6">
           {event.image_url && (
-            <div className="h-64 overflow-hidden">
-              <img src={event.image_url} alt={event.title} className="w-full h-full object-cover" />
+            <div className="relative h-64 overflow-hidden">
+              <Image src={event.image_url} alt={event.title} fill priority sizes="(max-width: 768px) 100vw, 768px" className="object-cover" />
             </div>
           )}
           <div className="p-6 md:p-8">

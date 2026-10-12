@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useContent } from "@/lib/useContent";
@@ -52,11 +53,14 @@ export default function AboutPage() {
       {/* Hero Carousel */}
       <div className="relative w-full aspect-[16/7] md:aspect-[16/5] overflow-hidden bg-ink">
         {carouselImages.map((img, i) => (
-          <img
+          <Image
             key={img.src}
             src={img.src}
             alt={img.alt}
-            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
+            fill
+            priority={i === 0}
+            sizes="100vw"
+            className={`object-cover transition-opacity duration-500 ${
               i === slide ? "opacity-100" : "opacity-0"
             }`}
           />
@@ -126,9 +130,9 @@ export default function AboutPage() {
             {features.map((f) => (
               <div key={f.title} className="flex flex-col items-center">
                 <div
-                  className={`w-24 h-24 md:w-36 md:h-36 rounded-full overflow-hidden bg-gradient-to-br ${f.gradient} border-4 border-white shadow-md mb-5`}
+                  className={`relative w-24 h-24 md:w-36 md:h-36 rounded-full overflow-hidden bg-gradient-to-br ${f.gradient} border-4 border-white shadow-md mb-5`}
                 >
-                  <img src={f.img} alt={f.title} className="w-full h-full object-cover" />
+                  <Image src={f.img} alt={f.title} fill sizes="144px" className="object-cover" />
                 </div>
                 <h3 className="font-display text-[1.1rem] text-ink uppercase tracking-wide mb-2">
                   {f.title}

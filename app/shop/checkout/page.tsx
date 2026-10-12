@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useCart } from "@/components/CartContext";
@@ -274,9 +275,9 @@ export default function CheckoutPage() {
                 <div className="space-y-3 mb-4">
                   {items.map((item) => (
                     <div key={item.product.id} className="flex gap-3 items-center">
-                      <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-gradient-to-br from-[#ffc4fb] to-[#abf7dc] grid place-items-center">
+                      <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-gradient-to-br from-[#ffc4fb] to-[#abf7dc] grid place-items-center">
                         {item.product.image_url ? (
-                          <img src={item.product.image_url} alt={item.product.name} className="w-full h-full object-cover" />
+                          <Image src={item.product.image_url} alt={item.product.name} fill sizes="48px" className="object-cover" />
                         ) : (
                           <span className="text-lg">🫧</span>
                         )}

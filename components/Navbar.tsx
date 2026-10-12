@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useCart } from "@/components/CartContext";
@@ -77,9 +78,12 @@ export default function Navbar() {
     <nav className="sticky top-0 z-[1000] backdrop-blur-md overflow-visible shadow-sm transition-all" style={{ backgroundColor: "#abf7dc" }}>
       <div className={`container flex items-center justify-between gap-6 transition-all ${scrolled ? "py-1.5" : "py-4"}`}>
         <Link href="/" className="flex items-center gap-2.5 flex-shrink-0">
-          <img
+          <Image
             src="/images/header_logo.png"
             alt="The Slime Studio"
+            width={192}
+            height={60}
+            priority
             className="w-auto object-contain flex-shrink-0 transition-all duration-300 md:!h-[60px]"
             style={{ height: scrolled ? 40 : 48 }}
           />
