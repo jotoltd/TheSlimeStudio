@@ -79,6 +79,17 @@ export async function redeemRewardCode(code: string, email: string): Promise<voi
         updated_at: new Date().toISOString(),
       })
       .eq("id", card.id);
+
+    // If they still have unclaimed rewards, issue the next code straight away
+    const remaining = (card.rewards_earned || 0) - ((card.rewards_redeemed || 0) + 1);
+    if (remaining > 0) {
+      const { data: fresh } = await supabaseAdmin
+        .from("loyalty_cards")
+        .select("name, email")
+        .eq("id", card.id)
+        .single();
+      if (fresh) await generateRewardCode(card.id, fresh.email, fresh.name);
+    }
   } catch (e) {
     console.error("Failed to redeem reward code:", e);
   }
