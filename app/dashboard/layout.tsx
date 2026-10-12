@@ -18,6 +18,7 @@ const navSections = [
       { href: "/dashboard/notifications", label: "Notifications", Icon: BellIcon, badge: true },
       { href: "/dashboard/revenue", label: "Revenue", Icon: DollarIcon },
       { href: "/dashboard/ads", label: "Ads", Icon: TrendingUpIcon },
+      { href: "/dashboard/marketing", label: "Marketing", Icon: PhotoIcon },
     ],
   },
   {
