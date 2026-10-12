@@ -156,7 +156,7 @@ export default function MarketingPage() {
 
       const family = findPoppins();
       await Promise.all([
-        document.fonts.load(`800 100px ${family}`).catch(() => {}),
+        document.fonts.load(`700 100px ${family}`).catch(() => {}),
         document.fonts.load(`600 40px ${family}`).catch(() => {}),
       ]);
       if (cancelled) return;
@@ -170,83 +170,102 @@ export default function MarketingPage() {
       const bh = bg.height * scale;
       ctx.drawImage(bg, (w - bw) / 2, (h - bh) / 2, bw, bh);
 
-      // Gradient overlay — bottom-weighted
-      const [gTop, gBot] = OVERLAY_GRADIENTS[tpl.overlay];
-      const grad = ctx.createLinearGradient(0, h * 0.35, 0, h);
-      grad.addColorStop(0, gTop);
-      grad.addColorStop(1, gBot);
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, w, h);
-
       const u = w / 1080; // scale unit
       const story = h / w > 1.4;
       const wide = w / h > 1.4;
-      ctx.textAlign = wide ? "left" : "center";
+
+      // Gradient overlay — from the left on wide ads, bottom-weighted otherwise
+      const [gTop, gBot] = OVERLAY_GRADIENTS[tpl.overlay];
+      const grad = wide
+        ? ctx.createLinearGradient(0, 0, w * 0.75, 0)
+        : ctx.createLinearGradient(0, h * 0.35, 0, h);
+      if (wide) {
+        grad.addColorStop(0, gBot);
+        grad.addColorStop(1, gTop);
+      } else {
+        grad.addColorStop(0, gTop);
+        grad.addColorStop(1, gBot);
+      }
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+
+      const tx = wide ? 80 * u : w / 2; // text anchor
+      ctx.textBaseline = "middle";
       ctx.shadowColor = "rgba(0,0,0,0.35)";
-      ctx.shadowBlur = 18 * u;
-      const cx = wide ? 80 * u : w / 2;
 
-      // Logo — top
-      const logoW = wide ? 300 * u : story ? 380 * u : 340 * u;
-      const logoH = (logo.height / logo.width) * logoW;
+      // Logo — centered on square/story, top-right on wide
       ctx.shadowBlur = 0;
-      ctx.drawImage(logo, wide ? 80 * u : (w - logoW) / 2, wide ? 60 * u : story ? 110 * u : 70 * u, logoW, logoH);
+      if (wide) {
+        const logoH = 150 * u;
+        const logoW = (logo.width / logo.height) * logoH;
+        ctx.drawImage(logo, w - logoW - 50 * u, 40 * u, logoW, logoH);
+      } else {
+        const logoW = story ? 400 * u : 360 * u;
+        const logoH = (logo.height / logo.width) * logoW;
+        ctx.drawImage(logo, (w - logoW) / 2, story ? 120 * u : 70 * u, logoW, logoH);
+      }
 
-      const baseY = story ? h * 0.62 : wide ? h * 0.42 : h * 0.62;
-      ctx.shadowBlur = 18 * u;
+      // Vertical stack: badge -> headline -> sub -> CTA
+      const marginL = 80 * u;
+      const contentX = (wContent: number) => (wide ? marginL : (w - wContent) / 2);
+      let y = wide ? h * 0.22 : story ? h * 0.56 : h * 0.6;
 
       // Badge pill
-      ctx.font = `700 ${Math.round(34 * u)}px ${family}`;
-      const badgePad = 28 * u;
+      ctx.font = `600 ${Math.round(34 * u)}px ${family}`;
+      const badgePad = 30 * u;
       const badgeW = ctx.measureText(tpl.badge).width + badgePad * 2;
-      const badgeH = 64 * u;
-      const badgeX = wide ? 80 * u : (w - badgeW) / 2;
-      const badgeY = baseY - badgeH;
+      const badgeH = 66 * u;
+      const badgeX = contentX(badgeW);
       ctx.fillStyle = "#ff2d78";
       ctx.beginPath();
-      ctx.roundRect(badgeX, badgeY, badgeW, badgeH, badgeH / 2);
+      ctx.roundRect(badgeX, y, badgeW, badgeH, badgeH / 2);
       ctx.fill();
       ctx.fillStyle = "#fff";
-      ctx.textBaseline = "middle";
-      ctx.fillText(tpl.badge, badgeX + badgePad, badgeY + badgeH / 2 + 2 * u);
+      ctx.textAlign = "center";
+      ctx.shadowBlur = 8 * u;
+      ctx.fillText(tpl.badge, badgeX + badgeW / 2, y + badgeH / 2 + 2 * u);
+      ctx.shadowBlur = 18 * u;
+      y += badgeH + 44 * u;
 
       // Headline
-      const headSize = Math.round((wide ? 88 : story ? 96 : 92) * u);
-      ctx.font = `800 ${headSize}px ${family}`;
+      const headSize = Math.round((wide ? 78 : story ? 96 : 92) * u);
+      ctx.font = `700 ${headSize}px ${family}`;
       ctx.fillStyle = "#ffffff";
+      ctx.textAlign = wide ? "left" : "center";
       const lines = tpl.headline.split("\n");
-      const lh = headSize * 1.05;
-      const headTop = badgeY + badgeH + 40 * u;
+      const lh = headSize * 1.02;
       lines.forEach((line, i) => {
-        ctx.fillText(line, cx, headTop + lh * i + headSize / 2);
+        ctx.fillText(line, tx, y + lh * i + headSize / 2);
       });
+      y += lh * lines.length + 30 * u;
 
       // Sub
-      const subY = headTop + lh * lines.length + 34 * u;
-      ctx.font = `500 ${Math.round((wide ? 34 : 40) * u)}px ${family}`;
+      ctx.font = `500 ${Math.round((wide ? 32 : 38) * u)}px ${family}`;
       ctx.fillStyle = "rgba(255,255,255,0.92)";
-      ctx.fillText(tpl.sub, cx, subY);
+      ctx.fillText(tpl.sub, tx, y + 16 * u);
+      y += (wide ? 70 : 100) * u;
 
       // CTA pill
-      const ctaY = subY + (story ? 110 : 90) * u;
       const ctaText = tpl.cta.toUpperCase();
-      ctx.font = `700 ${Math.round(36 * u)}px ${family}`;
-      const ctaPad = 44 * u;
+      ctx.font = `600 ${Math.round(34 * u)}px ${family}`;
+      const ctaPad = 46 * u;
       const ctaW = ctx.measureText(ctaText).width + ctaPad * 2;
-      const ctaH = 80 * u;
-      const ctaX = wide ? 80 * u : (w - ctaW) / 2;
+      const ctaH = 78 * u;
+      const ctaX = contentX(ctaW);
       ctx.shadowBlur = 0;
       ctx.fillStyle = "#ffffff";
       ctx.beginPath();
-      ctx.roundRect(ctaX, ctaY, ctaW, ctaH, ctaH / 2);
+      ctx.roundRect(ctaX, y, ctaW, ctaH, ctaH / 2);
       ctx.fill();
       ctx.fillStyle = "#c026d3";
-      ctx.fillText(ctaText, ctaX + ctaPad, ctaY + ctaH / 2 + 2 * u);
+      ctx.textAlign = "center";
+      ctx.fillText(ctaText, ctaX + ctaW / 2, y + ctaH / 2 + 2 * u);
 
-      // URL footer
+      // URL footer — below CTA on wide (bottom-left), bottom edge otherwise
       ctx.font = `500 ${Math.round(28 * u)}px ${family}`;
       ctx.fillStyle = "rgba(255,255,255,0.85)";
-      ctx.fillText("theslimestudio.co.uk", wide ? 80 * u : w / 2, h - 60 * u);
+      ctx.textAlign = wide ? "left" : "center";
+      ctx.fillText("theslimestudio.co.uk", wide ? marginL : w / 2, wide ? h - 50 * u : h - 60 * u);
     })();
     return () => {
       cancelled = true;
