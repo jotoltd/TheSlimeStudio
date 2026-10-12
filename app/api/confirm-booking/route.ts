@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripeAsync } from "@/lib/stripe";
-import { createPaidBooking } from "@/lib/create-booking";
+import { createPaidBooking, awardLoyaltyStamp } from "@/lib/create-booking";
 import { supabaseAdmin } from "@/lib/supabase";
 import { sendCapiEvent, metaContextFromRequest } from "@/lib/capi";
 
@@ -8,7 +8,9 @@ export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { paymentIntentId, fromRedirect, giftCardCode } = body;
+  const { paymentIntentId, fromRedirect } = body;
+  let giftCardCode = body.giftCardCode as string | undefined;
+  let giftCardAmount = Number(body.giftCardAmount) || 0;
   let { name, email, date, timeSlot, people, totalPrice, phone, isParty } = body;
 
   if (!paymentIntentId) {
@@ -39,6 +41,8 @@ export async function POST(req: NextRequest) {
       totalPrice = totalPrice ?? parseFloat(md.totalPrice || "0");
       phone = phone || md.phone || "";
       isParty = isParty || md.type === "party";
+      giftCardCode = giftCardCode || md.giftCardCode || undefined;
+      giftCardAmount = giftCardAmount || Number(md.giftCardAmount) || 0;
     }
   }
 
@@ -97,8 +101,11 @@ export async function POST(req: NextRequest) {
         .single();
 
       if (giftCard && giftCard.balance > 0) {
-        const redeemAmount = Math.min(giftCard.balance, totalPrice);
-        await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/gift-card-redeem`, {
+        // giftCardAmount is what the card covered on the client; fall back to
+        // the paid total for older callers.
+        const cover = giftCardAmount > 0 ? giftCardAmount : totalPrice;
+        const redeemAmount = Math.min(giftCard.balance, cover);
+        const redeemRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/gift-card-redeem`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -107,6 +114,11 @@ export async function POST(req: NextRequest) {
             bookingId: result.bookingId,
           }),
         });
+        if (redeemRes.ok && people > 1) {
+          // Gift card bookings earn a stamp per slime maker; the booking itself
+          // already earned one, so award the remainder.
+          await awardLoyaltyStamp(name, email, people - 1);
+        }
       }
     } catch (e) {
       console.error("Failed to redeem gift card:", e);

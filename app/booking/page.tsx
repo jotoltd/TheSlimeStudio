@@ -177,6 +177,8 @@ function BookingPageInner() {
             people: fallback.people,
             totalPrice: fallback.totalPrice,
             discountCode: fallback.discountCode,
+            giftCardCode: fallback.giftCardCode,
+            giftCardAmount: fallback.giftCardAmount,
           }),
         }).then((res) => res.json()).then((data) => {
           if (data.success) {
@@ -372,7 +374,9 @@ function BookingPageInner() {
 
   const maxPeopleForSlot = timeSlot ? remaining[timeSlot] ?? slotCapacity : slotCapacity;
   const totalPrice = useMemo(() => people * pricePerPerson, [people, pricePerPerson]);
-  const finalPrice = appliedDiscount ? appliedDiscount.finalAmount : totalPrice;
+  const afterDiscount = appliedDiscount ? appliedDiscount.finalAmount : totalPrice;
+  const giftCardCover = giftCardBalance !== null ? Math.min(giftCardBalance, afterDiscount) : 0;
+  const finalPrice = Math.max(0, afterDiscount - giftCardCover);
 
   async function applyDiscount() {
     if (!discountCode.trim()) return;
@@ -521,6 +525,7 @@ function BookingPageInner() {
             totalPrice: finalPrice,
             discountCode: appliedDiscount?.code,
             giftCardCode: giftCardBalance !== null ? giftCardCode : null,
+            giftCardAmount: giftCardCover,
             adSource,
             ...getMetaCookies(),
           }),
@@ -533,6 +538,7 @@ function BookingPageInner() {
             totalPrice: finalPrice,
             discountCode: appliedDiscount?.code,
             giftCardCode: giftCardBalance !== null ? giftCardCode : null,
+            giftCardAmount: giftCardCover,
           }));
           window.location.href = data.url;
           return;
@@ -560,6 +566,7 @@ function BookingPageInner() {
           isParty: false,
           discountCode: appliedDiscount?.code,
           giftCardCode: giftCardBalance !== null ? giftCardCode : null,
+          giftCardAmount: giftCardCover,
           adSource,
           ...getMetaCookies(),
         }),
@@ -749,6 +756,7 @@ function BookingPageInner() {
                             isParty: false,
                             discountCode: appliedDiscount?.code,
                             giftCardCode: giftCardBalance !== null ? giftCardCode : null,
+                            giftCardAmount: giftCardCover,
                             adSource: localStorage.getItem("adSource"),
                           }),
                         });
@@ -1136,6 +1144,9 @@ function BookingPageInner() {
                   <div>Total ({people} × £{pricePerPerson.toFixed(2)})</div>
                   {appliedDiscount && (
                     <div className="text-green-600 text-[0.75rem]">Discount −£{appliedDiscount.discountAmount.toFixed(2)}</div>
+                  )}
+                  {giftCardCover > 0 && (
+                    <div className="text-purple-600 text-[0.75rem]">Gift card −£{giftCardCover.toFixed(2)}</div>
                   )}
                 </div>
                 <span className="font-display text-xl md:text-2xl">£{finalPrice.toFixed(2)}</span>

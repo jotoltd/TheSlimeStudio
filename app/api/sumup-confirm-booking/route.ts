@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
     phone?: string;
     discountCode?: string;
     giftCardCode?: string;
+    giftCardAmount?: number;
   };
 
   const { checkoutRef } = body;
@@ -165,8 +166,9 @@ export async function POST(req: NextRequest) {
             .single();
 
           if (giftCard && giftCard.balance > 0) {
-            const redeemAmount = Math.min(giftCard.balance, fallbackDetails.totalPrice);
-            await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/gift-card-redeem`, {
+            const cover = Number(body.giftCardAmount) > 0 ? Number(body.giftCardAmount) : fallbackDetails.totalPrice;
+            const redeemAmount = Math.min(giftCard.balance, cover);
+            const redeemRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/gift-card-redeem`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -175,6 +177,11 @@ export async function POST(req: NextRequest) {
                 bookingId: result.bookingId,
               }),
             });
+            if (redeemRes.ok && fallbackDetails.people > 1) {
+              // Gift card bookings earn a stamp per slime maker; one was
+              // already awarded for the booking itself.
+              await awardLoyaltyStamp(fallbackDetails.name, fallbackDetails.email, fallbackDetails.people - 1);
+            }
           }
         } catch (e) {
           console.error("Failed to redeem gift card:", e);

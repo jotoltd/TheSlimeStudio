@@ -188,7 +188,9 @@ export async function sendAdminNotification(d: BookingDetails, overCapacity: boo
   await logEmail(CONTACT_EMAIL, `New Booking — ${d.name}`, "admin_notification", "sent");
 }
 
-export async function awardLoyaltyStamp(name: string, email: string) {
+export async function awardLoyaltyStamp(name: string, email: string, count = 1) {
+  if (count < 1) return;
+
   const { data: siteSettings } = await supabaseAdmin
     .from("site_settings")
     .select("loyalty_enabled, stamps_per_reward")
@@ -205,41 +207,41 @@ export async function awardLoyaltyStamp(name: string, email: string) {
     .single();
 
   if (!existingCard) {
-    await supabaseAdmin.from("loyalty_cards").insert({
-      email: email.toLowerCase(),
-      name,
-      stamps: 1,
-      total_stamps: 1,
-      rewards_earned: 0,
-      rewards_redeemed: 0,
-    });
+    const rewards = Math.floor(count / stampsPerReward);
+    const { data: card } = await supabaseAdmin
+      .from("loyalty_cards")
+      .insert({
+        email: email.toLowerCase(),
+        name,
+        stamps: count % stampsPerReward,
+        total_stamps: count,
+        rewards_earned: rewards,
+        rewards_redeemed: 0,
+      })
+      .select("id")
+      .single();
+    if (rewards > 0 && card) {
+      await generateRewardCode(card.id, email, name);
+    }
     return;
   }
 
-  const newStamps = existingCard.stamps + 1;
-  const newTotal = existingCard.total_stamps + 1;
-  let newRewards = existingCard.rewards_earned;
-  let stampCount = newStamps;
-  let earnedNewReward = false;
-
-  if (newStamps >= stampsPerReward) {
-    newRewards += 1;
-    stampCount = newStamps - stampsPerReward;
-    earnedNewReward = true;
-  }
+  const newTotal = existingCard.stamps + count;
+  const earnedRewards = Math.floor(newTotal / stampsPerReward);
+  const stampCount = newTotal % stampsPerReward;
 
   await supabaseAdmin
     .from("loyalty_cards")
     .update({
       stamps: stampCount,
-      total_stamps: newTotal,
-      rewards_earned: newRewards,
+      total_stamps: existingCard.total_stamps + count,
+      rewards_earned: existingCard.rewards_earned + earnedRewards,
       name,
       updated_at: new Date().toISOString(),
     })
     .eq("id", existingCard.id);
 
-  if (earnedNewReward && !existingCard.reward_code) {
+  if (earnedRewards > 0 && !existingCard.reward_code) {
     await generateRewardCode(existingCard.id, email, name);
   }
 }

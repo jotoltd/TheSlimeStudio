@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripeAsync, getStripeModeAsync } from "@/lib/stripe";
-import { supabaseAdmin, STAMPS_PER_REWARD } from "@/lib/supabase";
-import { generateRewardCode, redeemRewardCode } from "@/lib/loyalty-rewards";
+import { supabaseAdmin } from "@/lib/supabase";
+import { redeemRewardCode } from "@/lib/loyalty-rewards";
+import { awardLoyaltyStamp } from "@/lib/create-booking";
 import { sendCapiEvent, metaContextFromRequest } from "@/lib/capi";
 
 export const runtime = "nodejs";
@@ -159,60 +160,37 @@ export async function POST(req: NextRequest) {
       });
     } catch {}
 
-    // Award loyalty stamp (if loyalty programme is enabled)
-    try {
-      const { data: siteSettings } = await supabaseAdmin
-        .from("site_settings")
-        .select("loyalty_enabled, stamps_per_reward")
-        .eq("id", 1)
-        .single();
-
-      if (siteSettings?.loyalty_enabled) {
-        const stampsPerReward = siteSettings.stamps_per_reward || STAMPS_PER_REWARD;
-        const { data: existingCard } = await supabaseAdmin
-          .from("loyalty_cards")
-          .select("id, stamps, total_stamps, rewards_earned, reward_code")
-          .eq("email", email.toLowerCase())
+    // If a gift card covered the whole price, redeem it now.
+    if (giftCardCode && booking?.id) {
+      try {
+        const { data: giftCard } = await supabaseAdmin
+          .from("gift_cards")
+          .select("balance")
+          .eq("code", giftCardCode.trim().toUpperCase())
           .single();
 
-        if (existingCard) {
-          const newStamps = existingCard.stamps + 1;
-          const newTotal = existingCard.total_stamps + 1;
-          let newRewards = existingCard.rewards_earned;
-          let stampCount = newStamps;
-          let earnedNewReward = false;
-
-          if (newStamps >= stampsPerReward) {
-            newRewards += 1;
-            stampCount = newStamps - stampsPerReward;
-            earnedNewReward = true;
-          }
-
-          await supabaseAdmin
-            .from("loyalty_cards")
-            .update({
-              stamps: stampCount,
-              total_stamps: newTotal,
-              rewards_earned: newRewards,
-              name,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", existingCard.id);
-
-          if (earnedNewReward && !existingCard.reward_code) {
-            await generateRewardCode(existingCard.id, email, name);
-          }
-        } else {
-          await supabaseAdmin.from("loyalty_cards").insert({
-            email: email.toLowerCase(),
-            name,
-            stamps: 1,
-            total_stamps: 1,
-            rewards_earned: 0,
-            rewards_redeemed: 0,
+        if (giftCard && giftCard.balance > 0) {
+          const cover = Number(body.giftCardAmount) > 0 ? Number(body.giftCardAmount) : giftCard.balance;
+          const redeemAmount = Math.min(giftCard.balance, cover);
+          await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/gift-card-redeem`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              code: giftCardCode.trim().toUpperCase(),
+              amount: redeemAmount,
+              bookingId: booking.id,
+            }),
           });
         }
+      } catch (e) {
+        console.error("Failed to redeem gift card:", e);
       }
+    }
+
+    // Loyalty: gift card bookings earn a stamp per slime maker, other free
+    // bookings earn one.
+    try {
+      await awardLoyaltyStamp(name, email, giftCardCode ? people : 1);
     } catch (e) {
       console.error("Failed to award loyalty stamp:", e);
     }
@@ -263,6 +241,7 @@ export async function POST(req: NextRequest) {
         phone: body.phone || "",
         discountCode: discountCode || "",
         giftCardCode: giftCardCode || "",
+        giftCardAmount: String(Number(body.giftCardAmount) || ""),
         adSource: body.adSource || "",
         // Meta click context — lets the Conversions API Purchase event match
         // back to the ad click even when the browser pixel was blocked.
