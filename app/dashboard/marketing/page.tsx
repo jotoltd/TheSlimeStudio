@@ -11,7 +11,7 @@ type Template = {
   badge: string;
   cta: string;
   image: string;
-  overlay: "dark" | "pink" | "purple" | "orange";
+  overlay: string;
   adCopy: { primary: string; headline: string };
 };
 
@@ -104,14 +104,109 @@ const TEMPLATES: Template[] = [
       headline: "Pre-School Slime Sessions — £7.50",
     },
   },
+  {
+    id: "adults",
+    name: "Adults Only Night",
+    headline: "ADULTS ONLY\nSLIME NIGHT",
+    sub: "Slime, drinks & zero kids — 18+",
+    badge: "ADULTS ONLY",
+    cta: "Grab your spot",
+    image: "teal",
+    overlay: "purple",
+    adCopy: {
+      primary: "Yes, it's a real thing — and yes, you need to try it 🍸\n\nOur Adults Only Slime Nights are BACK. Slime making, drinks, music and absolutely no children allowed. Bring your mates, leave your kids at home.\n\nThe most fun night out in Norfolk you didn't know existed 👇",
+      headline: "Adults Only Slime Night — 18+",
+    },
+  },
+  {
+    id: "afterschool",
+    name: "After School Club",
+    headline: "AFTER SCHOOL\nSLIME CLUB",
+    sub: "Weekly sessions straight after school",
+    badge: "AGES 5+",
+    cta: "Join the club",
+    image: "mixing",
+    overlay: "teal",
+    adCopy: {
+      primary: "The after-school club kids actually want to go to 🌈\n\nWeekly slime club at The Slime Studio — they make, they play, they bring their slime home. You get an hour of peace.\n\nSpaces are limited each week — book ahead 👇",
+      headline: "After School Slime Club — Book Now",
+    },
+  },
+  {
+    id: "christmas",
+    name: "Christmas Sessions",
+    headline: "CHRISTMAS\nSLIME SESSIONS",
+    sub: "Festive slime making this December",
+    badge: "BOOK EARLY",
+    cta: "Book festive fun",
+    image: "pink_action",
+    overlay: "gold",
+    adCopy: {
+      primary: "Christmas sessions are coming to The Slime Studio! 🎄\n\nFestive slime making with sparkles, seasonal colours and all the Christmas vibes — the perfect festive treat that keeps them busy for an hour.\n\nDecember slots sell out every year — book early 👇",
+      headline: "Christmas Slime Sessions — Book Early",
+    },
+  },
+  {
+    id: "kits",
+    name: "Slime Kits & Shop",
+    headline: "SLIME KITS\nTO TAKE HOME",
+    sub: "DIY kits & slime goodies from our shop",
+    badge: "IN STORE & ONLINE",
+    cta: "Shop slime",
+    image: "toppings",
+    overlay: "pink",
+    adCopy: {
+      primary: "Can't make it to the studio? Take the slime home with you 🏠\n\nOur DIY slime kits have everything they need to make proper slime at home — the same stuff we use in the studio.\n\nPerfect gifts, rainy day saviours, and party bag upgrades 👇",
+      headline: "DIY Slime Kits — Shop Now",
+    },
+  },
+  {
+    id: "halfterm",
+    name: "School Holidays",
+    headline: "SCHOOL HOLIDAY\nSORTED",
+    sub: "Slime sessions running every day",
+    badge: "FROM £15",
+    cta: "Book a slot",
+    image: "blue_close",
+    overlay: "teal",
+    adCopy: {
+      primary: "Half term childcare? Sorted. Bored kids? Sorted. 🙌\n\nThe Slime Studio is open every day through the school holidays — 1-hour sessions where they make their own slime and take it home.\n\nBook ahead — holiday slots go fast 👇",
+      headline: "School Holiday Sessions — From £15",
+    },
+  },
+  {
+    id: "rainyday",
+    name: "Rainy Day",
+    headline: "RAINY DAY?\nSLIME DAY",
+    sub: "Indoor family fun in Holt, Norfolk",
+    badge: "OPEN WEEKENDS",
+    cta: "Book now",
+    image: "pink_stretch",
+    overlay: "dark",
+    adCopy: {
+      primary: "Grey skies over Norfolk? We have the cure 🌧️➡️🌈\n\nAn hour of slime making at The Slime Studio turns a rainy day into the best day of the week. Indoor, warm, and gloriously messy (for them — not your house).\n\nWeekend sessions from £15 👇",
+      headline: "Rainy Day? Make Slime Instead",
+    },
+  },
 ];
 
-const OVERLAY_GRADIENTS: Record<Template["overlay"], [string, string]> = {
+const OVERLAY_GRADIENTS: Record<string, [string, string]> = {
   pink: ["rgba(236,72,153,0)", "rgba(157,23,77,0.88)"],
   purple: ["rgba(124,58,237,0.05)", "rgba(46,16,101,0.9)"],
+  teal: ["rgba(20,184,166,0)", "rgba(19,78,74,0.9)"],
+  gold: ["rgba(0,0,0,0)", "rgba(120,53,15,0.9)"],
   orange: ["rgba(0,0,0,0)", "rgba(67,20,7,0.9)"],
   dark: ["rgba(0,0,0,0.05)", "rgba(15,10,30,0.88)"],
 };
+
+const OVERLAY_OPTIONS = [
+  { id: "pink", label: "Pink", swatch: "#be185d" },
+  { id: "purple", label: "Purple", swatch: "#5b21b6" },
+  { id: "teal", label: "Teal", swatch: "#0f766e" },
+  { id: "gold", label: "Gold", swatch: "#92400e" },
+  { id: "orange", label: "Spooky", swatch: "#431407" },
+  { id: "dark", label: "Dark", swatch: "#1e1b2e" },
+];
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -133,14 +228,17 @@ export default function MarketingPage() {
   const [tplId, setTplId] = useState("session");
   const [sizeId, setSizeId] = useState("square");
   const [imgId, setImgId] = useState(TEMPLATES[0].image);
+  const [overlayId, setOverlayId] = useState(TEMPLATES[0].overlay);
   const [copied, setCopied] = useState("");
   const tpl = TEMPLATES.find((t) => t.id === tplId)!;
   const size = SIZES.find((s) => s.id === sizeId)!;
   const photo = PHOTOS.find((p) => p.id === imgId)!;
 
   function pickTemplate(id: string) {
+    const t = TEMPLATES.find((x) => x.id === id)!;
     setTplId(id);
-    setImgId(TEMPLATES.find((t) => t.id === id)!.image);
+    setImgId(t.image);
+    setOverlayId(t.overlay);
   }
 
   useEffect(() => {
@@ -175,7 +273,7 @@ export default function MarketingPage() {
       const wide = w / h > 1.4;
 
       // Gradient overlay — from the left on wide ads, bottom-weighted otherwise
-      const [gTop, gBot] = OVERLAY_GRADIENTS[tpl.overlay];
+      const [gTop, gBot] = OVERLAY_GRADIENTS[overlayId] || OVERLAY_GRADIENTS.pink;
       const grad = wide
         ? ctx.createLinearGradient(0, 0, w * 0.75, 0)
         : ctx.createLinearGradient(0, h * 0.35, 0, h);
@@ -270,7 +368,7 @@ export default function MarketingPage() {
     return () => {
       cancelled = true;
     };
-  }, [tpl, size, photo]);
+  }, [tpl, size, photo, overlayId]);
 
   function download() {
     canvasRef.current?.toBlob((blob) => {
@@ -339,10 +437,10 @@ export default function MarketingPage() {
             </div>
           </div>
 
-          {/* Photo picker */}
+          {/* Photo + colour picker */}
           <div className="bg-white rounded-[20px] p-6 shadow-sm mb-6">
-            <h2 className="font-display text-[1rem] mb-4">3 · Swap the photo (optional)</h2>
-            <div className="grid grid-cols-3 gap-2">
+            <h2 className="font-display text-[1rem] mb-4">3 · Swap photo & colour (optional)</h2>
+            <div className="grid grid-cols-3 gap-2 mb-4">
               {PHOTOS.map((p) => (
                 <button
                   key={p.id}
@@ -352,6 +450,20 @@ export default function MarketingPage() {
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={p.src} alt={p.label} className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {OVERLAY_OPTIONS.map((o) => (
+                <button
+                  key={o.id}
+                  onClick={() => setOverlayId(o.id)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[0.8rem] font-medium transition-all ${
+                    overlayId === o.id ? "bg-ink text-white shadow-sm" : "bg-ink/[0.05] text-ink-soft hover:bg-ink/10"
+                  }`}
+                >
+                  <span className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: o.swatch }} />
+                  {o.label}
                 </button>
               ))}
             </div>
