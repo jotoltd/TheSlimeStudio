@@ -110,6 +110,15 @@ export async function POST(req: NextRequest) {
           }
         }
 
+        // Gift card purchase — activate the pending card on payment
+        if (session.metadata?.type === "gift_card" && session.metadata?.gift_card_code) {
+          await supabaseAdmin
+            .from("gift_cards")
+            .update({ status: "active" })
+            .eq("code", session.metadata.gift_card_code)
+            .eq("status", "pending");
+        }
+
         if (session.metadata?.bookingId && session.metadata?.type !== "subscription") {
           await supabaseAdmin
             .from("bookings")

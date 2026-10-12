@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      // Create pending gift card record
+      // Create pending gift card record — activated when payment is confirmed
       const insertError = await insertCard({
         code,
         balance: amount,
@@ -129,7 +129,7 @@ export async function POST(req: NextRequest) {
         recipient_email: recipientEmail || null,
         recipient_name: recipientName || null,
         message: message || null,
-        status: "active",
+        status: "pending",
         expiry_date: expiryDate.toISOString(),
         payment_reference: session.id,
         customer_id: customerId || null,
@@ -181,7 +181,7 @@ export async function POST(req: NextRequest) {
 
       const checkoutData = await res.json();
 
-      // Create pending gift card record
+      // Create pending gift card record — activated when payment is confirmed
       const insertError = await insertCard({
         code,
         balance: amount,
@@ -191,7 +191,7 @@ export async function POST(req: NextRequest) {
         recipient_email: recipientEmail || null,
         recipient_name: recipientName || null,
         message: message || null,
-        status: "active",
+        status: "pending",
         expiry_date: expiryDate.toISOString(),
         payment_reference: checkoutRef,
         customer_id: customerId || null,

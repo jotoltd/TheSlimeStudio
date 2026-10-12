@@ -13,7 +13,7 @@ type GiftCard = {
   recipient_email: string | null;
   recipient_name: string | null;
   message: string | null;
-  status: "active" | "used" | "expired" | "cancelled";
+  status: "pending" | "active" | "used" | "expired" | "cancelled";
   expiry_date: string | null;
   purchased_at: string;
   redeemed_at: string | null;
@@ -104,7 +104,7 @@ export default function GiftCardsPage() {
     recipient_email: "",
     recipient_name: "",
     message: "",
-    status: "active" as "active" | "used" | "expired" | "cancelled",
+    status: "active" as "pending" | "active" | "used" | "expired" | "cancelled",
     expiry_date: "",
     customer_id: "",
   });
@@ -382,6 +382,7 @@ export default function GiftCardsPage() {
                 onChange={(e) => setForm({ ...form, status: e.target.value as any })}
                 className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
               >
+                <option value="pending">Pending</option>
                 <option value="active">Active</option>
                 <option value="used">Used</option>
                 <option value="expired">Expired</option>

@@ -19,12 +19,18 @@ export async function GET(req: NextRequest) {
       }
       const { data: card } = await supabaseAdmin
         .from("gift_cards")
-        .select("code, balance, expiry_date, purchaser_email")
+        .select("id, code, balance, expiry_date, purchaser_email")
         .eq("payment_reference", sumupRef)
         .single();
       if (!card) {
         return NextResponse.json({ error: "Gift card not found" }, { status: 404 });
       }
+      // Payment verified — activate the card
+      await supabaseAdmin
+        .from("gift_cards")
+        .update({ status: "active" })
+        .eq("id", card.id)
+        .eq("status", "pending");
       return NextResponse.json({
         giftCard: {
           code: card.code,
@@ -64,13 +70,20 @@ export async function GET(req: NextRequest) {
 
     const { data: giftCard } = await supabaseAdmin
       .from("gift_cards")
-      .select("code, balance, expiry_date, purchaser_email")
+      .select("id, code, balance, expiry_date, purchaser_email")
       .eq("code", giftCardCode)
       .single();
 
     if (!giftCard) {
       return NextResponse.json({ error: "Gift card not found" }, { status: 404 });
     }
+
+    // Payment verified — activate the card
+    await supabaseAdmin
+      .from("gift_cards")
+      .update({ status: "active" })
+      .eq("id", giftCard.id)
+      .eq("status", "pending");
 
     return NextResponse.json({
       giftCard: {
