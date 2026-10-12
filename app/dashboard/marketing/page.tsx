@@ -229,6 +229,7 @@ export default function MarketingPage() {
   const [sizeId, setSizeId] = useState("square");
   const [imgId, setImgId] = useState(TEMPLATES[0].image);
   const [overlayId, setOverlayId] = useState(TEMPLATES[0].overlay);
+  const [txt, setTxt] = useState({ headline: TEMPLATES[0].headline, sub: TEMPLATES[0].sub, badge: TEMPLATES[0].badge, cta: TEMPLATES[0].cta });
   const [copied, setCopied] = useState("");
   const tpl = TEMPLATES.find((t) => t.id === tplId)!;
   const size = SIZES.find((s) => s.id === sizeId)!;
@@ -239,6 +240,7 @@ export default function MarketingPage() {
     setTplId(id);
     setImgId(t.image);
     setOverlayId(t.overlay);
+    setTxt({ headline: t.headline, sub: t.sub, badge: t.badge, cta: t.cta });
   }
 
   useEffect(() => {
@@ -309,42 +311,58 @@ export default function MarketingPage() {
       let y = wide ? h * 0.22 : story ? h * 0.56 : h * 0.6;
 
       // Badge pill
-      ctx.font = `600 ${Math.round(34 * u)}px ${family}`;
-      const badgePad = 30 * u;
-      const badgeW = ctx.measureText(tpl.badge).width + badgePad * 2;
-      const badgeH = 66 * u;
-      const badgeX = contentX(badgeW);
-      ctx.fillStyle = "#ff2d78";
-      ctx.beginPath();
-      ctx.roundRect(badgeX, y, badgeW, badgeH, badgeH / 2);
-      ctx.fill();
-      ctx.fillStyle = "#fff";
-      ctx.textAlign = "center";
-      ctx.shadowBlur = 8 * u;
-      ctx.fillText(tpl.badge, badgeX + badgeW / 2, y + badgeH / 2 + 2 * u);
-      ctx.shadowBlur = 18 * u;
-      y += badgeH + 44 * u;
+      if (txt.badge.trim()) {
+        ctx.font = `600 ${Math.round(34 * u)}px ${family}`;
+        const badgePad = 30 * u;
+        const badgeW = ctx.measureText(txt.badge).width + badgePad * 2;
+        const badgeH = 66 * u;
+        const badgeX = contentX(badgeW);
+        ctx.fillStyle = "#ff2d78";
+        ctx.beginPath();
+        ctx.roundRect(badgeX, y, badgeW, badgeH, badgeH / 2);
+        ctx.fill();
+        ctx.fillStyle = "#fff";
+        ctx.textAlign = "center";
+        ctx.shadowBlur = 8 * u;
+        ctx.fillText(txt.badge, badgeX + badgeW / 2, y + badgeH / 2 + 2 * u);
+        ctx.shadowBlur = 18 * u;
+        y += badgeH + 44 * u;
+      }
 
-      // Headline
-      const headSize = Math.round((wide ? 78 : story ? 96 : 92) * u);
-      ctx.font = `700 ${headSize}px ${family}`;
+      // Headline — shrink until the longest line fits the canvas
+      const lines = txt.headline.split("\n").filter((l) => l.trim());
+      let headSize = Math.round((wide ? 78 : story ? 96 : 92) * u);
+      const maxW = wide ? w - 160 * u : w * 0.88;
+      const setHeadFont = () => { ctx.font = `700 ${Math.round(headSize)}px ${family}`; };
+      setHeadFont();
+      while (headSize > 34 * u && lines.some((l) => ctx.measureText(l).width > maxW)) {
+        headSize -= 4 * u;
+        setHeadFont();
+      }
       ctx.fillStyle = "#ffffff";
       ctx.textAlign = wide ? "left" : "center";
-      const lines = tpl.headline.split("\n");
       const lh = headSize * 1.02;
       lines.forEach((line, i) => {
         ctx.fillText(line, tx, y + lh * i + headSize / 2);
       });
-      y += lh * lines.length + 30 * u;
+      y += lh * Math.max(lines.length, 1) + 30 * u;
 
-      // Sub
-      ctx.font = `500 ${Math.round((wide ? 32 : 38) * u)}px ${family}`;
-      ctx.fillStyle = "rgba(255,255,255,0.92)";
-      ctx.fillText(tpl.sub, tx, y + 16 * u);
+      // Sub — shrink to fit too
+      let subSize = Math.round((wide ? 32 : 38) * u);
+      const setSubFont = () => { ctx.font = `500 ${Math.round(subSize)}px ${family}`; };
+      setSubFont();
+      while (subSize > 20 * u && ctx.measureText(txt.sub).width > maxW) {
+        subSize -= 3 * u;
+        setSubFont();
+      }
+      if (txt.sub.trim()) {
+        ctx.fillStyle = "rgba(255,255,255,0.92)";
+        ctx.fillText(txt.sub, tx, y + 16 * u);
+      }
       y += (wide ? 70 : 100) * u;
 
-      // CTA pill
-      const ctaText = tpl.cta.toUpperCase();
+      const ctaText = txt.cta.toUpperCase();
+      if (ctaText.trim()) {
       ctx.font = `600 ${Math.round(34 * u)}px ${family}`;
       const ctaPad = 46 * u;
       const ctaW = ctx.measureText(ctaText).width + ctaPad * 2;
@@ -358,6 +376,7 @@ export default function MarketingPage() {
       ctx.fillStyle = "#c026d3";
       ctx.textAlign = "center";
       ctx.fillText(ctaText, ctaX + ctaW / 2, y + ctaH / 2 + 2 * u);
+      }
 
       // URL footer — below CTA on wide (bottom-left), bottom edge otherwise
       ctx.font = `500 ${Math.round(28 * u)}px ${family}`;
@@ -368,7 +387,7 @@ export default function MarketingPage() {
     return () => {
       cancelled = true;
     };
-  }, [tpl, size, photo, overlayId]);
+  }, [tpl, size, photo, overlayId, txt]);
 
   function download() {
     canvasRef.current?.toBlob((blob) => {
@@ -469,9 +488,62 @@ export default function MarketingPage() {
             </div>
           </div>
 
+          {/* Custom text */}
+          <div className="bg-white rounded-[20px] p-6 shadow-sm mb-6">
+            <h2 className="font-display text-[1rem] mb-4">4 · Write your own text (optional)</h2>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[0.7rem] uppercase tracking-wider text-ink-soft font-semibold mb-1.5">Headline — press Enter for a second line</label>
+                <textarea
+                  rows={2}
+                  value={txt.headline}
+                  onChange={(e) => setTxt({ ...txt, headline: e.target.value })}
+                  className="w-full px-3.5 py-2.5 border border-ink/15 rounded-xl text-[0.9rem] font-bold resize-none focus:outline-none focus:ring-2 focus:ring-bright-lavender/50"
+                />
+              </div>
+              <div>
+                <label className="block text-[0.7rem] uppercase tracking-wider text-ink-soft font-semibold mb-1.5">Sub-heading</label>
+                <input
+                  type="text"
+                  value={txt.sub}
+                  onChange={(e) => setTxt({ ...txt, sub: e.target.value })}
+                  className="w-full px-3.5 py-2.5 border border-ink/15 rounded-xl text-[0.9rem] focus:outline-none focus:ring-2 focus:ring-bright-lavender/50"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[0.7rem] uppercase tracking-wider text-ink-soft font-semibold mb-1.5">Pink badge</label>
+                  <input
+                    type="text"
+                    value={txt.badge}
+                    onChange={(e) => setTxt({ ...txt, badge: e.target.value })}
+                    placeholder="e.g. FROM £15"
+                    className="w-full px-3.5 py-2.5 border border-ink/15 rounded-xl text-[0.9rem] focus:outline-none focus:ring-2 focus:ring-bright-lavender/50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[0.7rem] uppercase tracking-wider text-ink-soft font-semibold mb-1.5">Button text</label>
+                  <input
+                    type="text"
+                    value={txt.cta}
+                    onChange={(e) => setTxt({ ...txt, cta: e.target.value })}
+                    placeholder="e.g. Book now"
+                    className="w-full px-3.5 py-2.5 border border-ink/15 rounded-xl text-[0.9rem] focus:outline-none focus:ring-2 focus:ring-bright-lavender/50"
+                  />
+                </div>
+              </div>
+              <button
+                onClick={() => setTxt({ headline: tpl.headline, sub: tpl.sub, badge: tpl.badge, cta: tpl.cta })}
+                className="text-[0.75rem] font-medium text-ink-soft hover:text-ink underline"
+              >
+                Reset to template text
+              </button>
+            </div>
+          </div>
+
           {/* Ad copy */}
           <div className="bg-white rounded-[20px] p-6 shadow-sm">
-            <h2 className="font-display text-[1rem] mb-1">4 · Ad text — paste into Ads Manager</h2>
+            <h2 className="font-display text-[1rem] mb-1">5 · Ad text — paste into Ads Manager</h2>
             <p className="text-[0.75rem] text-ink-soft mb-4">Copy these into the "Primary text" and "Headline" fields when creating the ad.</p>
             <div className="space-y-3">
               <div>
