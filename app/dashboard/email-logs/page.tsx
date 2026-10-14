@@ -90,8 +90,22 @@ export default function EmailsPage() {
   const [tplId, setTplId] = useState("booking");
   const [tplDraft, setTplDraft] = useState<Record<string, string>>({});
   const [tplMsg, setTplMsg] = useState("");
+  const [preview, setPreview] = useState<{ subject: string; html: string } | null>(null);
+  const [previewTick, setPreviewTick] = useState(0);
 
   useEffect(() => { loadAll(); }, [filter]);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      fetch("/api/admin/email-preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: tplId, overrides: tplDraft }),
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => j && setPreview(j));
+    }, 400);
+    return () => clearTimeout(t);
+  }, [tplId, tplDraft, previewTick]);
 
   async function loadAll() {
     setLoading(true);
@@ -137,6 +151,7 @@ export default function EmailsPage() {
       body: JSON.stringify({ templates: tplDraft }),
     });
     setTplMsg(res.ok ? "Saved — applies to new emails within a minute" : "Failed to save");
+    if (res.ok) setPreviewTick((t) => t + 1);
   }
 
   async function sendTest() {
@@ -262,34 +277,56 @@ export default function EmailsPage() {
             </button>
           ))}
         </div>
-        <div className="space-y-3">
-          {EMAIL_TEMPLATES.find((t) => t.id === tplId)!.fields.map((f) => (
-            <div key={f.key}>
-              <label className="block text-[0.7rem] uppercase tracking-wider text-ink-soft font-semibold mb-1.5">{f.label}</label>
-              {f.multi ? (
-                <textarea
-                  rows={2}
-                  value={tplDraft[f.key] || ""}
-                  placeholder={f.placeholder}
-                  onChange={(e) => setTplDraft({ ...tplDraft, [f.key]: e.target.value })}
-                  className="w-full px-3.5 py-2.5 border border-ink/15 rounded-xl text-[0.85rem] focus:outline-none focus:ring-2 focus:ring-bright-lavender/50 resize-y"
-                />
-              ) : (
-                <input
-                  type="text"
-                  value={tplDraft[f.key] || ""}
-                  placeholder={f.placeholder}
-                  onChange={(e) => setTplDraft({ ...tplDraft, [f.key]: e.target.value })}
-                  className="w-full px-3.5 py-2.5 border border-ink/15 rounded-xl text-[0.85rem] focus:outline-none focus:ring-2 focus:ring-bright-lavender/50"
-                />
-              )}
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="space-y-3">
+            {EMAIL_TEMPLATES.find((t) => t.id === tplId)!.fields.map((f) => (
+              <div key={f.key}>
+                <label className="block text-[0.7rem] uppercase tracking-wider text-ink-soft font-semibold mb-1.5">{f.label}</label>
+                {f.multi ? (
+                  <textarea
+                    rows={2}
+                    value={tplDraft[f.key] || ""}
+                    placeholder={f.placeholder}
+                    onChange={(e) => setTplDraft({ ...tplDraft, [f.key]: e.target.value })}
+                    className="w-full px-3.5 py-2.5 border border-ink/15 rounded-xl text-[0.85rem] focus:outline-none focus:ring-2 focus:ring-bright-lavender/50 resize-y"
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    value={tplDraft[f.key] || ""}
+                    placeholder={f.placeholder}
+                    onChange={(e) => setTplDraft({ ...tplDraft, [f.key]: e.target.value })}
+                    className="w-full px-3.5 py-2.5 border border-ink/15 rounded-xl text-[0.85rem] focus:outline-none focus:ring-2 focus:ring-bright-lavender/50"
+                  />
+                )}
+              </div>
+            ))}
+            <div className="flex items-center gap-3 pt-1">
+              <button onClick={saveTemplate} className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-bright-lavender to-sky-blue-light text-white font-semibold text-[0.85rem] hover:opacity-90">
+                Save wording
+              </button>
+              {tplMsg && <span className="text-[0.8rem] text-ink-soft">{tplMsg}</span>}
             </div>
-          ))}
-          <div className="flex items-center gap-3 pt-1">
-            <button onClick={saveTemplate} className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-bright-lavender to-sky-blue-light text-white font-semibold text-[0.85rem] hover:opacity-90">
-              Save wording
-            </button>
-            {tplMsg && <span className="text-[0.8rem] text-ink-soft">{tplMsg}</span>}
+          </div>
+
+          <div>
+            <div className="text-[0.7rem] uppercase tracking-wider text-ink-soft font-semibold mb-1.5">Preview (updates as you type)</div>
+            {preview ? (
+              <div className="border border-ink/10 rounded-xl overflow-hidden">
+                <div className="bg-ink/[0.04] px-4 py-2.5 border-b border-ink/10">
+                  <span className="text-[0.72rem] uppercase tracking-wider text-ink-soft font-semibold">Subject: </span>
+                  <span className="text-[0.82rem] font-medium">{preview.subject}</span>
+                </div>
+                <iframe
+                  title="Email preview"
+                  srcDoc={preview.html}
+                  className="w-full h-[520px] bg-white"
+                  sandbox=""
+                />
+              </div>
+            ) : (
+              <div className="h-[520px] rounded-xl bg-ink/[0.03] flex items-center justify-center text-ink-soft text-[0.85rem]">Loading preview…</div>
+            )}
           </div>
         </div>
       </div>
