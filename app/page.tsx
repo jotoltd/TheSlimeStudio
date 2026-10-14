@@ -23,6 +23,7 @@ export default function HomePage() {
             alt="Children mixing colourful slime at The Slime Studio in Holt, Norfolk"
             fill
             priority
+            fetchPriority="high"
             sizes="100vw"
             className="object-cover"
           />
@@ -36,6 +37,7 @@ export default function HomePage() {
               width={480}
               height={480}
               priority
+              sizes="(max-width: 768px) 240px, 480px"
               className="w-full max-w-[240px] md:max-w-[480px] mx-auto mb-6 md:mb-10 object-contain rounded-full shadow-lg"
               style={{ backgroundColor: "#ffffff" }}
             />

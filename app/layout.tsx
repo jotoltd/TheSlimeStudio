@@ -5,6 +5,7 @@ import MaintenanceGate from "@/components/MaintenanceGate";
 import { CartProvider } from "@/components/CartContext";
 import CartDrawer from "@/components/CartDrawer";
 import AdPixels from "@/components/AdPixels";
+import Preconnect from "@/components/Preconnect";
 
 const SITE_URL = "https://theslimestudio.co.uk";
 
@@ -146,6 +147,7 @@ export default function RootLayout({
       </head>
       <body>
         <AdPixels />
+        <Preconnect />
         <MaintenanceGate>
           <CartProvider>
             {children}
