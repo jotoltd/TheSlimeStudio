@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { verifyToken } from "@/lib/auth";
-import { getResend, EMAIL_FROM, cancellationHtml, logEmail, emailEnabled } from "@/lib/email";
+import { getResend, EMAIL_FROM, cancellationHtml, logEmail, emailEnabled, emailTemplates } from "@/lib/email";
 import { getStripeAsync } from "@/lib/stripe";
 
 export const runtime = "nodejs";
@@ -108,17 +108,18 @@ export async function POST(req: NextRequest) {
     try {
       const r = getResend();
       if (r) {
+        const ov = await emailTemplates();
         await r.emails.send({
           from: EMAIL_FROM,
           to: b.email,
-          subject: "Your Booking Has Been Cancelled — The Slime Studio",
+          subject: ov.email_tpl_cancellation_subject || "Your Booking Has Been Cancelled — The Slime Studio",
           html: cancellationHtml({
             name: b.name || "",
             date: b.date || "",
             timeSlot: b.time_slot || "",
             people: b.people || 0,
             isParty: b.is_party,
-          }),
+          }, ov),
         });
         await logEmail(b.email, "Booking Cancelled — The Slime Studio", "cancellation", "sent");
       }

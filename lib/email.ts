@@ -28,6 +28,23 @@ const EMAIL_SETTING_KEYS: Record<string, string> = {
   reward_code: "email_reward_codes",
 };
 
+let _tplCache: { at: number; map: Record<string, string> } | null = null;
+
+// Custom wording overrides stored in site_content (email_tpl_* keys), edited in /dashboard/email-logs
+export async function emailTemplates(): Promise<Record<string, string>> {
+  try {
+    if (!_tplCache || Date.now() - _tplCache.at > 60_000) {
+      const { data } = await supabaseAdmin.from("site_content").select("key, value").like("key", "email_tpl_%");
+      const map: Record<string, string> = {};
+      (data || []).forEach((r: { key: string; value: string }) => { if (r.value?.trim()) map[r.key] = r.value; });
+      _tplCache = { at: Date.now(), map };
+    }
+    return _tplCache.map;
+  } catch {
+    return _tplCache?.map || {};
+  }
+}
+
 let _settingsCache: { at: number; map: Record<string, boolean> } | null = null;
 
 export async function emailEnabled(type: string): Promise<boolean> {
@@ -81,16 +98,15 @@ export function bookingConfirmationHtml(opts: {
   people: number;
   totalPrice: number;
   isParty?: boolean;
-}): string {
+}, ov: Record<string, string> = {}): string {
   const dateStr = opts.date ? new Date(opts.date).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : "";
   return emailWrapper(`
-    <h1 style="color: #ff2d78; font-size: 1.5rem; margin-bottom: 16px;">Booking Confirmed!</h1>
+    <h1 style="color: #ff2d78; font-size: 1.5rem; margin-bottom: 16px;">${ov.email_tpl_booking_heading || "Booking Confirmed!"}</h1>
     <p style="color: #333; font-size: 1rem; line-height: 1.6;">
       Hi ${opts.name},
     </p>
     <p style="color: #333; font-size: 1rem; line-height: 1.6;">
-      ${opts.isParty ? "Your birthday party booking at The Slime Studio is confirmed!" : "Your slime-making session at The Slime Studio is confirmed!"}
-      We can't wait to see you.
+      ${ov.email_tpl_booking_body || `${opts.isParty ? "Your birthday party booking at The Slime Studio is confirmed!" : "Your slime-making session at The Slime Studio is confirmed!"} We can't wait to see you.`}
     </p>
     <div style="background: #fdeef7; border-radius: 12px; padding: 16px; margin: 16px 0;">
       <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Date:</strong> ${dateStr}</p>
@@ -100,10 +116,10 @@ export function bookingConfirmationHtml(opts: {
       ${opts.isParty ? '<p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Type:</strong> Birthday Party (1.5 hours)</p>' : '<p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Type:</strong> Standard Session (1 hour)</p>'}
     </div>
     <p style="color: #333; font-size: 1rem; line-height: 1.6;">
-      ${opts.isParty
+      ${ov.email_tpl_booking_note || (opts.isParty
         ? "Please arrive 10 minutes early so we can get everyone set up. Each child will make their own slime to take home!"
         : "Please arrive 5 minutes before your session. Everything you need is provided!"
-      }
+      )}
     </p>
     <p style="color: #333; font-size: 1rem; line-height: 1.6;">
       Need to make changes? Contact us at <a href="mailto:${CONTACT_EMAIL}" style="color: #ff2d78;">${CONTACT_EMAIL}</a>.
@@ -117,15 +133,15 @@ export function cancellationHtml(opts: {
   timeSlot: string;
   people: number;
   isParty?: boolean;
-}): string {
+}, ov: Record<string, string> = {}): string {
   const dateStr = opts.date ? new Date(opts.date).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : "";
   return emailWrapper(`
-    <h1 style="color: #ff2d78; font-size: 1.5rem; margin-bottom: 16px;">Booking Cancelled</h1>
+    <h1 style="color: #ff2d78; font-size: 1.5rem; margin-bottom: 16px;">${ov.email_tpl_cancellation_heading || "Booking Cancelled"}</h1>
     <p style="color: #333; font-size: 1rem; line-height: 1.6;">
       Hi ${opts.name},
     </p>
     <p style="color: #333; font-size: 1rem; line-height: 1.6;">
-      We're writing to let you know that your Slime Studio booking has been cancelled.
+      ${ov.email_tpl_cancellation_body || "We're writing to let you know that your Slime Studio booking has been cancelled."}
     </p>
     <div style="background: #fdeef7; border-radius: 12px; padding: 16px; margin: 16px 0;">
       <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Date:</strong> ${dateStr}</p>
@@ -148,15 +164,15 @@ export function eventBookingConfirmationHtml(opts: {
   quantity: number;
   totalPrice: number;
   pricingModel: string;
-}): string {
+}, ov: Record<string, string> = {}): string {
   const dateStr = opts.date ? new Date(opts.date).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : "";
   return emailWrapper(`
-    <h1 style="color: #ff2d78; font-size: 1.5rem; margin-bottom: 16px;">Event Booking Confirmed!</h1>
+    <h1 style="color: #ff2d78; font-size: 1.5rem; margin-bottom: 16px;">${ov.email_tpl_event_heading || "Event Booking Confirmed!"}</h1>
     <p style="color: #333; font-size: 1rem; line-height: 1.6;">
       Hi ${opts.name},
     </p>
     <p style="color: #333; font-size: 1rem; line-height: 1.6;">
-      Your booking for <strong>${opts.eventTitle}</strong> at The Slime Studio is confirmed! We can't wait to see you.
+      ${ov.email_tpl_event_body || `Your booking for <strong>${opts.eventTitle}</strong> at The Slime Studio is confirmed! We can't wait to see you.`}
     </p>
     <div style="background: #fdeef7; border-radius: 12px; padding: 16px; margin: 16px 0;">
       <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Event:</strong> ${opts.eventTitle}</p>
@@ -167,7 +183,7 @@ export function eventBookingConfirmationHtml(opts: {
       <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Total:</strong> &pound;${opts.totalPrice.toFixed(2)}</p>
     </div>
     <p style="color: #333; font-size: 1rem; line-height: 1.6;">
-      Please arrive 5 minutes before the event starts. Everything you need is provided!
+      ${ov.email_tpl_event_note || "Please arrive 5 minutes before the event starts. Everything you need is provided!"}
     </p>
     <p style="color: #333; font-size: 1rem; line-height: 1.6;">
       Need to make changes? Contact us at <a href="mailto:${CONTACT_EMAIL}" style="color: #ff2d78;">${CONTACT_EMAIL}</a>.
@@ -193,8 +209,9 @@ export async function sendEventBookingEmails(opts: {
     return;
   }
 
-  const html = eventBookingConfirmationHtml(opts);
-  const subject = `Event Booking Confirmed — ${opts.eventTitle} — The Slime Studio`;
+  const ov = await emailTemplates();
+  const html = eventBookingConfirmationHtml(opts, ov);
+  const subject = ov.email_tpl_event_subject || `Event Booking Confirmed — ${opts.eventTitle} — The Slime Studio`;
 
   if (await emailEnabled("event_booking_confirmation")) {
   try {
@@ -248,7 +265,7 @@ export function orderConfirmationHtml(opts: {
   shippingCost: number;
   total: number;
   shippingMethod: string;
-}): string {
+}, ov: Record<string, string> = {}): string {
   const itemsHtml = opts.items.map((item) => `
     <tr>
       <td style="padding: 8px 0; color: #333; font-size: 0.9rem;">${item.name} × ${item.quantity}</td>
@@ -257,12 +274,12 @@ export function orderConfirmationHtml(opts: {
   `).join("");
 
   return emailWrapper(`
-    <h1 style="color: #ff2d78; font-size: 1.5rem; margin-bottom: 16px;">Order Confirmed!</h1>
+    <h1 style="color: #ff2d78; font-size: 1.5rem; margin-bottom: 16px;">${ov.email_tpl_order_heading || "Order Confirmed!"}</h1>
     <p style="color: #333; font-size: 1rem; line-height: 1.6;">
       Hi ${opts.name},
     </p>
     <p style="color: #333; font-size: 1rem; line-height: 1.6;">
-      Thank you for your order from The Slime Studio!
+      ${ov.email_tpl_order_body || "Thank you for your order from The Slime Studio!"}
     </p>
     <div style="background: #fdeef7; border-radius: 12px; padding: 16px; margin: 16px 0;">
       <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Order:</strong> ${opts.orderNumber}</p>
@@ -285,9 +302,9 @@ export function orderConfirmationHtml(opts: {
       <p style="margin: 4px 0; color: #333; font-size: 1.1rem; text-align: right;"><strong>Total:</strong> &pound;${opts.total.toFixed(2)}</p>
     </div>
     <p style="color: #333; font-size: 1rem; line-height: 1.6; margin-top: 16px;">
-      ${opts.shippingMethod === "collection"
+      ${ov.email_tpl_order_note || (opts.shippingMethod === "collection"
         ? "We'll let you know when your order is ready to collect from our studio at Unit A, Feathers Yard, Holt, NR25 6BF."
-        : "We'll dispatch your order as soon as possible and send you tracking information."}
+        : "We'll dispatch your order as soon as possible and send you tracking information.")}
     </p>
     <p style="color: #333; font-size: 1rem; line-height: 1.6;">
       Questions? Contact us at <a href="mailto:${CONTACT_EMAIL}" style="color: #ff2d78;">${CONTACT_EMAIL}</a>.
@@ -311,8 +328,9 @@ export async function sendOrderConfirmationEmail(opts: {
     return;
   }
 
-  const html = orderConfirmationHtml(opts);
-  const subject = `Order Confirmed — ${opts.orderNumber} — The Slime Studio`;
+  const ov = await emailTemplates();
+  const html = orderConfirmationHtml(opts, ov);
+  const subject = ov.email_tpl_order_subject || `Order Confirmed — ${opts.orderNumber} — The Slime Studio`;
 
   if (!(await emailEnabled("order_confirmation"))) return;
 

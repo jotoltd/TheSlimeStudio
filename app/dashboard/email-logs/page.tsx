@@ -23,7 +23,42 @@ type EmailData = {
   dayQuota: number;
   byType: Record<string, { sent: number; failed: number }>;
   settings: Record<string, boolean>;
+  templates: Record<string, string>;
 };
+
+const EMAIL_TEMPLATES = [
+  {
+    id: "booking", label: "Booking confirmation", fields: [
+      { key: "email_tpl_booking_subject", label: "Subject", placeholder: "Your Slime Studio booking is confirmed!" },
+      { key: "email_tpl_booking_heading", label: "Heading", placeholder: "Booking Confirmed!" },
+      { key: "email_tpl_booking_body", label: "Main message", placeholder: "Your slime-making session at The Slime Studio is confirmed! We can't wait to see you.", multi: true },
+      { key: "email_tpl_booking_note", label: "Arrival note", placeholder: "Please arrive 5 minutes before your session. Everything you need is provided!", multi: true },
+    ],
+  },
+  {
+    id: "event", label: "Event booking confirmation", fields: [
+      { key: "email_tpl_event_subject", label: "Subject", placeholder: "Event Booking Confirmed — [event] — The Slime Studio" },
+      { key: "email_tpl_event_heading", label: "Heading", placeholder: "Event Booking Confirmed!" },
+      { key: "email_tpl_event_body", label: "Main message", placeholder: "Your booking at The Slime Studio is confirmed! We can't wait to see you.", multi: true },
+      { key: "email_tpl_event_note", label: "Arrival note", placeholder: "Please arrive 5 minutes before the event starts. Everything you need is provided!", multi: true },
+    ],
+  },
+  {
+    id: "cancellation", label: "Cancellation", fields: [
+      { key: "email_tpl_cancellation_subject", label: "Subject", placeholder: "Your Booking Has Been Cancelled — The Slime Studio" },
+      { key: "email_tpl_cancellation_heading", label: "Heading", placeholder: "Booking Cancelled" },
+      { key: "email_tpl_cancellation_body", label: "Main message", placeholder: "We're writing to let you know that your Slime Studio booking has been cancelled.", multi: true },
+    ],
+  },
+  {
+    id: "order", label: "Order confirmation (shop)", fields: [
+      { key: "email_tpl_order_subject", label: "Subject", placeholder: "Order Confirmed — [order no.] — The Slime Studio" },
+      { key: "email_tpl_order_heading", label: "Heading", placeholder: "Order Confirmed!" },
+      { key: "email_tpl_order_body", label: "Main message", placeholder: "Thank you for your order from The Slime Studio!", multi: true },
+      { key: "email_tpl_order_note", label: "Delivery note", placeholder: "We'll dispatch your order as soon as possible and send you tracking information.", multi: true },
+    ],
+  },
+];
 
 const TOGGLES = [
   { key: "email_booking_confirmation", label: "Booking emails to customers", desc: "Confirmations, event bookings, and cancellations" },
@@ -52,13 +87,23 @@ export default function EmailsPage() {
   const [filter, setFilter] = useState<string>("all");
   const [testTo, setTestTo] = useState("");
   const [msg, setMsg] = useState("");
+  const [tplId, setTplId] = useState("booking");
+  const [tplDraft, setTplDraft] = useState<Record<string, string>>({});
+  const [tplMsg, setTplMsg] = useState("");
 
   useEffect(() => { loadAll(); }, [filter]);
 
   async function loadAll() {
     setLoading(true);
     const res = await fetch("/api/admin/emails");
-    if (res.ok) setData(await res.json());
+    if (res.ok) {
+      const json = await res.json();
+      setData(json);
+      const tpl = EMAIL_TEMPLATES.find((t) => t.id === tplId)!;
+      const draft: Record<string, string> = {};
+      tpl.fields.forEach((f) => { draft[f.key] = json.templates?.[f.key] || ""; });
+      setTplDraft(draft);
+    }
     let query = supabase.from("email_logs").select("*");
     if (filter !== "all") query = query.eq("type", filter);
     const { data: logRows } = await query.order("created_at", { ascending: false }).limit(100);
@@ -73,6 +118,25 @@ export default function EmailsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ settings: { [key]: value } }),
     });
+  }
+
+  function selectTemplate(id: string) {
+    setTplId(id);
+    setTplMsg("");
+    const tpl = EMAIL_TEMPLATES.find((t) => t.id === id)!;
+    const draft: Record<string, string> = {};
+    tpl.fields.forEach((f) => { draft[f.key] = data?.templates[f.key] || ""; });
+    setTplDraft(draft);
+  }
+
+  async function saveTemplate() {
+    setTplMsg("");
+    const res = await fetch("/api/admin/emails", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ templates: tplDraft }),
+    });
+    setTplMsg(res.ok ? "Saved — applies to new emails within a minute" : "Failed to save");
   }
 
   async function sendTest() {
@@ -182,6 +246,50 @@ export default function EmailsPage() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* Template editor */}
+      <div className="bg-white rounded-[20px] p-6 shadow-sm mb-8">
+        <h2 className="font-display text-[1rem] mb-1">Edit what the emails say</h2>
+        <p className="text-[0.78rem] text-ink-soft mb-4">Change the wording customers see. Leave a field blank to use the standard text. Booking details (names, dates, prices) are still filled in automatically.</p>
+        <div className="flex gap-2 flex-wrap mb-4">
+          {EMAIL_TEMPLATES.map((t) => (
+            <button key={t.id} onClick={() => selectTemplate(t.id)}
+              className={`px-3.5 py-1.5 rounded-full text-[0.78rem] font-medium transition-all ${tplId === t.id ? "bg-sky-blue-light text-ink shadow-sm" : "bg-ink/[0.04] text-ink hover:bg-sky-blue-light/20"}`}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <div className="space-y-3">
+          {EMAIL_TEMPLATES.find((t) => t.id === tplId)!.fields.map((f) => (
+            <div key={f.key}>
+              <label className="block text-[0.7rem] uppercase tracking-wider text-ink-soft font-semibold mb-1.5">{f.label}</label>
+              {f.multi ? (
+                <textarea
+                  rows={2}
+                  value={tplDraft[f.key] || ""}
+                  placeholder={f.placeholder}
+                  onChange={(e) => setTplDraft({ ...tplDraft, [f.key]: e.target.value })}
+                  className="w-full px-3.5 py-2.5 border border-ink/15 rounded-xl text-[0.85rem] focus:outline-none focus:ring-2 focus:ring-bright-lavender/50 resize-y"
+                />
+              ) : (
+                <input
+                  type="text"
+                  value={tplDraft[f.key] || ""}
+                  placeholder={f.placeholder}
+                  onChange={(e) => setTplDraft({ ...tplDraft, [f.key]: e.target.value })}
+                  className="w-full px-3.5 py-2.5 border border-ink/15 rounded-xl text-[0.85rem] focus:outline-none focus:ring-2 focus:ring-bright-lavender/50"
+                />
+              )}
+            </div>
+          ))}
+          <div className="flex items-center gap-3 pt-1">
+            <button onClick={saveTemplate} className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-bright-lavender to-sky-blue-light text-white font-semibold text-[0.85rem] hover:opacity-90">
+              Save wording
+            </button>
+            {tplMsg && <span className="text-[0.8rem] text-ink-soft">{tplMsg}</span>}
           </div>
         </div>
       </div>

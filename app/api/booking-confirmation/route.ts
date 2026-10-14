@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getResend, EMAIL_FROM, bookingConfirmationHtml, logEmail, emailEnabled } from "@/lib/email";
+import { getResend, EMAIL_FROM, bookingConfirmationHtml, logEmail, emailEnabled, emailTemplates } from "@/lib/email";
 
 export const runtime = "nodejs";
 
@@ -29,13 +29,14 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    const ov = await emailTemplates();
     await r.emails.send({
       from: EMAIL_FROM,
       to: email,
-      subject: isParty ? "Party Booking Confirmed — The Slime Studio" : "Booking Confirmed — The Slime Studio",
-      html: bookingConfirmationHtml({ name, date, timeSlot, people, totalPrice, isParty }),
+      subject: ov.email_tpl_booking_subject || (isParty ? "Party Booking Confirmed — The Slime Studio" : "Booking Confirmed — The Slime Studio"),
+      html: bookingConfirmationHtml({ name, date, timeSlot, people, totalPrice, isParty }, ov),
     });
-    const subject = isParty ? "Party Booking Confirmed — The Slime Studio" : "Booking Confirmed — The Slime Studio";
+    const subject = ov.email_tpl_booking_subject || (isParty ? "Party Booking Confirmed — The Slime Studio" : "Booking Confirmed — The Slime Studio");
     await logEmail(email, subject, isParty ? "booking_confirmation" : "booking_confirmation", "sent");
     return NextResponse.json({ success: true, emailSent: true });
   } catch (e) {

@@ -25,10 +25,14 @@ export async function GET(req: NextRequest) {
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
 
-  const [{ data: logs }, { data: settings }] = await Promise.all([
+  const [{ data: logs }, { data: settings }, { data: tplRows }] = await Promise.all([
     supabaseAdmin.from("email_logs").select("type, status, created_at").gte("created_at", since30),
     supabaseAdmin.from("site_settings").select(TOGGLES.join(", ")).eq("id", 1).single(),
+    supabaseAdmin.from("site_content").select("key, value").like("key", "email_tpl_%"),
   ]);
+
+  const templates: Record<string, string> = {};
+  (tplRows || []).forEach((r: { key: string; value: string }) => { templates[r.key] = r.value; });
 
   const rows = logs || [];
   const byType: Record<string, { sent: number; failed: number }> = {};
@@ -65,6 +69,7 @@ export async function GET(req: NextRequest) {
     dayQuota: 100,
     byType,
     settings: settings || {},
+    templates,
   });
 }
 
@@ -95,6 +100,17 @@ export async function POST(req: NextRequest) {
       await logEmail(CONTACT_EMAIL, "Test email — The Slime Studio admin", "test", "failed");
       return NextResponse.json({ error: e instanceof Error ? e.message : "Send failed" }, { status: 400 });
     }
+  }
+
+  // Save template wording overrides (blank value restores the default text)
+  if (body.templates && typeof body.templates === "object") {
+    const rows = Object.entries(body.templates as Record<string, string>)
+      .filter(([k]) => k.startsWith("email_tpl_"))
+      .map(([key, value]) => ({ key, value: String(value ?? "") }));
+    if (rows.length === 0) return NextResponse.json({ error: "No valid templates" }, { status: 400 });
+    const { error } = await supabaseAdmin.from("site_content").upsert(rows, { onConflict: "key" });
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true });
   }
 
   // Update toggles

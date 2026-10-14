@@ -4,7 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { redeemRewardCode } from "@/lib/loyalty-rewards";
 import { awardLoyaltyStamp } from "@/lib/create-booking";
 import { redeemGiftCard } from "@/lib/gift-cards";
-import { getResend, EMAIL_FROM, bookingConfirmationHtml, logEmail, emailEnabled } from "@/lib/email";
+import { getResend, EMAIL_FROM, bookingConfirmationHtml, logEmail, emailEnabled, emailTemplates } from "@/lib/email";
 import { sendCapiEvent, metaContextFromRequest } from "@/lib/capi";
 
 export const runtime = "nodejs";
@@ -157,11 +157,12 @@ export async function POST(req: NextRequest) {
     try {
       const r = getResend();
       if (r && (await emailEnabled("booking_confirmation"))) {
+        const ov = await emailTemplates();
         await r.emails.send({
           from: EMAIL_FROM,
           to: email,
-          subject: "Booking Confirmed — The Slime Studio",
-          html: bookingConfirmationHtml({ name, date, timeSlot, people, totalPrice: 0, isParty: false }),
+          subject: ov.email_tpl_booking_subject || "Booking Confirmed — The Slime Studio",
+          html: bookingConfirmationHtml({ name, date, timeSlot, people, totalPrice: 0, isParty: false }, ov),
         });
         await logEmail(email, "Booking Confirmed — The Slime Studio", "booking_confirmation", "sent");
       }

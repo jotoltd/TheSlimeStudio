@@ -8,6 +8,7 @@ import {
   bookingConfirmationHtml,
   adSourceLabel,
   emailEnabled,
+  emailTemplates,
 } from "@/lib/email";
 
 export type BookingDetails = {
@@ -148,10 +149,11 @@ async function isOverCapacity(date: string, timeSlot: string, people: number): P
 export async function sendCustomerConfirmation(d: BookingDetails) {
   const r = getResend();
   if (!r || !(await emailEnabled("booking_confirmation"))) return;
+  const ov = await emailTemplates();
   await r.emails.send({
     from: EMAIL_FROM,
     to: d.email,
-    subject: "Your Slime Studio booking is confirmed!",
+    subject: ov.email_tpl_booking_subject || "Your Slime Studio booking is confirmed!",
     html: bookingConfirmationHtml({
       name: d.name,
       date: d.date,
@@ -159,7 +161,7 @@ export async function sendCustomerConfirmation(d: BookingDetails) {
       people: d.people,
       totalPrice: Number(d.totalPrice),
       isParty: d.isParty,
-    }),
+    }, ov),
   });
   await logEmail(d.email, "Booking Confirmation", "booking_confirmation", "sent");
 }
