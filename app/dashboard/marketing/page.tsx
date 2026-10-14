@@ -208,6 +208,30 @@ const OVERLAY_OPTIONS = [
   { id: "dark", label: "Dark", swatch: "#1e1b2e" },
 ];
 
+const LAUNCH_DESTINATIONS: Record<string, { link: string; ctaType: string }> = {
+  session: { link: "https://theslimestudio.co.uk/booking", ctaType: "BOOK_NOW" },
+  halloween: { link: "https://theslimestudio.co.uk/events/halloween-slime-session", ctaType: "BOOK_NOW" },
+  giftcards: { link: "https://theslimestudio.co.uk/gift-card", ctaType: "SHOP_NOW" },
+  parties: { link: "https://theslimestudio.co.uk/parties", ctaType: "LEARN_MORE" },
+  preschool: { link: "https://theslimestudio.co.uk/events", ctaType: "BOOK_NOW" },
+  adults: { link: "https://theslimestudio.co.uk/events", ctaType: "BOOK_NOW" },
+  afterschool: { link: "https://theslimestudio.co.uk/events", ctaType: "BOOK_NOW" },
+  christmas: { link: "https://theslimestudio.co.uk/events", ctaType: "BOOK_NOW" },
+  kits: { link: "https://theslimestudio.co.uk/shop", ctaType: "SHOP_NOW" },
+  halfterm: { link: "https://theslimestudio.co.uk/booking", ctaType: "BOOK_NOW" },
+  rainyday: { link: "https://theslimestudio.co.uk/booking", ctaType: "BOOK_NOW" },
+};
+
+const AD_AUDIENCES = [
+  { id: "checkout", label: "Checkout Starters — 30d (retargeting)" },
+  { id: "visitors", label: "Site Visitors — 30d (retargeting)" },
+  { id: "lookalike_customers", label: "Lookalike — your customers (new people)" },
+  { id: "lookalike_purchasers", label: "Lookalike — pixel purchasers" },
+  { id: "customers", label: "Past customers (repeat bookings)" },
+  { id: "purchasers", label: "Pixel purchasers (repeat bookings)" },
+  { id: "local", label: "Local area — 25 miles around Holt" },
+];
+
 const LOGO_POSITIONS = [
   { id: "hidden", label: "Hidden" },
   { id: "tl", label: "Top left" },
@@ -242,6 +266,8 @@ export default function MarketingPage() {
   const [logoPos, setLogoPos] = useState("tc");
   const [txt, setTxt] = useState({ headline: TEMPLATES[0].headline, sub: TEMPLATES[0].sub, badge: TEMPLATES[0].badge, cta: TEMPLATES[0].cta });
   const [copied, setCopied] = useState("");
+  const [launch, setLaunch] = useState({ audience: "checkout", budget: "3", name: "", link: "", msg: "", ok: false });
+  const [launching, setLaunching] = useState(false);
   const tpl = TEMPLATES.find((t) => t.id === tplId)!;
   const size = SIZES.find((s) => s.id === sizeId)!;
   const photo = PHOTOS.find((p) => p.id === imgId)!;
@@ -418,6 +444,36 @@ export default function MarketingPage() {
     setTimeout(() => setCopied(""), 1500);
   }
 
+  async function launchAd() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    setLaunching(true);
+    setLaunch({ ...launch, msg: "" });
+    try {
+      const dest = LAUNCH_DESTINATIONS[tpl.id] || LAUNCH_DESTINATIONS.session;
+      const res = await fetch("/api/admin/create-ad", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          image: canvas.toDataURL("image/png"),
+          name: launch.name || `${tpl.name} — ${size.label}`,
+          primaryText: tpl.adCopy.primary,
+          headline: tpl.adCopy.headline,
+          link: launch.link || dest.link,
+          ctaType: dest.ctaType,
+          audience: launch.audience === "local" ? undefined : launch.audience,
+          dailyBudget: parseFloat(launch.budget) || 3,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) setLaunch({ ...launch, msg: json.error || "Failed", ok: false });
+      else setLaunch({ ...launch, msg: `Created (paused) — campaign ${json.campaignId}. Switch it on in Ads Manager or the Ads page.`, ok: true });
+    } catch {
+      setLaunch({ ...launch, msg: "Network error", ok: false });
+    }
+    setLaunching(false);
+  }
+
   return (
     <div className="py-8 md:py-10 px-5 md:px-10">
       <div className="mb-8">
@@ -590,6 +646,67 @@ export default function MarketingPage() {
                 </div>
                 <div className="bg-ink/[0.04] rounded-xl p-3.5 text-[0.82rem] font-medium">{tpl.adCopy.headline}</div>
               </div>
+            </div>
+          </div>
+
+          {/* Launch as ad */}
+          <div className="bg-white rounded-[20px] p-6 shadow-sm mt-6 border-2 border-bright-lavender/30">
+            <h2 className="font-display text-[1rem] mb-1">6 · Launch as a Meta ad</h2>
+            <p className="text-[0.75rem] text-ink-soft mb-4">Creates the whole campaign on Facebook & Instagram, <strong>paused</strong> — review it, then switch it on in the Ads page or Ads Manager.</p>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[0.7rem] uppercase tracking-wider text-ink-soft font-semibold mb-1.5">Who sees it</label>
+                <select
+                  value={launch.audience}
+                  onChange={(e) => setLaunch({ ...launch, audience: e.target.value })}
+                  className="w-full px-3.5 py-2.5 border border-ink/15 rounded-xl text-[0.88rem] bg-white focus:outline-none focus:ring-2 focus:ring-bright-lavender/50"
+                >
+                  {AD_AUDIENCES.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[0.7rem] uppercase tracking-wider text-ink-soft font-semibold mb-1.5">Daily budget £</label>
+                  <input
+                    type="number" min="1" step="0.5"
+                    value={launch.budget}
+                    onChange={(e) => setLaunch({ ...launch, budget: e.target.value })}
+                    className="w-full px-3.5 py-2.5 border border-ink/15 rounded-xl text-[0.88rem] focus:outline-none focus:ring-2 focus:ring-bright-lavender/50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[0.7rem] uppercase tracking-wider text-ink-soft font-semibold mb-1.5">Ad name</label>
+                  <input
+                    type="text"
+                    value={launch.name}
+                    placeholder={`${tpl.name} — ${size.label}`}
+                    onChange={(e) => setLaunch({ ...launch, name: e.target.value })}
+                    className="w-full px-3.5 py-2.5 border border-ink/15 rounded-xl text-[0.88rem] focus:outline-none focus:ring-2 focus:ring-bright-lavender/50"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[0.7rem] uppercase tracking-wider text-ink-soft font-semibold mb-1.5">Link (where clicks go)</label>
+                <input
+                  type="text"
+                  value={launch.link}
+                  placeholder={(LAUNCH_DESTINATIONS[tpl.id] || LAUNCH_DESTINATIONS.session).link}
+                  onChange={(e) => setLaunch({ ...launch, link: e.target.value })}
+                  className="w-full px-3.5 py-2.5 border border-ink/15 rounded-xl text-[0.82rem] focus:outline-none focus:ring-2 focus:ring-bright-lavender/50"
+                />
+              </div>
+              <button
+                onClick={launchAd}
+                disabled={launching}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-bright-lavender to-sky-blue-light text-white font-semibold text-[0.9rem] hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {launching ? "Creating campaign…" : "Create ad (paused)"}
+              </button>
+              {launch.msg && (
+                <div className={`rounded-xl px-4 py-3 text-[0.8rem] ${launch.ok ? "bg-green-50 border border-green-200 text-green-800" : "bg-red-50 border border-red-200 text-red-800"}`}>
+                  {launch.msg}
+                </div>
+              )}
             </div>
           </div>
         </div>
