@@ -266,7 +266,7 @@ export default function MarketingPage() {
   const [logoPos, setLogoPos] = useState("tc");
   const [txt, setTxt] = useState({ headline: TEMPLATES[0].headline, sub: TEMPLATES[0].sub, badge: TEMPLATES[0].badge, cta: TEMPLATES[0].cta });
   const [copied, setCopied] = useState("");
-  const [launch, setLaunch] = useState({ audience: "checkout", budget: "3", name: "", link: "", msg: "", ok: false });
+  const [launch, setLaunch] = useState({ audience: "checkout", budget: "3", name: "", link: "", start: "", end: "", msg: "", ok: false });
   const [launching, setLaunching] = useState(false);
   const tpl = TEMPLATES.find((t) => t.id === tplId)!;
   const size = SIZES.find((s) => s.id === sizeId)!;
@@ -463,6 +463,8 @@ export default function MarketingPage() {
           ctaType: dest.ctaType,
           audience: launch.audience === "local" ? undefined : launch.audience,
           dailyBudget: parseFloat(launch.budget) || 3,
+          startTime: launch.start || undefined,
+          endTime: launch.end || undefined,
         }),
       });
       const json = await res.json();
@@ -682,6 +684,26 @@ export default function MarketingPage() {
                     placeholder={`${tpl.name} — ${size.label}`}
                     onChange={(e) => setLaunch({ ...launch, name: e.target.value })}
                     className="w-full px-3.5 py-2.5 border border-ink/15 rounded-xl text-[0.88rem] focus:outline-none focus:ring-2 focus:ring-bright-lavender/50"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[0.7rem] uppercase tracking-wider text-ink-soft font-semibold mb-1.5">Starts (optional)</label>
+                  <input
+                    type="datetime-local"
+                    value={launch.start}
+                    onChange={(e) => setLaunch({ ...launch, start: e.target.value })}
+                    className="w-full px-3 py-2.5 border border-ink/15 rounded-xl text-[0.8rem] focus:outline-none focus:ring-2 focus:ring-bright-lavender/50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[0.7rem] uppercase tracking-wider text-ink-soft font-semibold mb-1.5">Ends (optional)</label>
+                  <input
+                    type="datetime-local"
+                    value={launch.end}
+                    onChange={(e) => setLaunch({ ...launch, end: e.target.value })}
+                    className="w-full px-3 py-2.5 border border-ink/15 rounded-xl text-[0.8rem] focus:outline-none focus:ring-2 focus:ring-bright-lavender/50"
                   />
                 </div>
               </div>

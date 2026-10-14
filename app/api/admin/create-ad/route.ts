@@ -40,9 +40,9 @@ export async function POST(req: NextRequest) {
   if (!metaToken || !pixelId) return NextResponse.json({ error: "Meta ads not configured" }, { status: 500 });
 
   const body = await req.json();
-  const { image, name, primaryText, headline, link, ctaType, audience, dailyBudget } = body as {
+  const { image, name, primaryText, headline, link, ctaType, audience, dailyBudget, startTime, endTime } = body as {
     image?: string; name?: string; primaryText?: string; headline?: string; link?: string;
-    ctaType?: string; audience?: string; dailyBudget?: number;
+    ctaType?: string; audience?: string; dailyBudget?: number; startTime?: string; endTime?: string;
   };
 
   if (!image || !name || !link || !dailyBudget) {
@@ -92,7 +92,8 @@ export async function POST(req: NextRequest) {
     promoted_object: JSON.stringify({ pixel_id: pixelId, custom_event_type: "PURCHASE" }),
     targeting: JSON.stringify(targeting),
     status: "PAUSED",
-    start_time: new Date(Date.now() + 3600000).toISOString(),
+    start_time: startTime ? new Date(startTime).toISOString() : new Date(Date.now() + 3600000).toISOString(),
+    ...(endTime ? { end_time: new Date(endTime).toISOString() } : {}),
   });
   if (!adset.id) {
     return NextResponse.json({ error: "Ad set failed: " + (adset.error?.error_user_msg || adset.error?.message || "unknown"), campaignId: campaign.id }, { status: 400 });
