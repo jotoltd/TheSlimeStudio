@@ -112,9 +112,14 @@ export default function AdsPage() {
 
   return (
     <div className="py-8 md:py-10 px-5 md:px-10">
-      <div className="mb-8">
-        <h1 className="font-display text-[1.6rem] md:text-[2rem]">Ads</h1>
-        <p className="text-ink-soft text-[0.9rem] mt-1">Live Meta ads performance and bookings they generated.</p>
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="font-display text-[1.6rem] md:text-[2rem]">Ads</h1>
+          <p className="text-ink-soft text-[0.9rem] mt-1">Live Meta ads performance and bookings they generated.</p>
+        </div>
+        <a href="/dashboard/marketing" className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-bright-lavender to-sky-blue-light text-white font-semibold text-[0.85rem] hover:opacity-90 transition-opacity shadow-sm">
+          + Create a new ad
+        </a>
       </div>
 
       {loading ? (
@@ -141,6 +146,51 @@ export default function AdsPage() {
               ))}
             </div>
           )}
+
+          {/* Verdict banner — are the ads working? */}
+          {(() => {
+            const liveCount = [...data.manage.campaigns, ...data.manage.adsets].filter((e) => e.effectiveStatus === "ACTIVE").length;
+            const spend = data.summary.month.spend;
+            const revenue = data.attributedRevenue;
+            const roas = spend > 0 ? revenue / spend : null;
+            return (
+              <div className="rounded-[20px] p-6 md:p-8 mb-8 text-white bg-gradient-to-br from-[#ff2d78] via-[#a855f7] to-[#38bdf8] shadow-md">
+                <div className="flex flex-wrap items-center justify-between gap-6">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`w-2.5 h-2.5 rounded-full ${liveCount > 0 ? "bg-green-300" : "bg-white/40"}`} />
+                      <span className="text-[0.8rem] font-semibold uppercase tracking-wider text-white/90">
+                        {liveCount > 0 ? `${liveCount} campaign${liveCount > 1 ? "s" : ""} live` : "Nothing running"}
+                      </span>
+                    </div>
+                    <div className="font-display text-[1.4rem] md:text-[1.8rem] leading-tight">
+                      {spend > 0
+                        ? roas && roas >= 1
+                          ? `Ads are paying off — every £1 spent made £${roas.toFixed(2)}`
+                          : `£${fmt(spend).slice(1)} spent → £${fmt(revenue).slice(1)} booked back`
+                        : liveCount > 0
+                          ? "Ads are live — results will appear as people click"
+                          : "No spend yet — launch or resume a campaign below"}
+                    </div>
+                  </div>
+                  <div className="flex gap-6 md:gap-8">
+                    <div>
+                      <div className="text-[0.7rem] uppercase tracking-wider text-white/80">Spent · 30d</div>
+                      <div className="font-display text-[1.5rem]">{fmt(spend)}</div>
+                    </div>
+                    <div>
+                      <div className="text-[0.7rem] uppercase tracking-wider text-white/80">Booked from ads</div>
+                      <div className="font-display text-[1.5rem]">{fmt(revenue)}</div>
+                    </div>
+                    <div>
+                      <div className="text-[0.7rem] uppercase tracking-wider text-white/80">Bookings</div>
+                      <div className="font-display text-[1.5rem]">{data.adBookings.length}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Headline stats — last 30 days */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5 mb-8">
@@ -169,6 +219,33 @@ export default function AdsPage() {
               <div className="text-[0.75rem] text-ink-soft mt-1">Meta reported: {data.summary.month.purchases}</div>
             </div>
           </div>
+
+          {/* What your ads look like — visual first */}
+          {data.adPreviews?.length > 0 && (
+            <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm mb-8">
+              <h2 className="font-display text-[1.1rem] mb-5">What your ads look like</h2>
+              <div className="grid md:grid-cols-2 gap-5">
+                {data.adPreviews.map((p, i) => (
+                  <div key={i} className="border border-ink/[0.08] rounded-2xl overflow-hidden">
+                    {p.thumbnail && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={p.thumbnail} alt="" className="w-full h-44 object-cover" />
+                    )}
+                    <div className="p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="font-medium text-[0.85rem]">{p.name}</span>
+                        <span className={`text-[0.6rem] px-1.5 py-0.5 rounded-full font-medium ${p.status === "ACTIVE" ? "bg-green-100 text-green-700" : "bg-ink/[0.08] text-ink-soft"}`}>{p.status === "ACTIVE" ? "Live" : p.status}</span>
+                        <span className="text-[0.6rem] bg-ink/[0.06] text-ink-soft px-1.5 py-0.5 rounded-full">{p.kind}</span>
+                      </div>
+                      {p.headline && <div className="text-[0.9rem] font-medium">{p.headline}</div>}
+                      {p.body && <div className="text-[0.75rem] text-ink-soft mt-1 line-clamp-3">{p.body}</div>}
+                      {p.link && <div className="text-[0.7rem] text-sky-blue-light mt-2 truncate">→ {p.link}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Daily trend */}
           {data.daily.length > 0 && (
@@ -372,33 +449,6 @@ export default function AdsPage() {
             <BreakdownCard title="Ad Sets" rows={data.adsets} />
             <BreakdownCard title="Ads" rows={data.ads} showThumb />
           </div>
-
-          {/* What your ads look like */}
-          {data.adPreviews?.length > 0 && (
-            <div className="bg-white rounded-[20px] p-8 shadow-sm mb-8">
-              <h2 className="font-display text-[1.1rem] mb-5">What your ads look like</h2>
-              <div className="grid md:grid-cols-2 gap-5">
-                {data.adPreviews.map((p, i) => (
-                  <div key={i} className="border border-ink/[0.08] rounded-2xl overflow-hidden">
-                    {p.thumbnail && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={p.thumbnail} alt="" className="w-full h-40 object-cover" />
-                    )}
-                    <div className="p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="font-medium text-[0.85rem]">{p.name}</span>
-                        <span className={`text-[0.6rem] px-1.5 py-0.5 rounded-full font-medium ${p.status === "ACTIVE" ? "bg-green-100 text-green-700" : "bg-ink/[0.08] text-ink-soft"}`}>{p.status === "ACTIVE" ? "Live" : p.status}</span>
-                        <span className="text-[0.6rem] bg-ink/[0.06] text-ink-soft px-1.5 py-0.5 rounded-full">{p.kind}</span>
-                      </div>
-                      {p.headline && <div className="text-[0.9rem] font-medium">{p.headline}</div>}
-                      {p.body && <div className="text-[0.75rem] text-ink-soft mt-1 line-clamp-3">{p.body}</div>}
-                      {p.link && <div className="text-[0.7rem] text-sky-blue-light mt-2 truncate">→ {p.link}</div>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Comments on ads */}
           <div className="bg-white rounded-[20px] p-8 shadow-sm mb-8">
