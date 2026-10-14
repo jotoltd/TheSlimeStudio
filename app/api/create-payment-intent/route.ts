@@ -4,7 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { redeemRewardCode } from "@/lib/loyalty-rewards";
 import { awardLoyaltyStamp } from "@/lib/create-booking";
 import { redeemGiftCard } from "@/lib/gift-cards";
-import { getResend, EMAIL_FROM, bookingConfirmationHtml, logEmail } from "@/lib/email";
+import { getResend, EMAIL_FROM, bookingConfirmationHtml, logEmail, emailEnabled } from "@/lib/email";
 import { sendCapiEvent, metaContextFromRequest } from "@/lib/capi";
 
 export const runtime = "nodejs";
@@ -156,7 +156,7 @@ export async function POST(req: NextRequest) {
     // Send confirmation email
     try {
       const r = getResend();
-      if (r) {
+      if (r && (await emailEnabled("booking_confirmation"))) {
         await r.emails.send({
           from: EMAIL_FROM,
           to: email,

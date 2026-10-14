@@ -12,47 +12,195 @@ type EmailLog = {
   created_at: string;
 };
 
-export default function EmailLogsPage() {
+type EmailData = {
+  configured: boolean;
+  domainStatus: string;
+  sent30: number;
+  failed30: number;
+  monthCount: number;
+  todayCount: number;
+  monthQuota: number;
+  dayQuota: number;
+  byType: Record<string, { sent: number; failed: number }>;
+  settings: Record<string, boolean>;
+};
+
+const TOGGLES = [
+  { key: "email_booking_confirmation", label: "Booking emails to customers", desc: "Confirmations, event bookings, and cancellations" },
+  { key: "email_order_confirmation", label: "Order & gift card emails", desc: "Shop order confirmations and gift card deliveries" },
+  { key: "email_admin_alerts", label: "Alerts to you", desc: "New booking, order, and event notifications to studio@" },
+  { key: "email_reward_codes", label: "Loyalty reward emails", desc: "Reward codes sent when stamps are earned" },
+];
+
+const TYPE_LABELS: Record<string, string> = {
+  booking_confirmation: "Booking confirmation",
+  cancellation: "Cancellation",
+  event_booking_confirmation: "Event confirmation",
+  event_booking_admin: "Event admin alert",
+  order_confirmation: "Order confirmation",
+  admin_notification: "Admin alert",
+  gift_card: "Gift card",
+  subscription: "Subscription",
+  reward_code: "Reward code",
+  test: "Test",
+};
+
+export default function EmailsPage() {
+  const [data, setData] = useState<EmailData | null>(null);
   const [logs, setLogs] = useState<EmailLog[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "booking_confirmation" | "cancellation" | "subscription">("all");
+  const [filter, setFilter] = useState<string>("all");
+  const [testTo, setTestTo] = useState("");
+  const [msg, setMsg] = useState("");
 
-  useEffect(() => { loadLogs(); }, [filter]);
+  useEffect(() => { loadAll(); }, [filter]);
 
-  async function loadLogs() {
+  async function loadAll() {
     setLoading(true);
+    const res = await fetch("/api/admin/emails");
+    if (res.ok) setData(await res.json());
     let query = supabase.from("email_logs").select("*");
     if (filter !== "all") query = query.eq("type", filter);
-    const { data } = await query.order("created_at", { ascending: false }).limit(100);
-    if (data) setLogs(data as EmailLog[]);
+    const { data: logRows } = await query.order("created_at", { ascending: false }).limit(100);
+    if (logRows) setLogs(logRows as EmailLog[]);
     setLoading(false);
   }
 
+  async function toggle(key: string, value: boolean) {
+    setData((d) => d && { ...d, settings: { ...d.settings, [key]: value } });
+    await fetch("/api/admin/emails", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ settings: { [key]: value } }),
+    });
+  }
+
+  async function sendTest() {
+    setMsg("");
+    const res = await fetch("/api/admin/emails", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ test: testTo || true }),
+    });
+    const json = await res.json();
+    setMsg(res.ok ? `Test sent to ${testTo || "studio@theslimestudio.co.uk"} — check the inbox` : json.error || "Failed");
+    loadAll();
+  }
+
+  const types = Array.from(new Set([...Object.keys(data?.byType || {}), ...logs.map((l) => l.type)]));
+
+  if (loading && !data) return <div className="py-16 text-center text-ink-soft">Loading…</div>;
+  if (!data) return <div className="py-16 text-center text-ink-soft">Failed to load</div>;
+
   return (
     <div className="py-8 md:py-10 px-5 md:px-10">
-      <div className="flex flex-wrap justify-between items-center gap-4 mb-8">
-        <div>
-          <h1 className="font-display text-[1.6rem] md:text-[2rem]">Email Logs</h1>
-          <p className="text-ink-soft text-[0.9rem] mt-1">Track confirmation and cancellation emails sent to customers.</p>
+      <div className="mb-8">
+        <h1 className="font-display text-[1.6rem] md:text-[2rem]">Emails</h1>
+        <p className="text-ink-soft text-[0.9rem] mt-1">Control which emails the site sends, and see what&apos;s going out.</p>
+      </div>
+
+      {/* Status + usage */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <div className="bg-white rounded-[16px] p-5 shadow-sm">
+          <div className="text-[0.7rem] uppercase tracking-wider text-ink-soft font-semibold mb-1">Status</div>
+          <div className={`font-display text-[1.1rem] ${data.configured && data.domainStatus === "verified" ? "text-green-600" : "text-red-600"}`}>
+            {data.configured ? (data.domainStatus === "verified" ? "Working" : data.domainStatus) : "Not set up"}
+          </div>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          {(["all", "booking_confirmation", "cancellation", "subscription"] as const).map((f) => (
-            <button key={f} onClick={() => setFilter(f)}
-              className={`px-4 py-2 rounded-full text-[0.85rem] font-medium capitalize transition-all ${filter === f ? "bg-sky-blue-light text-ink shadow-sm" : "bg-white text-ink hover:bg-sky-blue-light/20"}`}>
-              {f.replace(/_/g, " ")}
-            </button>
-          ))}
+        <div className="bg-white rounded-[16px] p-5 shadow-sm">
+          <div className="text-[0.7rem] uppercase tracking-wider text-ink-soft font-semibold mb-1">Sent today</div>
+          <div className="font-display text-[1.6rem]">{data.todayCount}<span className="text-[0.85rem] text-ink-soft font-normal"> / {data.dayQuota} max</span></div>
+        </div>
+        <div className="bg-white rounded-[16px] p-5 shadow-sm">
+          <div className="text-[0.7rem] uppercase tracking-wider text-ink-soft font-semibold mb-1">This month</div>
+          <div className="font-display text-[1.6rem]">{data.monthCount}<span className="text-[0.85rem] text-ink-soft font-normal"> / {data.monthQuota}</span></div>
+        </div>
+        <div className="bg-white rounded-[16px] p-5 shadow-sm">
+          <div className="text-[0.7rem] uppercase tracking-wider text-ink-soft font-semibold mb-1">Last 30 days</div>
+          <div className="font-display text-[1.6rem]">{data.sent30}{data.failed30 > 0 && <span className="text-[0.85rem] text-red-600 font-normal"> ({data.failed30} failed)</span>}</div>
         </div>
       </div>
 
-      <div className="bg-white rounded-[20px] p-4 md:p-8 shadow-sm">
-        {loading ? (
-          <div className="text-center py-10 text-ink-soft text-[0.9rem]">Loading...</div>
-        ) : logs.length === 0 ? (
-          <div className="text-center py-10 text-ink-soft text-[0.9rem]">
-            <div className="text-3xl mb-3">📧</div>
-            No email logs yet. Logs will appear here when booking confirmations or cancellations are sent.
+      <div className="grid md:grid-cols-2 gap-6 mb-8">
+        {/* Toggles */}
+        <div className="bg-white rounded-[20px] p-6 shadow-sm">
+          <h2 className="font-display text-[1rem] mb-1">What gets sent</h2>
+          <p className="text-[0.78rem] text-ink-soft mb-4">Turn email types on or off. Changes apply within a minute.</p>
+          <div className="space-y-1">
+            {TOGGLES.map((t) => {
+              const on = data.settings[t.key] !== false;
+              return (
+                <button
+                  key={t.key}
+                  onClick={() => toggle(t.key, !on)}
+                  className="w-full flex items-center justify-between gap-4 p-3 rounded-xl hover:bg-ink/[0.03] transition-colors text-left"
+                >
+                  <div>
+                    <div className="text-[0.88rem] font-medium">{t.label}</div>
+                    <div className="text-[0.75rem] text-ink-soft">{t.desc}</div>
+                  </div>
+                  <div className={`w-11 h-6 rounded-full flex-shrink-0 relative transition-colors ${on ? "bg-green-500" : "bg-ink/20"}`}>
+                    <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${on ? "left-[22px]" : "left-0.5"}`} />
+                  </div>
+                </button>
+              );
+            })}
           </div>
+        </div>
+
+        {/* Test + breakdown */}
+        <div className="space-y-6">
+          <div className="bg-white rounded-[20px] p-6 shadow-sm">
+            <h2 className="font-display text-[1rem] mb-1">Send a test</h2>
+            <p className="text-[0.78rem] text-ink-soft mb-3">Check emails actually arrive — useful after DNS or domain changes.</p>
+            <div className="flex gap-2">
+              <input
+                type="email"
+                value={testTo}
+                placeholder="studio@theslimestudio.co.uk"
+                onChange={(e) => setTestTo(e.target.value)}
+                className="flex-1 px-3.5 py-2.5 border border-ink/15 rounded-xl text-[0.85rem] focus:outline-none focus:ring-2 focus:ring-bright-lavender/50"
+              />
+              <button onClick={sendTest} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-bright-lavender to-sky-blue-light text-white font-semibold text-[0.85rem] hover:opacity-90">
+                Send
+              </button>
+            </div>
+            {msg && <div className="mt-3 text-[0.8rem] text-ink-soft">{msg}</div>}
+          </div>
+
+          <div className="bg-white rounded-[20px] p-6 shadow-sm">
+            <h2 className="font-display text-[1rem] mb-3">By type — last 30 days</h2>
+            {Object.keys(data.byType).length === 0 ? (
+              <div className="text-[0.85rem] text-ink-soft">No emails logged yet.</div>
+            ) : (
+              <div className="space-y-2">
+                {Object.entries(data.byType).sort((a, b) => b[1].sent - a[1].sent).map(([type, c]) => (
+                  <div key={type} className="flex items-center justify-between text-[0.85rem]">
+                    <span>{TYPE_LABELS[type] || type.replace(/_/g, " ")}</span>
+                    <span className="font-medium">{c.sent}{c.failed > 0 && <span className="text-red-600"> +{c.failed} failed</span>}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Log */}
+      <div className="bg-white rounded-[20px] p-4 md:p-8 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <h2 className="font-display text-[1rem]">Recent emails</h2>
+          <div className="flex gap-2 flex-wrap">
+            {["all", ...types].map((f) => (
+              <button key={f} onClick={() => setFilter(f)}
+                className={`px-3.5 py-1.5 rounded-full text-[0.78rem] font-medium capitalize transition-all ${filter === f ? "bg-sky-blue-light text-ink shadow-sm" : "bg-ink/[0.04] text-ink hover:bg-sky-blue-light/20"}`}>
+                {f === "all" ? "All" : (TYPE_LABELS[f] || f.replace(/_/g, " "))}
+              </button>
+            ))}
+          </div>
+        </div>
+        {logs.length === 0 ? (
+          <div className="text-center py-10 text-ink-soft text-[0.9rem]">No emails logged yet.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
@@ -68,10 +216,10 @@ export default function EmailLogsPage() {
               <tbody>
                 {logs.map((log) => (
                   <tr key={log.id} className="border-t border-ink/[0.08]">
-                    <td className="py-3 pr-4 text-[0.9rem]">{new Date(log.created_at).toLocaleString("en-GB")}</td>
+                    <td className="py-3 pr-4 text-[0.9rem] whitespace-nowrap">{new Date(log.created_at).toLocaleString("en-GB")}</td>
                     <td className="py-3 pr-4 text-[0.9rem]">{log.recipient}</td>
                     <td className="py-3 pr-4 text-[0.9rem]">{log.subject}</td>
-                    <td className="py-3 pr-4 text-[0.9rem] capitalize">{log.type.replace(/_/g, " ")}</td>
+                    <td className="py-3 pr-4 text-[0.9rem]">{TYPE_LABELS[log.type] || log.type.replace(/_/g, " ")}</td>
                     <td className="py-3">
                       <span className={`px-2 py-0.5 rounded-full text-[0.75rem] font-medium ${log.status === "sent" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>{log.status}</span>
                     </td>

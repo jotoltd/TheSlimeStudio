@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getResend, EMAIL_FROM, bookingConfirmationHtml, logEmail } from "@/lib/email";
+import { getResend, EMAIL_FROM, bookingConfirmationHtml, logEmail, emailEnabled } from "@/lib/email";
 
 export const runtime = "nodejs";
 
@@ -22,6 +22,9 @@ export async function POST(req: NextRequest) {
   const r = getResend();
   if (!r) {
     console.warn("RESEND_API_KEY not set — skipping confirmation email");
+    return NextResponse.json({ success: true, emailSent: false });
+  }
+  if (!(await emailEnabled("booking_confirmation"))) {
     return NextResponse.json({ success: true, emailSent: false });
   }
 

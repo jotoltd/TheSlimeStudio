@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { verifyToken } from "@/lib/auth";
-import { getResend, EMAIL_FROM, cancellationHtml, logEmail } from "@/lib/email";
+import { getResend, EMAIL_FROM, cancellationHtml, logEmail, emailEnabled } from "@/lib/email";
 import { getStripeAsync } from "@/lib/stripe";
 
 export const runtime = "nodejs";
@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Send cancellation email
-  if (b.email) {
+  if (b.email && (await emailEnabled("cancellation"))) {
     try {
       const r = getResend();
       if (r) {

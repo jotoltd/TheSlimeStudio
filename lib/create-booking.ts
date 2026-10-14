@@ -7,6 +7,7 @@ import {
   logEmail,
   bookingConfirmationHtml,
   adSourceLabel,
+  emailEnabled,
 } from "@/lib/email";
 
 export type BookingDetails = {
@@ -146,7 +147,7 @@ async function isOverCapacity(date: string, timeSlot: string, people: number): P
 
 export async function sendCustomerConfirmation(d: BookingDetails) {
   const r = getResend();
-  if (!r) return;
+  if (!r || !(await emailEnabled("booking_confirmation"))) return;
   await r.emails.send({
     from: EMAIL_FROM,
     to: d.email,
@@ -165,7 +166,7 @@ export async function sendCustomerConfirmation(d: BookingDetails) {
 
 export async function sendAdminNotification(d: BookingDetails, overCapacity: boolean) {
   const r = getResend();
-  if (!r) return;
+  if (!r || !(await emailEnabled("admin_notification"))) return;
   await r.emails.send({
     from: EMAIL_FROM,
     to: CONTACT_EMAIL,

@@ -16,6 +16,38 @@ export async function logEmail(recipient: string, subject: string, type: string,
   } catch {}
 }
 
+// Maps email types to the toggles in site_settings (managed in /dashboard/email-logs)
+const EMAIL_SETTING_KEYS: Record<string, string> = {
+  booking_confirmation: "email_booking_confirmation",
+  cancellation: "email_booking_confirmation",
+  event_booking_confirmation: "email_booking_confirmation",
+  order_confirmation: "email_order_confirmation",
+  gift_card: "email_order_confirmation",
+  admin_notification: "email_admin_alerts",
+  event_booking_admin: "email_admin_alerts",
+  reward_code: "email_reward_codes",
+};
+
+let _settingsCache: { at: number; map: Record<string, boolean> } | null = null;
+
+export async function emailEnabled(type: string): Promise<boolean> {
+  try {
+    if (!_settingsCache || Date.now() - _settingsCache.at > 60_000) {
+      const { data } = await supabaseAdmin
+        .from("site_settings")
+        .select("email_admin_alerts, email_booking_confirmation, email_order_confirmation, email_reward_codes")
+        .eq("id", 1)
+        .single();
+      _settingsCache = { at: Date.now(), map: (data as Record<string, boolean>) || {} };
+    }
+    const col = EMAIL_SETTING_KEYS[type];
+    if (!col) return true;
+    return _settingsCache.map[col] !== false;
+  } catch {
+    return true; // fail open — never silently break email
+  }
+}
+
 export const EMAIL_FROM = "The Slime Studio <noreply@theslimestudio.co.uk>";
 export const CONTACT_EMAIL = "studio@theslimestudio.co.uk";
 
@@ -31,7 +63,7 @@ export function adSourceLabel(adSource: string): string {
   return inner;
 }
 
-function emailWrapper(content: string): string {
+export function emailWrapper(content: string): string {
   return `
     <div style="font-family: 'Poppins', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
       ${content}
@@ -164,6 +196,7 @@ export async function sendEventBookingEmails(opts: {
   const html = eventBookingConfirmationHtml(opts);
   const subject = `Event Booking Confirmed — ${opts.eventTitle} — The Slime Studio`;
 
+  if (await emailEnabled("event_booking_confirmation")) {
   try {
     await resend.emails.send({
       from: EMAIL_FROM,
@@ -176,8 +209,10 @@ export async function sendEventBookingEmails(opts: {
     console.error("Failed to send event booking email:", e);
     await logEmail(opts.email, subject, "event_booking_confirmation", "failed");
   }
+  }
 
   // Send admin notification
+  if (await emailEnabled("admin_notification")) {
   try {
     await resend.emails.send({
       from: EMAIL_FROM,
@@ -201,6 +236,7 @@ export async function sendEventBookingEmails(opts: {
     await logEmail(CONTACT_EMAIL, `New Event Booking — ${opts.eventTitle}`, "event_booking_admin", "sent");
   } catch (e) {
     console.error("Failed to send admin event booking email:", e);
+  }
   }
 }
 
@@ -277,6 +313,8 @@ export async function sendOrderConfirmationEmail(opts: {
 
   const html = orderConfirmationHtml(opts);
   const subject = `Order Confirmed — ${opts.orderNumber} — The Slime Studio`;
+
+  if (!(await emailEnabled("order_confirmation"))) return;
 
   try {
     await resend.emails.send({

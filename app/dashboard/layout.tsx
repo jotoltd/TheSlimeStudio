@@ -49,7 +49,7 @@ const navSections = [
       { href: "/dashboard/settings", label: "Settings", Icon: SettingsIcon },
       { href: "/dashboard/content", label: "Content", Icon: FileTextIcon },
       { href: "/dashboard/faqs", label: "FAQs", Icon: FileTextIcon },
-      { href: "/dashboard/email-logs", label: "Email Logs", Icon: InboxIcon },
+      { href: "/dashboard/email-logs", label: "Emails", Icon: InboxIcon },
       { href: "/dashboard/export", label: "Export Data", Icon: DownloadIcon },
     ],
   },
