@@ -44,12 +44,20 @@ type Data = {
       spend: number;
       impressions: number;
       clicks: number;
+      conversions: number;
       ctr: number;
-      daily: { date: string; spend: number; impressions: number; clicks: number }[];
-      campaigns: { name: string; status: string; spend: number; impressions: number; clicks: number }[];
+      daily: { date: string; spend: number; impressions: number; clicks: number; conversions: number }[];
+      campaigns: { name: string; status: string; dailyBudget: number | null; spend: number; impressions: number; clicks: number; ctr: number; cpc: number; conversions: number; convValue: number; costPerConv: number | null }[];
+      ads: { name: string; adGroup: string; campaign: string; spend: number; impressions: number; clicks: number; ctr: number; cpc: number; conversions: number; convValue: number; costPerConv: number | null }[];
     };
   };
   attributedRevenue: number;
+  totals?: {
+    bookings: number; paidBookings: number; revenue: number;
+    adBookings: number; adRevenue: number; organicBookings: number; organicRevenue: number;
+    byPlatform?: Record<"meta" | "google" | "tiktok" | "other", { bookings: number; revenue: number }>;
+  };
+  range?: { key: string; since: string; until: string };
   comments: { adName: string; platform: string; author: string; text: string; time: string; replyUrl: string | null }[];
   fbCommentsUnavailable?: boolean;
 };
@@ -61,13 +69,23 @@ const PLATFORM_COLORS: Record<string, string> = {
   Google: "bg-amber-100 text-amber-800",
 };
 
+function safeDecode(s: string): string {
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return s;
+  }
+}
+
 function adLabel(notes: string): string {
-  const m = notes.match(/utm:([a-z]+)/i);
+  const m = notes.match(/utm:([a-z]+)(?:\/([^\],]+))?/i);
   if (m) {
-    const map: Record<string, string> = { ig: "Instagram", instagram: "Instagram", fb: "Facebook", facebook: "Facebook", google: "Google" };
-    return `${map[m[1].toLowerCase()] || m[1]} Ad`;
+    const map: Record<string, string> = { ig: "Instagram", instagram: "Instagram", fb: "Facebook", facebook: "Facebook", google: "Google", tiktok: "TikTok" };
+    const base = `${map[m[1].toLowerCase()] || m[1]} Ad`;
+    return m[2] ? `${base} · ${safeDecode(m[2]).replace(/\+/g, " ")}` : base;
   }
   if (notes.includes("Google Ad")) return "Google Ad";
+  if (notes.includes("Facebook/Instagram")) return "Meta Ad";
   return "Meta Ad";
 }
 
@@ -95,19 +113,20 @@ export default function AdsPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [budgetEdits, setBudgetEdits] = useState<Record<string, string>>({});
   const [tab, setTab] = useState<"overview" | "meta" | "google" | "other">("overview");
+  const [range, setRange] = useState("30d");
 
-  async function load() {
+  async function load(r = range) {
     setLoading(true);
     try {
-      const r = await fetch("/api/admin/ads-insights");
-      setData(await r.json());
+      const res = await fetch(`/api/admin/ads-insights?range=${r}`);
+      setData(await res.json());
     } catch {
       setData(null);
     }
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [range]);
 
   async function control(id: string, payload: { status?: string; dailyBudget?: number }) {
     setBusyId(id); setActionMsg("");
@@ -128,16 +147,36 @@ export default function AdsPage() {
 
   const maxSpend = Math.max(...(data?.daily || []).map((d) => d.spend), 0.01);
 
+  // Bookings/revenue filtered to the selected reporting window
+  const rangeSince = data?.range?.since;
+  const rangeBookings = (data?.adBookings || []).filter((b) => !rangeSince || (b.created_at || "") >= rangeSince);
+  const paidInRange = rangeBookings.filter((b) => b.payment_status === "paid");
+  const rangeRevenue = paidInRange.reduce((s, b) => s + Number(b.total_price), 0);
+  const rangeLabel = range === "today" ? "today" : range === "7d" ? "last 7 days" : range === "90d" ? "last 90 days" : "last 30 days";
+
   return (
     <div className="py-8 md:py-10 px-5 md:px-10">
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="font-display text-[1.6rem] md:text-[2rem]">Ads</h1>
-          <p className="text-ink-soft text-[0.9rem] mt-1">Live Meta ads performance and bookings they generated.</p>
+          <p className="text-ink-soft text-[0.9rem] mt-1">Live Meta &amp; Google ads performance and the bookings they generated.</p>
         </div>
-        <a href="/dashboard/marketing" className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-bright-lavender to-sky-blue-light text-white font-semibold text-[0.85rem] hover:opacity-90 transition-opacity shadow-sm">
-          + Create a new ad
-        </a>
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex gap-1 bg-white rounded-full p-1 shadow-sm">
+            {[["today", "Today"], ["7d", "7 days"], ["30d", "30 days"], ["90d", "90 days"]].map(([k, label]) => (
+              <button
+                key={k}
+                onClick={() => setRange(k)}
+                className={`px-3.5 py-1.5 rounded-full text-[0.78rem] font-medium transition-all ${range === k ? "bg-ink text-white" : "text-ink-soft hover:bg-ink/[0.05]"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <a href="/dashboard/marketing" className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-bright-lavender to-sky-blue-light text-white font-semibold text-[0.85rem] hover:opacity-90 transition-opacity shadow-sm">
+            + Create a new ad
+          </a>
+        </div>
       </div>
 
       {loading ? (
@@ -167,45 +206,77 @@ export default function AdsPage() {
 
           {/* Verdict banner — are the ads working? */}
           {(() => {
-            const liveCount = [...data.manage.campaigns, ...data.manage.adsets].filter((e) => e.effectiveStatus === "ACTIVE").length;
-            const spend = data.summary.month.spend;
-            const revenue = data.attributedRevenue;
+            const metaSpend = data.summary.month.spend;
+            const googleSpend = data.google?.api?.connected ? data.google.api.spend : 0;
+            const spend = metaSpend + googleSpend;
+            // Prefer the uncapped server-side totals — data.adBookings is
+            // capped at ~100 rows for display and undercounts busy windows.
+            const revenue = data.totals?.adRevenue ?? rangeRevenue;
+            const bookings = data.totals?.adBookings ?? paidInRange.length;
             const roas = spend > 0 ? revenue / spend : null;
+            const costPerBooking = bookings > 0 ? spend / bookings : null;
+            const metaRev = data.totals?.byPlatform?.meta.revenue ?? paidInRange.filter((b) => b.platform === "meta").reduce((s, b) => s + Number(b.total_price), 0);
+            const googleRev = data.totals?.byPlatform?.google.revenue ?? paidInRange.filter((b) => b.platform === "google").reduce((s, b) => s + Number(b.total_price), 0);
+            const liveMeta = [...data.manage.campaigns, ...data.manage.adsets].some((e) => e.effectiveStatus === "ACTIVE");
+            const liveGoogle = (data.google?.api?.campaigns || []).some((c) => c.status === "ENABLED");
+            const anyLive = liveMeta || liveGoogle;
+
+            let verdict: string;
+            let verdictSub = "";
+            if (spend > 0) {
+              if (revenue === 0) {
+                verdict = `£${spend.toFixed(0)} spent — no bookings from ads yet`;
+                verdictSub = "Either nobody's converting or tracking missed them. If it stays at zero after a few more days of spend, pause and rethink.";
+              } else if (roas && roas >= 2) {
+                verdict = `Yes — ads are working. Every £1 spent made £${roas.toFixed(2)}`;
+                verdictSub = "Profitable. Safe to raise budgets if you want more volume.";
+              } else if (roas && roas >= 1) {
+                verdict = `Breaking even — £1 in, £${roas.toFixed(2)} back`;
+                verdictSub = "Covering costs but barely. Better creative or tighter targeting would push it profitable.";
+              } else {
+                verdict = `Losing money — £${spend.toFixed(0)} spent, £${revenue.toFixed(0)} booked back`;
+                verdictSub = "Consider pausing the weakest campaign below and reworking the ad.";
+              }
+            } else {
+              verdict = anyLive ? "Ads are live — results appear as people click and book" : "No ads spending right now";
+              verdictSub = anyLive ? "" : "Launch from Marketing, or resume a paused campaign.";
+            }
+
+            const platformLine = [
+              metaSpend > 0 || metaRev > 0 ? `Meta: ${fmt(metaSpend)} spent → ${fmt(metaRev)} booked` : null,
+              googleSpend > 0 || googleRev > 0 ? `Google: ${fmt(googleSpend)} spent → ${fmt(googleRev)} booked` : null,
+            ].filter(Boolean).join("   ·   ");
+
             return (
               <div className="rounded-[20px] p-6 md:p-8 mb-8 text-white bg-gradient-to-br from-[#ff2d78] via-[#a855f7] to-[#38bdf8] shadow-md">
-                <div className="flex flex-wrap items-center justify-between gap-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className={`w-2.5 h-2.5 rounded-full ${anyLive ? "bg-green-300" : "bg-white/40"}`} />
+                  <span className="text-[0.8rem] font-semibold uppercase tracking-wider text-white/90">
+                    {anyLive ? "Ads running" : "Nothing running"}
+                  </span>
+                </div>
+                <div className="font-display text-[1.4rem] md:text-[1.8rem] leading-tight mb-1">{verdict}</div>
+                {verdictSub && <div className="text-white/85 text-[0.85rem] mb-4 max-w-[36rem]">{verdictSub}</div>}
+                {platformLine && <div className="text-white/75 text-[0.78rem] mb-5">{platformLine}</div>}
+                <div className="flex gap-6 md:gap-10 flex-wrap">
                   <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`w-2.5 h-2.5 rounded-full ${liveCount > 0 ? "bg-green-300" : "bg-white/40"}`} />
-                      <span className="text-[0.8rem] font-semibold uppercase tracking-wider text-white/90">
-                        {liveCount > 0 ? `${liveCount} campaign${liveCount > 1 ? "s" : ""} live` : "Nothing running"}
-                      </span>
-                    </div>
-                    <div className="font-display text-[1.4rem] md:text-[1.8rem] leading-tight">
-                      {spend > 0
-                        ? roas && roas >= 1
-                          ? `Ads are paying off — every £1 spent made £${roas.toFixed(2)}`
-                          : `£${fmt(spend).slice(1)} spent → £${fmt(revenue).slice(1)} booked back`
-                        : liveCount > 0
-                          ? "Ads are live — results will appear as people click"
-                          : "No spend yet — launch or resume a campaign below"}
-                    </div>
+                    <div className="text-[0.7rem] uppercase tracking-wider text-white/80">Spent · {rangeLabel}</div>
+                    <div className="font-display text-[1.5rem]">{fmt(spend)}</div>
                   </div>
-                  <div className="flex gap-6 md:gap-8">
-                    <div>
-                      <div className="text-[0.7rem] uppercase tracking-wider text-white/80">Spent · 30d</div>
-                      <div className="font-display text-[1.5rem]">{fmt(spend)}</div>
-                    </div>
-                    <div>
-                      <div className="text-[0.7rem] uppercase tracking-wider text-white/80">Booked from ads</div>
-                      <div className="font-display text-[1.5rem]">{fmt(revenue)}</div>
-                    </div>
-                    <div>
-                      <div className="text-[0.7rem] uppercase tracking-wider text-white/80">Bookings</div>
-                      <div className="font-display text-[1.5rem]">{data.adBookings.length}</div>
-                    </div>
+                  <div>
+                    <div className="text-[0.7rem] uppercase tracking-wider text-white/80">Booked from ads</div>
+                    <div className="font-display text-[1.5rem]">{fmt(revenue)}</div>
+                  </div>
+                  <div>
+                    <div className="text-[0.7rem] uppercase tracking-wider text-white/80">Paid bookings</div>
+                    <div className="font-display text-[1.5rem]">{bookings}</div>
+                  </div>
+                  <div>
+                    <div className="text-[0.7rem] uppercase tracking-wider text-white/80">Cost per booking</div>
+                    <div className="font-display text-[1.5rem]">{costPerBooking ? fmt(costPerBooking) : "—"}</div>
                   </div>
                 </div>
+                <div className="text-white/60 text-[0.7rem] mt-4">Only counts bookings proven to come from an ad click — real return is at least this.</div>
               </div>
             );
           })()}
@@ -228,26 +299,71 @@ export default function AdsPage() {
             <>
               <div className="grid md:grid-cols-3 gap-4 md:gap-5 mb-8">
                 {PLATFORM_TABS.map((t) => {
-                  const tot = data.platformTotals?.find((p) => p.platform === t.id) || { bookings: 0, revenue: 0 };
+                  const rows = rangeBookings.filter((b) => b.platform === t.id || (t.id === "other" && b.platform === "tiktok"));
+                  // Uncapped per-platform counts from the server — rows is
+                  // capped at ~100 for display. Counts paid bookings only.
+                  const plat = data.totals?.byPlatform;
+                  const bookings = plat
+                    ? (t.id === "other" ? plat.other.bookings + plat.tiktok.bookings : plat[t.id].bookings)
+                    : rows.filter((b) => b.payment_status === "paid").length;
+                  const revenue = plat
+                    ? (t.id === "other" ? plat.other.revenue + plat.tiktok.revenue : plat[t.id].revenue)
+                    : rows.filter((b) => b.payment_status === "paid").reduce((s, b) => s + Number(b.total_price), 0);
                   const isMeta = t.id === "meta";
+                  const isGoogle = t.id === "google";
+                  const spend = isMeta ? data.summary.month.spend : isGoogle && data.google?.api?.connected ? data.google.api.spend : 0;
                   return (
                     <button key={t.id} onClick={() => setTab(t.id as "meta" | "google" | "other")} className="bg-white rounded-[20px] p-6 shadow-sm text-left hover:shadow-md transition-shadow">
                       <div className="flex items-center gap-2 mb-3">
                         <span className={`w-2.5 h-2.5 rounded-full ${t.color}`} />
                         <span className="text-[0.75rem] text-ink-soft uppercase tracking-wider font-semibold">{t.label}</span>
                       </div>
-                      <div className="font-display text-[1.6rem]">{fmt(tot.revenue)}</div>
+                      <div className="font-display text-[1.6rem]">{fmt(revenue)}</div>
                       <div className="text-[0.8rem] text-ink-soft">
-                        {tot.bookings} booking{tot.bookings === 1 ? "" : "s"} attributed
-                        {isMeta && data.summary.month.spend > 0 && ` · ${fmt(data.summary.month.spend)} spent`}
+                        {bookings} booking{bookings === 1 ? "" : "s"} · {rangeLabel}
+                        {spend > 0 && ` · ${fmt(spend)} spent`}
                       </div>
                     </button>
                   );
                 })}
               </div>
+              {data.totals && (
+                <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm mb-8">
+                  <h2 className="font-display text-[1.1rem] mb-1">Ads vs. everything else</h2>
+                  <p className="text-[0.75rem] text-ink-soft mb-5">All paid bookings {rangeLabel} — would these customers have booked anyway?</p>
+                  <div className="grid grid-cols-3 gap-4 mb-5">
+                    <div className="rounded-xl px-4 py-3 bg-ink/[0.03]">
+                      <div className="text-[0.7rem] text-ink-soft uppercase tracking-wider">All paid bookings</div>
+                      <div className="font-display text-[1.5rem]">{data.totals.paidBookings}</div>
+                      <div className="text-[0.75rem] text-ink-soft">{fmt(data.totals.revenue)}</div>
+                    </div>
+                    <div className="rounded-xl px-4 py-3 bg-pink-50">
+                      <div className="text-[0.7rem] text-ink-soft uppercase tracking-wider">From ads</div>
+                      <div className="font-display text-[1.5rem]">{data.totals.adBookings}</div>
+                      <div className="text-[0.75rem] text-ink-soft">{fmt(data.totals.adRevenue)}</div>
+                    </div>
+                    <div className="rounded-xl px-4 py-3 bg-green-50">
+                      <div className="text-[0.7rem] text-ink-soft uppercase tracking-wider">Organic / other</div>
+                      <div className="font-display text-[1.5rem]">{data.totals.organicBookings}</div>
+                      <div className="text-[0.75rem] text-ink-soft">{fmt(data.totals.organicRevenue)}</div>
+                    </div>
+                  </div>
+                  {data.totals.paidBookings > 0 && (
+                    <div>
+                      <div className="h-3 rounded-full overflow-hidden flex bg-ink/[0.06]">
+                        <div className="bg-gradient-to-r from-[#ff2d78] to-[#a855f7]" style={{ width: `${(data.totals.adBookings / data.totals.paidBookings) * 100}%` }} />
+                      </div>
+                      <div className="flex justify-between text-[0.72rem] text-ink-soft mt-2">
+                        <span><strong className="text-ink">{Math.round((data.totals.adBookings / data.totals.paidBookings) * 100)}%</strong> of bookings traceable to an ad click</span>
+                        <span>{Math.round((data.totals.organicBookings / data.totals.paidBookings) * 100)}% walked in without an ad</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
               <BookingsCard
-                bookings={data.adBookings}
-                title="All bookings from ads"
+                bookings={rangeBookings}
+                title={`All bookings from ads — ${rangeLabel}`}
                 note="Every booking that came in tagged from an ad click — Meta, Google, or any other tracked source."
               />
             </>
@@ -255,33 +371,42 @@ export default function AdsPage() {
 
           {/* ===== META TAB ===== */}
           {tab === "meta" && (<>
-          {/* Headline stats — last 30 days */}
+          {/* Headline stats — selected range */}
+          {(() => {
+            const metaBookingCount = data.totals?.byPlatform?.meta.bookings
+              ?? rangeBookings.filter((b) => b.platform === "meta" && b.payment_status === "paid").length;
+            const metaRangeRev = data.totals?.byPlatform?.meta.revenue
+              ?? rangeBookings.filter((b) => b.platform === "meta" && b.payment_status === "paid").reduce((s, b) => s + Number(b.total_price), 0);
+            const metaSpend = data.summary.month.spend;
+            return (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5 mb-8">
             <div className="bg-white rounded-[20px] p-6 shadow-sm border-l-4 border-red-400">
-              <div className="text-[0.75rem] text-ink-soft uppercase tracking-wider mb-2">Ad Spend · 30d</div>
-              <div className="font-display text-[1.8rem]">{fmt(data.summary.month.spend)}</div>
+              <div className="text-[0.75rem] text-ink-soft uppercase tracking-wider mb-2">Ad Spend · {rangeLabel}</div>
+              <div className="font-display text-[1.8rem]">{fmt(metaSpend)}</div>
               <div className="text-[0.75rem] text-ink-soft mt-1">Today: {fmt(data.summary.today.spend)} <Delta value={data.deltas?.spend} invert /></div>
             </div>
             <div className="bg-white rounded-[20px] p-6 shadow-sm border-l-4 border-green-400">
-              <div className="text-[0.75rem] text-ink-soft uppercase tracking-wider mb-2">Ad Booking Revenue</div>
-              <div className="font-display text-[1.8rem] text-green-600">{fmt(data.attributedRevenue)}</div>
-              <div className="text-[0.75rem] text-ink-soft mt-1">{data.adBookings.length} ad bookings <Delta value={data.deltas?.purchases} /></div>
+              <div className="text-[0.75rem] text-ink-soft uppercase tracking-wider mb-2">Meta Booking Revenue</div>
+              <div className="font-display text-[1.8rem] text-green-600">{fmt(metaRangeRev)}</div>
+              <div className="text-[0.75rem] text-ink-soft mt-1">{metaBookingCount} ad bookings <Delta value={data.deltas?.purchases} /></div>
             </div>
             <div className="bg-white rounded-[20px] p-6 shadow-sm border-l-4 border-bright-lavender">
               <div className="text-[0.75rem] text-ink-soft uppercase tracking-wider mb-2">Return on Spend</div>
               <div className="font-display text-[1.8rem]">
-                {data.summary.month.spend > 0 ? `${(data.attributedRevenue / data.summary.month.spend).toFixed(1)}x` : "--"}
+                {metaSpend > 0 ? `${(metaRangeRev / metaSpend).toFixed(1)}x` : "--"}
               </div>
               <div className="text-[0.75rem] text-ink-soft mt-1">revenue ÷ spend</div>
             </div>
             <div className="bg-white rounded-[20px] p-6 shadow-sm border-l-4 border-sky-blue-light">
               <div className="text-[0.75rem] text-ink-soft uppercase tracking-wider mb-2">Cost per Booking</div>
               <div className="font-display text-[1.8rem]">
-                {data.adBookings.length > 0 ? fmt(data.summary.month.spend / data.adBookings.length) : "--"}
+                {metaBookingCount > 0 ? fmt(metaSpend / metaBookingCount) : "--"}
               </div>
               <div className="text-[0.75rem] text-ink-soft mt-1">Meta reported: {data.summary.month.purchases}</div>
             </div>
           </div>
+            );
+          })()}
 
           {/* What your ads look like — visual first */}
           {data.adPreviews?.length > 0 && (
@@ -313,7 +438,7 @@ export default function AdsPage() {
           {/* Daily trend */}
           {data.daily.length > 0 && (
             <div className="bg-white rounded-[20px] p-8 shadow-sm mb-8">
-              <h2 className="font-display text-[1.1rem] mb-6">Daily — Last 30 Days</h2>
+              <h2 className="font-display text-[1.1rem] mb-6">Daily — {rangeLabel}</h2>
               <div className="flex items-end gap-[3px] h-32">
                 {data.daily.map((d) => (
                   <div key={d.date} className="flex-1 flex flex-col items-center justify-end gap-1 min-w-0" title={`${d.date}: ${fmt(d.spend)} · ${d.clicks} clicks · ${d.purchases} bookings`}>
@@ -332,7 +457,7 @@ export default function AdsPage() {
 
           {/* Funnel */}
           <div className="bg-white rounded-[20px] p-8 shadow-sm mb-8">
-            <h2 className="font-display text-[1.1rem] mb-6">Last 30 Days Funnel</h2>
+            <h2 className="font-display text-[1.1rem] mb-6">Funnel — {rangeLabel}</h2>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <FunnelStat label="Reached" value={data.summary.month.reach} />
               <FunnelStat label="Impressions" value={data.summary.month.impressions} />
@@ -358,7 +483,7 @@ export default function AdsPage() {
             <div className="grid md:grid-cols-2 gap-6 mb-8">
               <div className="bg-white rounded-[20px] p-8 shadow-sm">
                 <h2 className="font-display text-[1.1rem] mb-1">Who's seeing your ads</h2>
-                <p className="text-[0.75rem] text-ink-soft mb-5">Age & gender · last 30 days · 🎉 = bookings</p>
+                <p className="text-[0.75rem] text-ink-soft mb-5">Age &amp; gender · {rangeLabel} · 🎉 = bookings</p>
                 <div className="space-y-2.5">
                   {data.audience.ageGender.map((r) => {
                     const max = data.audience.ageGender[0]?.impressions || 1;
@@ -378,7 +503,7 @@ export default function AdsPage() {
               </div>
               <div className="bg-white rounded-[20px] p-8 shadow-sm">
                 <h2 className="font-display text-[1.1rem] mb-1">Where they're seeing them</h2>
-                <p className="text-[0.75rem] text-ink-soft mb-5">Regions · last 30 days</p>
+                <p className="text-[0.75rem] text-ink-soft mb-5">Regions · {rangeLabel}</p>
                 <div className="space-y-2.5">
                   {data.audience.regions.map((r) => {
                     const max = data.audience.regions[0]?.impressions || 1;
@@ -425,7 +550,7 @@ export default function AdsPage() {
           {data.audience?.placements?.length > 0 && (
             <div className="bg-white rounded-[20px] p-8 shadow-sm mb-8">
               <h2 className="font-display text-[1.1rem] mb-1">Where your ads appear</h2>
-              <p className="text-[0.75rem] text-ink-soft mb-5">Last 30 days · 🎉 = purchases Meta attributes to that placement</p>
+              <p className="text-[0.75rem] text-ink-soft mb-5">{rangeLabel} · 🎉 = purchases Meta attributes to that placement</p>
               <div className="overflow-x-auto">
                 <table className="w-full text-[0.85rem]">
                   <thead>
@@ -550,7 +675,7 @@ export default function AdsPage() {
 
           {/* Meta bookings */}
           <BookingsCard
-            bookings={data.adBookings.filter((b) => b.platform === "meta")}
+            bookings={rangeBookings.filter((b) => b.platform === "meta")}
             title="Bookings from Facebook & Instagram ads"
             note="Real bookings from your database — the accurate count. Ads Manager may show fewer purchases because Meta can't always connect a booking back to the original click."
           />
@@ -558,7 +683,7 @@ export default function AdsPage() {
 
           {/* ===== GOOGLE TAB ===== */}
           {tab === "google" && (<>
-          <GoogleApiSection api={data.google?.api} onChanged={load} />
+          <GoogleApiSection api={data.google?.api} onChanged={load} rangeLabel={rangeLabel} />
           {data.google && (
             <div className="bg-white rounded-[20px] p-8 shadow-sm">
               <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
@@ -616,7 +741,7 @@ export default function AdsPage() {
             </div>
           )}
           <BookingsCard
-            bookings={data.adBookings.filter((b) => b.platform === "google")}
+            bookings={rangeBookings.filter((b) => b.platform === "google")}
             title="Bookings from Google ads"
             note="Customers who clicked a Google ad (gclid tracked) and then booked or bought."
           />
@@ -636,7 +761,7 @@ export default function AdsPage() {
                 </p>
               </div>
               <BookingsCard
-                bookings={data.adBookings.filter((b) => b.platform === "other" || b.platform === "tiktok")}
+                bookings={rangeBookings.filter((b) => b.platform === "other" || b.platform === "tiktok")}
                 title="Bookings from other sources"
                 note="Bookings tagged with a non-Meta, non-Google source."
               />
@@ -679,8 +804,8 @@ function BookingsCard({ bookings, title, note }: { bookings: AdBooking[]; title:
   );
 }
 
-function GoogleApiSection({ api, onChanged }: { api?: NonNullable<Data["google"]>["api"]; onChanged: () => void }) {
-  const [cfg, setCfg] = useState<{ hasClientId: boolean; hasClientSecret: boolean; hasDevToken: boolean; customerId: string | null; loginCustomerId: string | null; connected: boolean } | null>(null);
+function GoogleApiSection({ api, onChanged, rangeLabel }: { api?: NonNullable<Data["google"]>["api"]; onChanged: () => void; rangeLabel: string }) {
+  const [cfg, setCfg] = useState<{ hasClientId: boolean; hasClientSecret: boolean; hasDevToken: boolean; customerId: string | null; loginCustomerId: string | null; connected: boolean; redirectUri?: string } | null>(null);
   const [form, setForm] = useState({ clientId: "", clientSecret: "", devToken: "", customerId: "", loginCustomerId: "" });
   const [msg, setMsg] = useState("");
   const [flash, setFlash] = useState("");
@@ -692,8 +817,9 @@ function GoogleApiSection({ api, onChanged }: { api?: NonNullable<Data["google"]
     if (p.get("gerr")) setFlash(`Connection failed: ${p.get("gerr")}`);
   }, []);
 
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const redirectUri = `${origin}/api/admin/google-ads/callback`;
+  // The URI the OAuth flow actually sends (server-authoritative). Before the
+  // config loads, guess from the current origin — usually the canonical domain.
+  const redirectUri = cfg?.redirectUri || `${typeof window !== "undefined" ? window.location.origin : ""}/api/admin/google-ads/callback`;
   const canConnect = cfg?.hasClientId && cfg?.hasClientSecret && cfg?.hasDevToken;
 
   async function saveCredentials() {
@@ -724,7 +850,7 @@ function GoogleApiSection({ api, onChanged }: { api?: NonNullable<Data["google"]
           <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
             <div>
               <h2 className="font-display text-[1.1rem] mb-1">Google Ads — live account data</h2>
-              <p className="text-[0.75rem] text-ink-soft">Spend, views and clicks straight from your Google Ads account · last 30 days.</p>
+              <p className="text-[0.75rem] text-ink-soft">Spend, views and clicks straight from your Google Ads account · {rangeLabel}.</p>
             </div>
             <button
               onClick={async () => { await fetch("/api/admin/google-ads", { method: "DELETE" }); onChanged(); }}
@@ -739,11 +865,12 @@ function GoogleApiSection({ api, onChanged }: { api?: NonNullable<Data["google"]
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
                 <div className="rounded-xl px-4 py-3 bg-red-50"><div className="text-[0.7rem] text-ink-soft uppercase tracking-wider">Spend</div><div className="font-display text-[1.4rem]">{fmt(api.spend)}</div></div>
                 <div className="rounded-xl px-4 py-3 bg-ink/[0.03]"><div className="text-[0.7rem] text-ink-soft uppercase tracking-wider">Views</div><div className="font-display text-[1.4rem]">{api.impressions.toLocaleString()}</div></div>
                 <div className="rounded-xl px-4 py-3 bg-ink/[0.03]"><div className="text-[0.7rem] text-ink-soft uppercase tracking-wider">Clicks</div><div className="font-display text-[1.4rem]">{api.clicks.toLocaleString()}</div></div>
                 <div className="rounded-xl px-4 py-3 bg-ink/[0.03]"><div className="text-[0.7rem] text-ink-soft uppercase tracking-wider">Click rate</div><div className="font-display text-[1.4rem]">{(api.ctr * 100).toFixed(1)}%</div></div>
+                <div className="rounded-xl px-4 py-3 bg-green-50"><div className="text-[0.7rem] text-ink-soft uppercase tracking-wider">Conversions</div><div className="font-display text-[1.4rem] text-green-600">{api.conversions?.toFixed(0) ?? 0}</div></div>
               </div>
               {api.daily.length > 0 && (
                 <div className="flex items-end gap-[3px] h-24 mb-6">
@@ -755,29 +882,84 @@ function GoogleApiSection({ api, onChanged }: { api?: NonNullable<Data["google"]
                 </div>
               )}
               {api.campaigns.length > 0 && (
-                <table className="w-full text-[0.85rem]">
-                  <thead>
-                    <tr className="text-left text-[0.7rem] text-ink-soft uppercase tracking-wider border-b border-ink/[0.08]">
-                      <th className="pb-2 pr-4">Campaign</th>
-                      <th className="pb-2 pr-4">Status</th>
-                      <th className="pb-2 pr-4 text-right">Views</th>
-                      <th className="pb-2 pr-4 text-right">Clicks</th>
-                      <th className="pb-2 text-right">Spend</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {api.campaigns.map((c) => (
-                      <tr key={c.name} className="border-b border-ink/[0.05] last:border-0">
-                        <td className="py-2.5 pr-4 font-medium">{c.name}</td>
-                        <td className="py-2.5 pr-4"><span className={`text-[0.65rem] px-1.5 py-0.5 rounded-full font-medium ${c.status === "ENABLED" ? "bg-green-100 text-green-700" : "bg-ink/[0.08] text-ink-soft"}`}>{c.status === "ENABLED" ? "Live" : c.status}</span></td>
-                        <td className="py-2.5 pr-4 text-right">{c.impressions.toLocaleString()}</td>
-                        <td className="py-2.5 pr-4 text-right">{c.clicks.toLocaleString()}</td>
-                        <td className="py-2.5 text-right">{fmt(c.spend)}</td>
+                <div className="overflow-x-auto mb-6">
+                  <h3 className="font-display text-[0.95rem] mb-3">Campaigns</h3>
+                  <table className="w-full text-[0.85rem]">
+                    <thead>
+                      <tr className="text-left text-[0.7rem] text-ink-soft uppercase tracking-wider border-b border-ink/[0.08]">
+                        <th className="pb-2 pr-4">Campaign</th>
+                        <th className="pb-2 pr-4">Status</th>
+                        <th className="pb-2 pr-4 text-right">£/day</th>
+                        <th className="pb-2 pr-4 text-right">Views</th>
+                        <th className="pb-2 pr-4 text-right">Clicks</th>
+                        <th className="pb-2 pr-4 text-right">CTR</th>
+                        <th className="pb-2 pr-4 text-right">Per click</th>
+                        <th className="pb-2 pr-4 text-right">Spend</th>
+                        <th className="pb-2 pr-4 text-right">Conv.</th>
+                        <th className="pb-2 text-right">£/conv</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {api.campaigns.map((c) => (
+                        <tr key={c.name} className="border-b border-ink/[0.05] last:border-0">
+                          <td className="py-2.5 pr-4 font-medium">{c.name}</td>
+                          <td className="py-2.5 pr-4"><span className={`text-[0.65rem] px-1.5 py-0.5 rounded-full font-medium ${c.status === "ENABLED" ? "bg-green-100 text-green-700" : "bg-ink/[0.08] text-ink-soft"}`}>{c.status === "ENABLED" ? "Live" : c.status}</span></td>
+                          <td className="py-2.5 pr-4 text-right">{c.dailyBudget != null ? fmt(c.dailyBudget) : "—"}</td>
+                          <td className="py-2.5 pr-4 text-right">{c.impressions.toLocaleString()}</td>
+                          <td className="py-2.5 pr-4 text-right">{c.clicks.toLocaleString()}</td>
+                          <td className="py-2.5 pr-4 text-right">{c.impressions > 0 ? `${(c.ctr * 100).toFixed(1)}%` : "—"}</td>
+                          <td className="py-2.5 pr-4 text-right">{c.clicks > 0 ? fmt(c.cpc) : "—"}</td>
+                          <td className="py-2.5 pr-4 text-right">{fmt(c.spend)}</td>
+                          <td className="py-2.5 pr-4 text-right">{c.conversions > 0 ? c.conversions.toFixed(0) : "—"}</td>
+                          <td className="py-2.5 text-right">{c.costPerConv != null ? fmt(c.costPerConv) : "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
+              {(api.ads || []).length > 0 && (
+                <div className="overflow-x-auto">
+                  <h3 className="font-display text-[0.95rem] mb-3">Individual ads — which ones work</h3>
+                  <table className="w-full text-[0.85rem]">
+                    <thead>
+                      <tr className="text-left text-[0.7rem] text-ink-soft uppercase tracking-wider border-b border-ink/[0.08]">
+                        <th className="pb-2 pr-4">Ad</th>
+                        <th className="pb-2 pr-4">Campaign</th>
+                        <th className="pb-2 pr-4 text-right">Views</th>
+                        <th className="pb-2 pr-4 text-right">Clicks</th>
+                        <th className="pb-2 pr-4 text-right">Per click</th>
+                        <th className="pb-2 pr-4 text-right">Spend</th>
+                        <th className="pb-2 text-right">Conversions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {api.ads.map((a, i) => (
+                        <tr key={`${a.name}-${i}`} className="border-b border-ink/[0.05] last:border-0">
+                          <td className="py-2.5 pr-4 font-medium">{a.name}</td>
+                          <td className="py-2.5 pr-4 text-ink-soft text-[0.78rem]">{a.campaign}</td>
+                          <td className="py-2.5 pr-4 text-right">{a.impressions.toLocaleString()}</td>
+                          <td className="py-2.5 pr-4 text-right">{a.clicks.toLocaleString()}</td>
+                          <td className="py-2.5 pr-4 text-right">{a.clicks > 0 ? fmt(a.cpc) : "—"}</td>
+                          <td className="py-2.5 pr-4 text-right">{fmt(a.spend)}</td>
+                          <td className="py-2.5 text-right">{a.conversions > 0 ? a.conversions.toFixed(0) : "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <div className="mt-6 pt-4 border-t border-ink/[0.08] space-y-3">
+                <a href="https://ads.google.com/aw/campaigns" target="_blank" rel="noreferrer" className="inline-block text-[0.8rem] font-medium text-amber-600 hover:underline">
+                  Pause / edit budgets in Google Ads →
+                </a>
+                <p className="text-[0.75rem] text-ink-soft leading-relaxed">
+                  (Google&apos;s read-only access tier doesn&apos;t allow remote changes — upgrading to Standard access unlocks it later.)
+                </p>
+                <p className="text-[0.75rem] text-ink-soft leading-relaxed">
+                  <strong>Tip — see which campaign a booking came from:</strong> in Google Ads, add <code className="bg-ink/[0.06] px-1 py-0.5 rounded">utm_campaign={"{"}campaignid{"}"}</code> to each ad&apos;s tracking options (or set <em>Final URL suffix</em> to <code className="bg-ink/[0.06] px-1 py-0.5 rounded">utm_source=google&utm_campaign=YourCampaignName</code> at campaign level). Bookings will then show the campaign name next to the Google Ad badge.
+                </p>
+              </div>
             </>
           )}
         </div>

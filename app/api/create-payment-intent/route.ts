@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getStripeAsync, getStripeModeAsync } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase";
 import { redeemRewardCode } from "@/lib/loyalty-rewards";
-import { awardLoyaltyStamp } from "@/lib/create-booking";
+import { awardLoyaltyStamp, awardReferrerReward } from "@/lib/create-booking";
 import { redeemGiftCard } from "@/lib/gift-cards";
 import { getResend, EMAIL_FROM, bookingConfirmationHtml, logEmail, emailEnabled, emailTemplates } from "@/lib/email";
 import { sendCapiEvent, metaContextFromRequest } from "@/lib/capi";
@@ -217,6 +217,7 @@ export async function POST(req: NextRequest) {
             .update({ used_count: (disc.used_count || 0) + 1 })
             .eq("id", disc.id);
         }
+        await awardReferrerReward(discountCode);
       } catch (e) {
         console.error("Failed to increment discount usage:", e);
       }

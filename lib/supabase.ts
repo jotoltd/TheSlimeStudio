@@ -58,7 +58,7 @@ export type PaymentMethod = "sumup" | "stripe" | "manual" | "unknown";
 
 export function paymentMethodFor(ref?: string | null): PaymentMethod {
   if (!ref) return "unknown";
-  if (ref.startsWith("SLM-BOOK-") || ref.startsWith("SLM-SHOP-")) return "sumup";
+  if (ref.startsWith("SLM-BOOK-") || ref.startsWith("SLM-SHOP-") || ref.startsWith("SLM-EVENT-") || ref.startsWith("SLM-GIFT-")) return "sumup";
   if (ref.startsWith("pi_") || ref.startsWith("cs_")) return "stripe";
   if (ref.startsWith("manual_")) return "manual";
   return "unknown";

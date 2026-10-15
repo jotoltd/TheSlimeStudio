@@ -32,6 +32,30 @@ export type CreateBookingResult = {
   error?: string;
 };
 
+// Pending checkouts older than this can never complete — Stripe checkout
+// sessions die at 24h and SumUp hosted-checkout redirects are one-shot.
+const ABANDONED_CHECKOUT_MS = 24 * 3600 * 1000;
+
+// Sweeps abandoned regular bookings. Called from admin routes that are hit
+// regularly (e.g. the notifications poll) since there's no cron in this app.
+export async function expireStalePendingBookings() {
+  const cutoff = new Date(Date.now() - ABANDONED_CHECKOUT_MS).toISOString();
+  await supabaseAdmin
+    .from("bookings")
+    .update({ payment_status: "expired" })
+    .eq("payment_status", "pending")
+    .lt("created_at", cutoff);
+}
+
+export async function expireStalePendingEventBookings() {
+  const cutoff = new Date(Date.now() - ABANDONED_CHECKOUT_MS).toISOString();
+  await supabaseAdmin
+    .from("special_event_bookings")
+    .update({ payment_status: "expired" })
+    .eq("payment_status", "pending")
+    .lt("created_at", cutoff);
+}
+
 /**
  * Creates a paid booking for a payment that has ALREADY been captured.
  *
@@ -111,6 +135,9 @@ export async function createPaidBooking(details: BookingDetails): Promise<Create
   if (discountCode && discountCode.toUpperCase().startsWith("FREE-")) {
     await redeemRewardCode(discountCode, email).catch(() => {});
   }
+  if (discountCode) {
+    await awardReferrerReward(discountCode).catch(() => {});
+  }
 
   return { created: true, bookingId: data.id, overCapacity };
 }
@@ -144,6 +171,27 @@ async function isOverCapacity(date: string, timeSlot: string, people: number): P
   } catch {
     return false;
   }
+}
+
+// Referral codes are discount codes linked to a customer — each confirmed
+// use earns the referrer the configured reward (currently always a loyalty
+// stamp). Call once per confirmed paid booking/order that used the code.
+export async function awardReferrerReward(discountCode: string) {
+  const { data: code } = await supabaseAdmin
+    .from("discount_codes")
+    .select("id, referrer_customer_id, referrer_reward")
+    .eq("code", discountCode.trim().toUpperCase())
+    .maybeSingle();
+  if (!code?.referrer_customer_id || code.referrer_reward !== "loyalty_stamp") return;
+
+  const { data: referrer } = await supabaseAdmin
+    .from("customers")
+    .select("email, name")
+    .eq("id", code.referrer_customer_id)
+    .maybeSingle();
+  if (!referrer?.email) return;
+
+  await awardLoyaltyStamp(referrer.name || "Customer", referrer.email);
 }
 
 export async function sendCustomerConfirmation(d: BookingDetails) {

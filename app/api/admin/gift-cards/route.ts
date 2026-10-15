@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { verifyToken } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
+function checkAdmin(req: NextRequest) {
+  const token = req.cookies.get("admin_token")?.value;
+  return !!token && !!verifyToken(token);
+}
+
 // GET - List all gift cards with optional search
 export async function GET(req: NextRequest) {
+  if (!checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { searchParams } = new URL(req.url);
   const search = searchParams.get("search") || "";
   const page = parseInt(searchParams.get("page") || "1");
@@ -46,6 +53,7 @@ export async function GET(req: NextRequest) {
 
 // POST - Create, update, toggle, or delete gift cards
 export async function POST(req: NextRequest) {
+  if (!checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();
   const { action, id, data: giftCardData } = body;
 

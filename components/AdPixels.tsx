@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { trackEvent } from "@/lib/ad-tracking";
+import { trackEvent, setAdSource } from "@/lib/ad-tracking";
 
 type AdSettings = {
   fb_pixel_id: string | null;
@@ -41,8 +41,7 @@ export default function AdPixels() {
         if (fbclid) adParts.push("Facebook/Instagram Ad");
         if (gclid) adParts.push("Google Ad");
         if (utmSource) adParts.push(`utm:${utmSource}${utmCampaign ? `/${utmCampaign}` : ""}`);
-        const adSource = `[Ad: ${adParts.join(", ")}]`;
-        localStorage.setItem("adSource", adSource);
+        setAdSource(`[Ad: ${adParts.join(", ")}]`);
       }
     }
 

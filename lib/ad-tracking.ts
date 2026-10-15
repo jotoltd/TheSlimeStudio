@@ -64,6 +64,36 @@ export function trackEvent(
 
 const GOOGLE_ADS_SEND_TO = "AW-18466024911/uMtICLeZq4AdEM_bpOVE";
 
+// Ad attribution tag — stored with a timestamp so an old ad click doesn't
+// mark every future booking forever. 30-day window, same as Google's own
+// click attribution. Stored as JSON: {"s": "[Ad: ...]", "t": <epoch ms>}.
+const AD_SOURCE_KEY = "adSource";
+const AD_SOURCE_TTL = 30 * 24 * 60 * 60 * 1000;
+
+export function setAdSource(label: string) {
+  if (typeof window === "undefined" || !label) return;
+  localStorage.setItem(AD_SOURCE_KEY, JSON.stringify({ s: label, t: Date.now() }));
+}
+
+export function getAdSource(): string | null {
+  if (typeof window === "undefined") return null;
+  const raw = localStorage.getItem(AD_SOURCE_KEY);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed?.s && parsed?.t && Date.now() - parsed.t < AD_SOURCE_TTL) return parsed.s;
+  } catch {
+    // Pre-TTL format stored the bare label — re-stamp it so ad clicks from
+    // before this deploy still attribute, then let it age out normally.
+    if (raw.startsWith("[Ad:")) {
+      setAdSource(raw);
+      return raw;
+    }
+  }
+  localStorage.removeItem(AD_SOURCE_KEY);
+  return null;
+}
+
 // Stash the customer's email before a hosted-checkout redirect (Stripe/SumUp)
 // so the post-redirect page can still attach it to the conversion.
 const PURCHASE_EMAIL_KEY = "pp_email";

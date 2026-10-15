@@ -203,11 +203,16 @@ export default function BookingsAdminPage() {
     setLoading(false);
   }
 
-  async function cancelBooking(id: string, name: string, paymentStatus?: string) {
+  async function cancelBooking(id: string, name: string, paymentStatus?: string, paymentRef?: string) {
     const isPaid = paymentStatus === "paid";
-    const msg = isPaid
-      ? `Cancel the booking for "${name}"? This will refund the customer via Stripe and send them a cancellation email. This cannot be undone.`
-      : `Cancel the booking for "${name}"? This will delete it and send a cancellation email. This cannot be undone.`;
+    const method = paymentMethodFor(paymentRef);
+    const msg = !isPaid
+      ? `Cancel the booking for "${name}"? This will delete it and send a cancellation email. This cannot be undone.`
+      : method === "sumup"
+        ? `Cancel the booking for "${name}"? This was paid via SumUp — refund the customer manually in your SumUp dashboard. A cancellation email will be sent. This cannot be undone.`
+        : method === "stripe"
+          ? `Cancel the booking for "${name}"? This will refund the customer via Stripe and send them a cancellation email. This cannot be undone.`
+          : `Cancel the booking for "${name}"? It's marked as paid — no automatic refund will be issued, so refund the customer via whichever provider was used. A cancellation email will be sent. This cannot be undone.`;
     if (!confirm(msg)) return;
     setCancellingId(id);
     try {
@@ -215,19 +220,25 @@ export default function BookingsAdminPage() {
       const data = await res.json();
       if (!res.ok) { alert(data.error || "Failed to cancel booking"); }
       else if (data.refunded) { alert("Booking cancelled and Stripe refund processed successfully."); }
+      else if (data.manualRefund === "sumup") { alert("Booking cancelled. This was a SumUp payment — refund the customer manually in your SumUp dashboard."); }
       else if (data.refundError) { alert("Booking cancelled but refund failed: " + data.refundError); }
     } catch { alert("Failed to cancel booking"); }
     setCancellingId(null);
     loadBookings();
   }
 
-  async function updateEventBooking(id: string, action: "mark_paid" | "mark_pending" | "cancel" | "delete", paymentStatus?: string, name?: string) {
+  async function updateEventBooking(id: string, action: "mark_paid" | "mark_pending" | "cancel" | "delete", paymentStatus?: string, name?: string, paymentRef?: string) {
     if (action === "delete" && !confirm("Delete this event booking permanently?")) return;
     if (action === "cancel") {
       const isPaid = paymentStatus === "paid";
-      const msg = isPaid
-        ? `Cancel the booking for "${name || "this customer"}"? This will refund the customer via Stripe. This cannot be undone.`
-        : `Cancel this event booking?`;
+      const method = paymentMethodFor(paymentRef);
+      const msg = !isPaid
+        ? `Cancel this event booking?`
+        : method === "stripe"
+          ? `Cancel the booking for "${name || "this customer"}"? This will refund the customer via Stripe. This cannot be undone.`
+          : method === "manual"
+            ? `Cancel the booking for "${name || "this customer"}"? This was recorded as a manual payment — refund the customer however they paid. This cannot be undone.`
+            : `Cancel the booking for "${name || "this customer"}"? This was paid via SumUp — refund the customer manually in your SumUp dashboard. This cannot be undone.`;
       if (!confirm(msg)) return;
     }
     try {
@@ -243,6 +254,7 @@ export default function BookingsAdminPage() {
       }
       if (action === "cancel") {
         if (data.refunded) alert("Booking cancelled and Stripe refund processed successfully.");
+        else if (data.manualRefund === "sumup") alert("Booking cancelled. This was a SumUp payment — refund the customer manually in your SumUp dashboard.");
         else if (data.refundError) alert("Booking cancelled but refund failed: " + data.refundError);
       }
       const start = `${calYear}-${String(calMonthIdx + 1).padStart(2, "0")}-01`;
@@ -687,7 +699,7 @@ export default function BookingsAdminPage() {
                                       <a href={`mailto:${eb.email}`} className="text-sky-blue-light hover:underline text-[0.7rem]">Email</a>
                                       {eb.payment_status !== "paid" && eb.payment_status !== "cancelled" && <button onClick={() => updateEventBooking(eb.id, "mark_paid")} className="text-[0.7rem] text-green-700 hover:underline">Mark paid</button>}
                                       {eb.payment_status === "paid" && <button onClick={() => updateEventBooking(eb.id, "mark_pending")} className="text-[0.7rem] text-orange-700 hover:underline">Unmark</button>}
-                                      {eb.payment_status !== "cancelled" && eb.payment_status !== "refunded" && <button onClick={() => updateEventBooking(eb.id, "cancel", eb.payment_status, eb.name)} className="text-[0.7rem] text-red-700 hover:underline">Cancel</button>}
+                                      {eb.payment_status !== "cancelled" && eb.payment_status !== "refunded" && <button onClick={() => updateEventBooking(eb.id, "cancel", eb.payment_status, eb.name, eb.payment_reference)} className="text-[0.7rem] text-red-700 hover:underline">Cancel</button>}
                                       <button onClick={() => updateEventBooking(eb.id, "delete")} className="text-[0.7rem] text-ink-soft hover:underline">Delete</button>
                                     </div>
                                   </div>
@@ -713,7 +725,7 @@ export default function BookingsAdminPage() {
                     )}
                     <div className="grid sm:grid-cols-2 gap-3">
                       {selectedDateBookings.map((b) => (
-                        <BookingCard key={b.id} b={b} onEdit={() => startEdit(b)} onCancel={() => cancelBooking(b.id, b.name, b.payment_status)} cancelling={cancellingId === b.id} />
+                        <BookingCard key={b.id} b={b} onEdit={() => startEdit(b)} onCancel={() => cancelBooking(b.id, b.name, b.payment_status, b.stripe_session_id)} cancelling={cancellingId === b.id} />
                       ))}
                     </div>
                   </>
@@ -728,7 +740,7 @@ export default function BookingsAdminPage() {
                 ) : (
                   <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {filteredBookings.map((b) => (
-                      <BookingCard key={b.id} b={b} onEdit={() => startEdit(b)} onCancel={() => cancelBooking(b.id, b.name, b.payment_status)} cancelling={cancellingId === b.id} />
+                      <BookingCard key={b.id} b={b} onEdit={() => startEdit(b)} onCancel={() => cancelBooking(b.id, b.name, b.payment_status, b.stripe_session_id)} cancelling={cancellingId === b.id} />
                     ))}
                   </div>
                 )}
@@ -812,7 +824,7 @@ export default function BookingsAdminPage() {
                       <td className="py-3.5">
                         <div className="flex gap-1.5">
                           <button onClick={() => startEdit(b)} className="px-2.5 py-1.5 rounded-lg bg-sky-blue-light/30 text-ink text-[0.8rem] hover:bg-sky-blue-light/50 transition-colors">Edit</button>
-                          <button onClick={() => cancelBooking(b.id, b.name, b.payment_status)} disabled={cancellingId === b.id} className="px-2.5 py-1.5 rounded-lg bg-red-100 text-red-700 text-[0.8rem] hover:bg-red-200 transition-colors disabled:opacity-60">
+                          <button onClick={() => cancelBooking(b.id, b.name, b.payment_status, b.stripe_session_id)} disabled={cancellingId === b.id} className="px-2.5 py-1.5 rounded-lg bg-red-100 text-red-700 text-[0.8rem] hover:bg-red-200 transition-colors disabled:opacity-60">
                             {cancellingId === b.id ? "…" : "Cancel"}
                           </button>
                         </div>

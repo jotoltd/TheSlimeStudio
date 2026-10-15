@@ -31,7 +31,35 @@ export function verifyToken(token: string): Record<string, unknown> | null {
     const expectedBuf = Buffer.from(expectedSig);
     if (sigBuf.length !== expectedBuf.length || !timingSafeEqual(sigBuf, expectedBuf)) return null;
     const payload = JSON.parse(Buffer.from(data, "base64url").toString());
-    if (payload.type === "customer") return null;
+    if (payload.type !== "admin") return null;
+    if (payload.exp && Date.now() > payload.exp) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+// Scoped, single-purpose tokens (e.g. OAuth `state`). The scope is bound into
+// both the payload type and the HMAC input, so a token minted for one purpose
+// can't be replayed for another — and since the type is `scope:...`, never
+// "admin", verifyToken rejects it, so a leaked state value can never be used
+// as an admin session cookie.
+export function createScopedToken(scope: string, payload: Record<string, unknown>): string {
+  const data = Buffer.from(JSON.stringify({ ...payload, type: `scope:${scope}`, iat: Date.now() })).toString("base64url");
+  const sig = createHmac("sha256", AUTH_SECRET).update(`${scope}:${data}`).digest("base64url");
+  return `${data}.${sig}`;
+}
+
+export function verifyScopedToken(scope: string, token: string): Record<string, unknown> | null {
+  try {
+    const [data, sig] = token.split(".");
+    if (!data || !sig) return null;
+    const expectedSig = createHmac("sha256", AUTH_SECRET).update(`${scope}:${data}`).digest("base64url");
+    const sigBuf = Buffer.from(sig);
+    const expectedBuf = Buffer.from(expectedSig);
+    if (sigBuf.length !== expectedBuf.length || !timingSafeEqual(sigBuf, expectedBuf)) return null;
+    const payload = JSON.parse(Buffer.from(data, "base64url").toString());
+    if (payload.type !== `scope:${scope}`) return null;
     if (payload.exp && Date.now() > payload.exp) return null;
     return payload;
   } catch {

@@ -1,5 +1,22 @@
 import { supabaseAdmin } from "@/lib/supabase";
 
+// Google Ads API versions get sunset — keep this on a currently-supported one
+// (v22 sunset ~Oct 2026; v26 is supported until Nov 2027)
+const API_VERSION = process.env.GOOGLE_ADS_API_VERSION || "v26";
+
+// The site's canonical origin. NEXT_PUBLIC_SITE_URL wins when set; otherwise
+// fall back to the site's canonical domain.
+export function siteOrigin(): string {
+  return (process.env.NEXT_PUBLIC_SITE_URL || "https://theslimestudio.co.uk").replace(/\/+$/, "");
+}
+
+// OAuth redirect URI. Google requires an exact match against what's registered
+// in Cloud Console, so this must be the canonical origin — not whatever host
+// the admin happened to load the dashboard on.
+export function googleAdsRedirectUri(): string {
+  return `${siteOrigin()}/api/admin/google-ads/callback`;
+}
+
 // Google Ads credentials live in site_content (set from /dashboard/ads Google tab)
 const KEYS = [
   "google_ads_client_id",
@@ -66,19 +83,23 @@ export async function googleAdsQuery(gaql: string): Promise<Record<string, unkno
   if (cfg.google_ads_login_customer_id) {
     headers["login-customer-id"] = cfg.google_ads_login_customer_id.replace(/-/g, "");
   }
-  const res = await fetch(`https://googleads.googleapis.com/v18/customers/${cid}/googleAds:search`, {
+  const res = await fetch(`https://googleads.googleapis.com/${API_VERSION}/customers/${cid}/googleAds:search`, {
     method: "POST",
     headers,
     body: JSON.stringify({ query: gaql }),
   });
-  const json = await res.json();
+  const text = await res.text();
+  let json: any = null;
+  try { json = JSON.parse(text); } catch {
+    throw new Error(`Google Ads API returned HTTP ${res.status} (not JSON): ${text.slice(0, 160)}`);
+  }
   if (json.error) throw new Error(json.error.message || "Google Ads query failed");
   return json.results || [];
 }
 
 // Which ad accounts the connected Google user can see (called during connect)
 export async function listAccessibleCustomers(accessToken: string, devToken: string): Promise<string[]> {
-  const res = await fetch("https://googleads.googleapis.com/v18/customers:listAccessibleCustomers", {
+  const res = await fetch(`https://googleads.googleapis.com/${API_VERSION}/customers:listAccessibleCustomers`, {
     headers: { Authorization: `Bearer ${accessToken}`, "developer-token": devToken },
   });
   const json = await res.json();

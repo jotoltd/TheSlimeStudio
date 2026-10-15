@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
-import { googleAdsConfig, clearGoogleAdsConfigCache } from "@/lib/google-ads";
+import { googleAdsConfig, clearGoogleAdsConfigCache, googleAdsRedirectUri } from "@/lib/google-ads";
 
 export const runtime = "nodejs";
 
@@ -28,6 +28,9 @@ export async function GET(req: NextRequest) {
     customerId: cfg.google_ads_customer_id || null,
     loginCustomerId: cfg.google_ads_login_customer_id || null,
     connected: !!cfg.google_ads_refresh_token,
+    // The exact URI the OAuth flow sends — must be registered in Cloud Console.
+    // Shown in the connect UI so the instructions always match the backend.
+    redirectUri: googleAdsRedirectUri(),
   });
 }
 

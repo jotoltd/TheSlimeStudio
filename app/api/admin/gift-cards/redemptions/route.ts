@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { verifyToken } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
 // GET - Get redemptions for a specific gift card
 export async function GET(req: NextRequest) {
+  const token = req.cookies.get("admin_token")?.value;
+  if (!token || !verifyToken(token)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { searchParams } = new URL(req.url);
   const cardId = searchParams.get("card_id");
 

@@ -41,18 +41,25 @@ export async function redeemGiftCard(
   }
 
   const newBalance = giftCard.balance - amount;
-  const { error: updateError } = await supabaseAdmin
+  // Conditional update on the balance we read — if another redemption beat us
+  // to it, zero rows match and we fail instead of overdrawing the card.
+  const { data: updated, error: updateError } = await supabaseAdmin
     .from("gift_cards")
     .update({
       balance: newBalance,
       status: newBalance === 0 ? "used" : "active",
       redeemed_at: newBalance === 0 ? new Date().toISOString() : giftCard.redeemed_at,
     })
-    .eq("id", giftCard.id);
+    .eq("id", giftCard.id)
+    .eq("balance", giftCard.balance)
+    .select("id");
 
   if (updateError) {
     console.error("Failed to update gift card balance:", updateError);
     return { success: false, error: "Failed to redeem gift card", status: 500 };
+  }
+  if (!updated || updated.length === 0) {
+    return { success: false, error: "Card balance changed — please try again", status: 409 };
   }
 
   const { error: redemptionError } = await supabaseAdmin.from("gift_card_redemptions").insert({

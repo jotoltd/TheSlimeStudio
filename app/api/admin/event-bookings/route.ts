@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { verifyToken } from "@/lib/auth";
 import { getStripeAsync } from "@/lib/stripe";
+import { expireStalePendingEventBookings } from "@/lib/create-booking";
 
 export const runtime = "nodejs";
 
@@ -18,12 +19,7 @@ export async function GET(req: NextRequest) {
 
   // Expire abandoned checkouts — Stripe checkout sessions die after 24h,
   // so a pending row older than that can never complete.
-  const expiryCutoff = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
-  await supabaseAdmin
-    .from("special_event_bookings")
-    .update({ payment_status: "expired" })
-    .eq("payment_status", "pending")
-    .lt("created_at", expiryCutoff);
+  await expireStalePendingEventBookings();
 
   let query = supabaseAdmin
     .from("special_event_bookings")
@@ -84,8 +80,15 @@ export async function POST(req: NextRequest) {
 
     let refundResult: { refunded: boolean; error?: string } = { refunded: false };
 
-    if (evtBooking?.payment_status === "paid" && evtBooking?.payment_reference) {
-      const ref = evtBooking.payment_reference as string;
+    // Only Stripe refs (pi_... / cs_...) can be refunded via API. SumUp rows
+    // store either the SLM-EVENT-... checkout reference or, on older bookings,
+    // SumUp's checkout UUID — both need a manual refund in the SumUp dashboard.
+    // manual_... refs are off-platform payments, not SumUp.
+    const ref = typeof evtBooking?.payment_reference === "string" ? evtBooking.payment_reference : null;
+    const isStripeRef = !!ref && (ref.startsWith("pi_") || ref.startsWith("cs_"));
+    const isSumUp = !!ref && !isStripeRef && !ref.startsWith("manual_");
+
+    if (evtBooking?.payment_status === "paid" && ref && isStripeRef) {
       try {
         const stripe = await getStripeAsync();
         if (stripe) {
@@ -112,7 +115,7 @@ export async function POST(req: NextRequest) {
       .update({ payment_status: newStatus })
       .eq("id", id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json({ success: true, refunded: refundResult.refunded, refundError: refundResult.error });
+    return NextResponse.json({ success: true, refunded: refundResult.refunded, refundError: refundResult.error, manualRefund: isSumUp && evtBooking?.payment_status === "paid" ? "sumup" : undefined });
   }
 
   if (action === "delete") {

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { verifyToken } from "@/lib/auth";
+import { expireStalePendingBookings } from "@/lib/create-booking";
 
 export const runtime = "nodejs";
 
@@ -15,8 +17,16 @@ type Notification = {
   at: string;
 };
 
-export async function GET() {
+export async function GET(req: Request) {
+  const token = (req.headers.get("cookie") || "").match(/admin_token=([^;]+)/)?.[1];
+  if (!token || !verifyToken(token)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
+    // This route is polled every 60s while the dashboard is open, so it
+    // doubles as the sweep for abandoned pending bookings.
+    await expireStalePendingBookings();
+
     const [lastSeenRes, dismissedRes, bookingsRes, eventsRes, ordersRes, cardsRes, enquiriesRes] = await Promise.all([
       supabaseAdmin.from("site_content").select("value").eq("key", LAST_SEEN_KEY).maybeSingle(),
       supabaseAdmin.from("site_content").select("value").eq("key", DISMISSED_KEY).maybeSingle(),
@@ -143,6 +153,10 @@ export async function GET() {
 
 // POST — body {dismiss: "item-id"} hides one item; empty body marks all read
 export async function POST(req: Request) {
+  const token = (req.headers.get("cookie") || "").match(/admin_token=([^;]+)/)?.[1];
+  if (!token || !verifyToken(token)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   let dismiss: string | undefined;
   try {
     const body = await req.json();

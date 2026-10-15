@@ -86,9 +86,16 @@ export async function GET(req: NextRequest) {
   const fields = "spend,impressions,reach,clicks,actions,action_values,frequency";
   const adLevelFields = `${fields},video_play_actions,video_p100_watched_actions,video_avg_time_watched_actions,quality_ranking,engagement_rate_ranking,conversion_rate_ranking`;
 
-  // Previous 7-day window for week-over-week comparisons
+  // Selected reporting window — default last 30 days
+  const range = req.nextUrl.searchParams.get("range") || "30d";
+  const days = range === "today" ? 1 : range === "7d" ? 7 : range === "90d" ? 90 : 30;
   const fmtDate = (d: Date) => d.toISOString().split("T")[0];
   const now = new Date();
+  const until = fmtDate(now);
+  const since = fmtDate(new Date(now.getTime() - (days - 1) * 86400000));
+  const tr = JSON.stringify({ since, until });
+
+  // Previous 7-day window for week-over-week comparisons
   const prevSince = fmtDate(new Date(now.getTime() - 14 * 86400000));
   const prevUntil = fmtDate(new Date(now.getTime() - 8 * 86400000));
   let metaError: string | null = null;
@@ -98,16 +105,16 @@ export async function GET(req: NextRequest) {
     safe(metaGet(metaToken, `${accountId}/insights`, { fields, date_preset: "today" }) as Promise<InsightRow[]>),
     safe(metaGet(metaToken, `${accountId}/insights`, { fields, date_preset: "last_7d" }) as Promise<InsightRow[]>),
     safe(metaGet(metaToken, `${accountId}/insights`, { fields, time_range: JSON.stringify({ since: prevSince, until: prevUntil }) }) as Promise<InsightRow[]>),
-    safe(metaGet(metaToken, `${accountId}/insights`, { fields, date_preset: "last_30d" }) as Promise<InsightRow[]>),
-    safe(metaGet(metaToken, `${accountId}/insights`, { level: "campaign", fields: `campaign_name,${fields}`, date_preset: "last_30d" }) as Promise<InsightRow[]>),
-    safe(metaGet(metaToken, `${accountId}/insights`, { level: "adset", fields: `adset_name,${fields}`, date_preset: "last_30d" }) as Promise<InsightRow[]>),
-    safe(metaGet(metaToken, `${accountId}/insights`, { level: "ad", fields: `ad_name,${adLevelFields}`, date_preset: "last_30d" }) as Promise<InsightRow[]>),
-    safe(metaGet(metaToken, `${accountId}/insights`, { fields: `spend,clicks,actions`, date_preset: "last_30d", time_increment: "1" }) as Promise<InsightRow[]>),
-    safe(metaGet(metaToken, `${accountId}/insights`, { fields: `impressions,reach,spend,actions`, date_preset: "last_30d", breakdowns: "age,gender" }) as Promise<InsightRow[]>),
-    safe(metaGet(metaToken, `${accountId}/insights`, { fields: `impressions,reach,spend`, date_preset: "last_30d", breakdowns: "region" }) as Promise<InsightRow[]>),
-    safe(metaGet(metaToken, `${accountId}/insights`, { fields: `impressions,clicks,spend,actions`, date_preset: "last_30d", breakdowns: "publisher_platform,platform_position" }) as Promise<InsightRow[]>),
-    safe(metaGet(metaToken, `${accountId}/insights`, { fields: `impressions,clicks,actions`, date_preset: "last_30d", breakdowns: "impression_device" }) as Promise<InsightRow[]>),
-    safe(metaGet(metaToken, `${accountId}/insights`, { fields: `actions,action_values`, date_preset: "last_30d", action_attribution_windows: '["1d_view","7d_click"]' }) as Promise<InsightRow[]>),
+    safe(metaGet(metaToken, `${accountId}/insights`, { fields, time_range: tr }) as Promise<InsightRow[]>),
+    safe(metaGet(metaToken, `${accountId}/insights`, { level: "campaign", fields: `campaign_name,${fields}`, time_range: tr }) as Promise<InsightRow[]>),
+    safe(metaGet(metaToken, `${accountId}/insights`, { level: "adset", fields: `adset_name,${fields}`, time_range: tr }) as Promise<InsightRow[]>),
+    safe(metaGet(metaToken, `${accountId}/insights`, { level: "ad", fields: `ad_name,${adLevelFields}`, time_range: tr }) as Promise<InsightRow[]>),
+    safe(metaGet(metaToken, `${accountId}/insights`, { fields: `spend,clicks,actions`, time_range: tr, time_increment: "1" }) as Promise<InsightRow[]>),
+    safe(metaGet(metaToken, `${accountId}/insights`, { fields: `impressions,reach,spend,actions`, time_range: tr, breakdowns: "age,gender" }) as Promise<InsightRow[]>),
+    safe(metaGet(metaToken, `${accountId}/insights`, { fields: `impressions,reach,spend`, time_range: tr, breakdowns: "region" }) as Promise<InsightRow[]>),
+    safe(metaGet(metaToken, `${accountId}/insights`, { fields: `impressions,clicks,spend,actions`, time_range: tr, breakdowns: "publisher_platform,platform_position" }) as Promise<InsightRow[]>),
+    safe(metaGet(metaToken, `${accountId}/insights`, { fields: `impressions,clicks,actions`, time_range: tr, breakdowns: "impression_device" }) as Promise<InsightRow[]>),
+    safe(metaGet(metaToken, `${accountId}/insights`, { fields: `actions,action_values`, time_range: tr, action_attribution_windows: '["1d_view","7d_click"]' }) as Promise<InsightRow[]>),
     safe(metaGet(metaToken, `${accountId}/campaigns`, { fields: "name,status,effective_status,daily_budget,objective" })),
     safe(metaGet(metaToken, `${accountId}/adsets`, { fields: "name,status,effective_status,daily_budget,campaign{name},targeting,optimization_goal,promoted_object" })),
     safe(metaGet(metaToken, `${accountId}/ads`, { fields: "name,status,effective_status,issues_info,creative{thumbnail_url,object_story_spec,effective_object_story_id,effective_instagram_media_id,instagram_permalink_url}" })),
@@ -244,13 +251,15 @@ export async function GET(req: NextRequest) {
   const gadsConnected = googleAdsReady(gadsCfg);
   const gadsQuery = (q: string) =>
     (gadsConnected ? googleAdsQuery(q) : Promise.resolve([])).catch((e) => { gadsApiError = e.message; return [] as Record<string, unknown>[]; });
-  const [gadsDaily, gadsCampaigns] = await Promise.all([
-    gadsQuery("SELECT segments.date, metrics.cost_micros, metrics.impressions, metrics.clicks FROM campaign WHERE segments.date DURING LAST_30_DAYS"),
-    gadsQuery("SELECT campaign.name, campaign.status, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.ctr FROM campaign WHERE segments.date DURING LAST_30_DAYS"),
+  const [gadsDaily, gadsCampaigns, gadsAds] = await Promise.all([
+    gadsQuery(`SELECT segments.date, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions FROM campaign WHERE segments.date BETWEEN '${since}' AND '${until}'`),
+    gadsQuery(`SELECT campaign.name, campaign.status, campaign_budget.amount_micros, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.ctr, metrics.average_cpc, metrics.conversions, metrics.conversions_value FROM campaign WHERE segments.date BETWEEN '${since}' AND '${until}'`),
+    // GAQL doesn't allow metrics in WHERE — filter zero-impression ads below
+    gadsQuery(`SELECT ad_group_ad.ad.name, ad_group.name, campaign.name, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.ctr, metrics.average_cpc, metrics.conversions, metrics.conversions_value FROM ad_group_ad WHERE segments.date BETWEEN '${since}' AND '${until}'`),
   ]);
 
   // Real bookings attributed to ads, from our own DB — sessions + special events
-  const [{ data: adBookings }, { data: adEventBookings }, { data: googleBookings }, { data: googleEventBookings }, { data: googleGiftCards }, { data: gadsSettings }] = await Promise.all([
+  const [{ data: adBookings }, { data: adEventBookings }, { data: googleBookings }, { data: googleEventBookings }, { data: googleGiftCards }, { data: gadsSettings }, { data: allBookings }, { data: allEventBookings }] = await Promise.all([
     supabaseAdmin
       .from("bookings")
       .select("id, name, email, date, time_slot, total_price, payment_status, notes, created_at")
@@ -286,6 +295,17 @@ export async function GET(req: NextRequest) {
       .select("google_ads_id, google_ads_enabled")
       .eq("id", 1)
       .single(),
+    // All bookings in range — the organic baseline to compare ad bookings against
+    supabaseAdmin
+      .from("bookings")
+      .select("id, payment_status, total_price, notes, created_at")
+      .gte("created_at", `${since}T00:00:00Z`)
+      .lte("created_at", `${until}T23:59:59Z`),
+    supabaseAdmin
+      .from("special_event_bookings")
+      .select("id, payment_status, total_price, notes, created_at")
+      .gte("created_at", `${since}T00:00:00Z`)
+      .lte("created_at", `${until}T23:59:59Z`),
   ]);
 
   const googleItems = [
@@ -296,27 +316,43 @@ export async function GET(req: NextRequest) {
 
   // Aggregate GAQL rows into daily + per-campaign summaries
   const gadsMicros = (v: unknown) => Number(v || 0) / 1_000_000;
-  const gadsDailyMap = new Map<string, { spend: number; impressions: number; clicks: number }>();
+  const gadsDailyMap = new Map<string, { spend: number; impressions: number; clicks: number; conversions: number }>();
   for (const r of gadsDaily as any[]) {
     const d = r.segments?.date || "";
-    const cur = gadsDailyMap.get(d) || { spend: 0, impressions: 0, clicks: 0 };
+    const cur = gadsDailyMap.get(d) || { spend: 0, impressions: 0, clicks: 0, conversions: 0 };
     cur.spend += gadsMicros(r.metrics?.costMicros);
     cur.impressions += Number(r.metrics?.impressions || 0);
     cur.clicks += Number(r.metrics?.clicks || 0);
+    cur.conversions += Number(r.metrics?.conversions || 0);
     gadsDailyMap.set(d, cur);
   }
-  const gadsCampaignMap = new Map<string, { name: string; status: string; spend: number; impressions: number; clicks: number }>();
+  const gadsCampaignMap = new Map<string, { name: string; status: string; dailyBudget: number | null; spend: number; impressions: number; clicks: number; ctr: number; cpc: number; conversions: number; convValue: number }>();
   for (const r of gadsCampaigns as any[]) {
     const name = r.campaign?.name || "Unknown";
-    const cur = gadsCampaignMap.get(name) || { name, status: r.campaign?.status || "", spend: 0, impressions: 0, clicks: 0 };
+    const cur = gadsCampaignMap.get(name) || { name, status: r.campaign?.status || "", dailyBudget: r.campaignBudget?.amountMicros ? Number(r.campaignBudget.amountMicros) / 1_000_000 : null, spend: 0, impressions: 0, clicks: 0, ctr: 0, cpc: 0, conversions: 0, convValue: 0 };
     cur.spend += gadsMicros(r.metrics?.costMicros);
     cur.impressions += Number(r.metrics?.impressions || 0);
     cur.clicks += Number(r.metrics?.clicks || 0);
+    cur.conversions += Number(r.metrics?.conversions || 0);
+    cur.convValue += Number(r.metrics?.conversionsValue || 0);
     gadsCampaignMap.set(name, cur);
   }
+  const gadsAdMap = new Map<string, { name: string; adGroup: string; campaign: string; spend: number; impressions: number; clicks: number; conversions: number; convValue: number }>();
+  for (const r of gadsAds as any[]) {
+    if (!Number(r.metrics?.impressions || 0)) continue; // only ads that actually served
+    const name = r.adGroupAd?.ad?.name || `${r.adGroup?.name || "Ad"} (${r.campaign?.name || ""})`;
+    const cur = gadsAdMap.get(name) || { name, adGroup: r.adGroup?.name || "", campaign: r.campaign?.name || "", spend: 0, impressions: 0, clicks: 0, conversions: 0, convValue: 0 };
+    cur.spend += gadsMicros(r.metrics?.costMicros);
+    cur.impressions += Number(r.metrics?.impressions || 0);
+    cur.clicks += Number(r.metrics?.clicks || 0);
+    cur.conversions += Number(r.metrics?.conversions || 0);
+    cur.convValue += Number(r.metrics?.conversionsValue || 0);
+    gadsAdMap.set(name, cur);
+  }
   const gadsDailyRows = Array.from(gadsDailyMap.entries()).map(([date, v]) => ({ date, ...v })).sort((a, b) => a.date.localeCompare(b.date));
-  const gadsCampaignRows = Array.from(gadsCampaignMap.values()).sort((a, b) => b.spend - a.spend);
-  const gadsTotals = gadsDailyRows.reduce((s, d) => ({ spend: s.spend + d.spend, impressions: s.impressions + d.impressions, clicks: s.clicks + d.clicks }), { spend: 0, impressions: 0, clicks: 0 });
+  const gadsCampaignRows = Array.from(gadsCampaignMap.values()).map((c) => ({ ...c, ctr: c.impressions > 0 ? c.clicks / c.impressions : 0, cpc: c.clicks > 0 ? c.spend / c.clicks : 0, costPerConv: c.conversions > 0 ? c.spend / c.conversions : null })).sort((a, b) => b.spend - a.spend);
+  const gadsAdRows = Array.from(gadsAdMap.values()).map((a) => ({ ...a, ctr: a.impressions > 0 ? a.clicks / a.impressions : 0, cpc: a.clicks > 0 ? a.spend / a.clicks : 0, costPerConv: a.conversions > 0 ? a.spend / a.conversions : null })).sort((a, b) => b.spend - a.spend);
+  const gadsTotals = gadsDailyRows.reduce((s, d) => ({ spend: s.spend + d.spend, impressions: s.impressions + d.impressions, clicks: s.clicks + d.clicks, conversions: s.conversions + d.conversions }), { spend: 0, impressions: 0, clicks: 0, conversions: 0 });
 
   const google = {
     tagEnabled: !!gadsSettings?.google_ads_enabled,
@@ -332,6 +368,7 @@ export async function GET(req: NextRequest) {
       ctr: gadsTotals.impressions > 0 ? gadsTotals.clicks / gadsTotals.impressions : 0,
       daily: gadsDailyRows,
       campaigns: gadsCampaignRows,
+      ads: gadsAdRows,
     },
   };
 
@@ -363,9 +400,38 @@ export async function GET(req: NextRequest) {
     .filter((b) => b.payment_status === "paid")
     .reduce((s, b) => s + Number(b.total_price), 0);
 
+  // Organic baseline — every booking in the window vs the ones tagged from ads.
+  // Unlike `adBookings`/`platformTotals` (capped at 50+50 rows for display),
+  // these counts come from the full window so headline numbers never undercount.
+  const allInRange = [...(allBookings || []), ...(allEventBookings || [])];
+  const paidAll = allInRange.filter((b) => b.payment_status === "paid");
+  const paidAds = paidAll.filter((b) => (b.notes || "").startsWith("[Ad:"));
+  const byPlatform: Record<string, { bookings: number; revenue: number }> = {
+    meta: { bookings: 0, revenue: 0 },
+    google: { bookings: 0, revenue: 0 },
+    tiktok: { bookings: 0, revenue: 0 },
+    other: { bookings: 0, revenue: 0 },
+  };
+  for (const b of paidAds) {
+    const p = byPlatform[detectPlatform(b.notes)];
+    p.bookings += 1;
+    p.revenue += Number(b.total_price || 0);
+  }
+  const totals = {
+    bookings: allInRange.length,
+    paidBookings: paidAll.length,
+    revenue: paidAll.reduce((s, b) => s + Number(b.total_price || 0), 0),
+    adBookings: paidAds.length,
+    adRevenue: paidAds.reduce((s, b) => s + Number(b.total_price || 0), 0),
+    organicBookings: paidAll.length - paidAds.length,
+    organicRevenue: paidAll.reduce((s, b) => s + Number(b.total_price || 0), 0) - paidAds.reduce((s, b) => s + Number(b.total_price || 0), 0),
+    byPlatform,
+  };
+
   return NextResponse.json({
     configured: true,
     metaError,
+    range: { key: range, since, until },
     summary: {
       today: summarize(today),
       week: weekSummary,
@@ -445,6 +511,7 @@ export async function GET(req: NextRequest) {
     adBookings: allAdBookings,
     platformTotals,
     attributedRevenue,
+    totals,
     comments,
     fbCommentsUnavailable,
     google,

@@ -48,7 +48,11 @@ export async function POST(req: NextRequest) {
   const b = booking as { email?: string; name?: string; date?: string; time_slot?: string; people?: number; is_party?: boolean; payment_status?: string; stripe_session_id?: string; total_price?: number };
   let refundResult: { refunded: boolean; error?: string } = { refunded: false };
 
-  if (b.payment_status === "paid" && b.stripe_session_id) {
+  // SumUp bookings store their checkout ref (SLM-...) in stripe_session_id —
+  // SumUp has no refund API for hosted checkouts, so flag it for manual refund.
+  const isSumUp = !!b.stripe_session_id?.startsWith("SLM-");
+
+  if (b.payment_status === "paid" && b.stripe_session_id && !isSumUp) {
     try {
       const stripe = await getStripeAsync();
       if (stripe) {
@@ -81,8 +85,21 @@ export async function POST(req: NextRequest) {
       .from("bookings")
       .update({ payment_status: "refunded" })
       .eq("id", bookingId);
+  } else if (b.payment_status === "paid") {
+    // Paid but not auto-refunded (e.g. a SumUp payment needing a manual
+    // refund) — keep the row as "cancelled" so the payment reference and
+    // customer details survive for the refund; deleting would erase them.
+    const { error: cancelErr } = await supabaseAdmin
+      .from("bookings")
+      .update({ payment_status: "cancelled" })
+      .eq("id", bookingId);
+    if (cancelErr) {
+      return NextResponse.json({
+        error: "Failed to cancel booking. Please try again."
+      }, { status: 500 });
+    }
   } else {
-    // If no refund needed or refund failed, delete the booking
+    // Unpaid booking — no refund involved, safe to delete
     let deleteError: { message: string } | null = null;
     const { error: adminErr } = await supabaseAdmin
       .from("bookings")
@@ -133,5 +150,6 @@ export async function POST(req: NextRequest) {
     success: true,
     refunded: refundResult.refunded,
     refundError: refundResult.error,
+    manualRefund: isSumUp && b.payment_status === "paid" ? "sumup" : undefined,
   });
 }

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getStripeAsync, getStripeModeAsync, getStripeKeysForMode } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase";
 import { sendOrderConfirmationEmail } from "@/lib/email";
-import { createPaidBooking } from "@/lib/create-booking";
+import { createPaidBooking, awardReferrerReward } from "@/lib/create-booking";
 import { redeemGiftCard } from "@/lib/gift-cards";
 import { sendCapiEvent } from "@/lib/capi";
 
@@ -161,6 +161,11 @@ export async function POST(req: NextRequest) {
                   .update({ stock: newStock })
                   .eq("id", item.product_id);
               }
+            }
+
+            // Referral codes reward the referrer on a confirmed order
+            if (order.discount_code) {
+              await awardReferrerReward(order.discount_code).catch(() => {});
             }
 
             // Redeem gift card if provided

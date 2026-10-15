@@ -8,7 +8,7 @@ import Calendar from "@/components/Calendar";
 import { supabase, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, PRICE_PER_PERSON, MAX_DAILY_BOOKINGS as DEFAULT_MAX } from "@/lib/supabase";
 import type { BookingSettings, OpeningHour, DateOverride } from "@/lib/supabase";
 import { useContent } from "@/lib/useContent";
-import { trackPurchase, trackInitiateCheckout, getMetaCookies } from "@/lib/ad-tracking";
+import { trackPurchase, trackInitiateCheckout, getMetaCookies, getAdSource, setAdSource } from "@/lib/ad-tracking";
 
 const InlinePayment = lazy(() => import("@/components/InlinePayment"));
 
@@ -90,8 +90,7 @@ function BookingPageInner() {
         if (fbclid) adParts.push("Facebook/Instagram Ad");
         if (gclid) adParts.push("Google Ad");
         if (utmSource) adParts.push(`utm:${utmSource}${utmCampaign ? `/${utmCampaign}` : ""}`);
-        const adSource = `[Ad: ${adParts.join(", ")}]`;
-        localStorage.setItem("adSource", adSource);
+        setAdSource(`[Ad: ${adParts.join(", ")}]`);
         // Clean up URL so the ad params don't persist across navigation
         const url = new URL(window.location.href);
         url.searchParams.delete("fbclid");
@@ -512,7 +511,7 @@ function BookingPageInner() {
     try {
       if (paymentProvider === "sumup") {
         // SumUp: redirect to hosted checkout
-        const adSource = typeof window !== "undefined" ? localStorage.getItem("adSource") : null;
+        const adSource = getAdSource();
         const res = await fetch("/api/sumup-booking-checkout", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -552,7 +551,7 @@ function BookingPageInner() {
       }
 
       // Stripe: inline payment intent
-      const adSource = typeof window !== "undefined" ? localStorage.getItem("adSource") : null;
+      const adSource = getAdSource();
       const res = await fetch("/api/create-payment-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -758,7 +757,7 @@ function BookingPageInner() {
                             discountCode: appliedDiscount?.code,
                             giftCardCode: giftCardBalance !== null ? giftCardCode : null,
                             giftCardAmount: giftCardCover,
-                            adSource: localStorage.getItem("adSource"),
+                            adSource: getAdSource(),
                           }),
                         });
                         const data = await res.json();

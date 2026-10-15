@@ -172,6 +172,8 @@ async function createSumUpCheckout(booking: any, event: any, instance: any, tota
 
   const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://www.theslimestudio.co.uk";
 
+  const checkoutRef = `SLM-EVENT-${booking.id.slice(0, 8)}`;
+
   const res = await fetch("https://api.sumup.com/v0.1/checkouts", {
     method: "POST",
     headers: {
@@ -179,7 +181,7 @@ async function createSumUpCheckout(booking: any, event: any, instance: any, tota
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      checkout_reference: `SLM-EVENT-${booking.id.slice(0, 8)}`,
+      checkout_reference: checkoutRef,
       amount: total.toFixed(2),
       currency: "GBP",
       merchant_code: process.env.SUMUP_MERCHANT_CODE || "",
@@ -193,9 +195,11 @@ async function createSumUpCheckout(booking: any, event: any, instance: any, tota
     return NextResponse.json({ error: data.error?.message || "Failed to create checkout" }, { status: 500 });
   }
 
+  // Store our checkout_reference, not SumUp's checkout id — the webhook and
+  // the admin refund path both key off the SLM-EVENT-... reference.
   await supabaseAdmin
     .from("special_event_bookings")
-    .update({ payment_reference: data.id })
+    .update({ payment_reference: checkoutRef })
     .eq("id", booking.id);
 
   return NextResponse.json({ url: data.hosted_checkout_url || data.url });

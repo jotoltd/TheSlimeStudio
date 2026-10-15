@@ -7,6 +7,7 @@ import {
   sendCustomerConfirmation,
   sendAdminNotification,
   awardLoyaltyStamp,
+  awardReferrerReward,
   type BookingDetails,
 } from "@/lib/create-booking";
 import { redeemRewardCode } from "@/lib/loyalty-rewards";
@@ -164,6 +165,9 @@ export async function POST(req: NextRequest) {
       await awardLoyaltyStamp(booking.name, booking.email).catch(() => {});
       if (booking.discount_code && booking.discount_code.toUpperCase().startsWith("FREE-")) {
         await redeemRewardCode(booking.discount_code, booking.email).catch(() => {});
+      }
+      if (booking.discount_code) {
+        await awardReferrerReward(booking.discount_code).catch(() => {});
       }
 
       console.warn(`[sumup-webhook] Recovered booking ${booking.id} for ${checkoutRef} — client never confirmed.`);
