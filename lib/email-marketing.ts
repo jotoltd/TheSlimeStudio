@@ -211,13 +211,26 @@ export function renderCampaignHtml(c: Pick<Campaign, "heading" | "body" | "ctaTe
 
 // --- sending ------------------------------------------------------------------
 
-// Resend free tier ~2 req/s; keep batches small enough to finish inside a
-// serverless invocation so the dashboard can page through the queue.
-export const SEND_BATCH = 40;
+// Batches must finish well inside a serverless invocation — the dashboard
+// pages through the queue with send_batch calls.
+export const SEND_BATCH = 12;
 
 export async function sendCampaignBatch(campaign: Campaign): Promise<Campaign> {
   const resend = getResend();
   if (!resend) throw new Error("RESEND_API_KEY not configured");
+
+  // Reconcile against what's actually been logged — if a previous invocation
+  // was killed mid-batch, its sends are in email_logs but not in the campaign
+  // doc. Skipping them prevents duplicate sends on resume.
+  const { data: logged } = await supabaseAdmin
+    .from("email_logs")
+    .select("recipient, status")
+    .eq("type", `campaign:${campaign.id}`);
+  const done = new Set((logged || []).map((l) => l.recipient));
+  const failedCount = (logged || []).filter((l) => l.status !== "sent").length;
+  campaign.recipients = campaign.recipients.filter((r) => !done.has(norm(r.email)));
+  campaign.sent = Math.max(campaign.sent, done.size - failedCount);
+  campaign.failed = Math.max(campaign.failed, failedCount);
 
   const batch = campaign.recipients.splice(0, SEND_BATCH);
   for (const r of batch) {
@@ -237,13 +250,16 @@ export async function sendCampaignBatch(campaign: Campaign): Promise<Campaign> {
       campaign.failed++;
       await logEmail(to, campaign.subject, `campaign:${campaign.id}`, "failed");
     }
+    // Persist after every send so a killed invocation can't lose progress
+    // or resend to people who already got it.
+    await saveCampaign(campaign);
     await new Promise((r) => setTimeout(r, 120));
   }
 
   if (campaign.recipients.length === 0) {
     campaign.status = campaign.sent > 0 ? "sent" : "failed";
     campaign.sentAt = new Date().toISOString();
+    await saveCampaign(campaign);
   }
-  await saveCampaign(campaign);
   return campaign;
 }

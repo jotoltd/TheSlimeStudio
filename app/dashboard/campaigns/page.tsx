@@ -144,6 +144,27 @@ export default function CampaignsPage() {
     }
   }
 
+  async function resume(id: string) {
+    setSending(id); setMsg("");
+    try {
+      let c: CampaignRow | undefined;
+      do {
+        const res = await fetch("/api/admin/campaigns", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "send_batch", id }),
+        });
+        const j = await res.json();
+        if (!res.ok) { setMsg(j.error || "Send failed"); break; }
+        c = j.campaign;
+        load();
+      } while (c && c.remaining > 0);
+      if (c && c.remaining === 0) setMsg(`Done — ${c.sent} sent${c.failed ? `, ${c.failed} failed` : ""}`);
+    } finally {
+      setSending(null);
+      load();
+    }
+  }
+
   async function remove(id: string) {
     if (!confirm("Delete this campaign record?")) return;
     await fetch("/api/admin/campaigns", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "delete", id }) });
@@ -241,7 +262,7 @@ export default function CampaignsPage() {
                   <div className="text-ink-soft text-[0.78rem]">{new Date(c.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</div>
                   <div className="text-ink-soft text-[0.78rem]">{data.segments[c.audience] || c.audience}</div>
                   <div className={`px-2.5 py-1 rounded-full text-[0.72rem] font-semibold ${c.status === "sent" ? "bg-green-100 text-green-700" : c.status === "sending" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}>
-                    {c.status === "sending" ? `sending ${c.sent}/${c.total}` : c.status}
+                    {c.status === "sending" ? (sending === c.id ? `sending ${c.sent}/${c.total}` : `paused ${c.sent}/${c.total}`) : c.status}
                   </div>
                   <div className="text-[0.78rem] text-ink-soft w-40 text-right">
                     {c.sent} sent{c.failed ? ` · ${c.failed} failed` : ""}
@@ -249,6 +270,11 @@ export default function CampaignsPage() {
                       <div className="text-[0.72rem]">{c.stats.opens} opens · {c.stats.clicks} clicks{c.stats.bounces ? ` · ${c.stats.bounces} bounced` : ""}</div>
                     )}
                   </div>
+                  {c.status === "sending" && (
+                    <button onClick={() => resume(c.id)} disabled={!!sending} className="text-[0.72rem] font-semibold text-amber-700 hover:underline disabled:opacity-40">
+                      {sending === c.id ? "Sending…" : "Resume"}
+                    </button>
+                  )}
                   <button onClick={() => toggleDetail(c.id)} className="text-[0.72rem] text-bright-lavender hover:underline">
                     {expanded === c.id ? "Hide" : "Details"}
                   </button>
