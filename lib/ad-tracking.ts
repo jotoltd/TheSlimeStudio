@@ -29,6 +29,20 @@ export type TrackEventName =
   | "ViewContent"
   | "CompleteRegistration";
 
+// GA4 only recognises its lowercase recommended event names — a "Purchase"
+// event is ingested as a custom event and never feeds Monetization reports.
+// PageView is skipped: gtag("config") already emits page_view, and firing it
+// again would double-count pageviews.
+const GA4_EVENT: Record<TrackEventName, string | null> = {
+  PageView: null,
+  Purchase: "purchase",
+  Lead: "generate_lead",
+  AddToCart: "add_to_cart",
+  InitiateCheckout: "begin_checkout",
+  ViewContent: "view_item",
+  CompleteRegistration: "sign_up",
+};
+
 export function trackEvent(
   event: TrackEventName,
   params?: Record<string, any>,
@@ -41,8 +55,9 @@ export function trackEvent(
     window.fbq("track", event, params, eventId ? { eventID: eventId } : undefined);
   }
 
-  if (window.gtag) {
-    window.gtag("event", event, params);
+  const ga4Event = GA4_EVENT[event];
+  if (window.gtag && ga4Event) {
+    window.gtag("event", ga4Event, params);
   }
 
   if (window.ttq) {
