@@ -65,6 +65,7 @@ type Data = {
     purchases?: number; purchaseRevenue?: number; bounceRate?: number;
     channels?: { channel: string; sessions: number; purchases: number; revenue: number }[];
     topPages?: { path: string; views: number; users: number }[];
+    realtime?: { activeUsers: number; pages: { page: string; users: number }[] };
   };
   comments: { adName: string; platform: string; author: string; text: string; time: string; replyUrl: string | null }[];
   fbCommentsUnavailable?: boolean;
@@ -371,8 +372,30 @@ export default function AdsPage() {
               )}
               {data.analytics?.connected && (
                 <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm mb-8">
-                  <h2 className="font-display text-[1.1rem] mb-1">Website analytics</h2>
+                  <div className="flex items-center justify-between mb-1">
+                    <h2 className="font-display text-[1.1rem]">Website analytics</h2>
+                    {data.analytics.realtime && (
+                      <span className="flex items-center gap-1.5 text-[0.75rem] font-semibold text-green-700">
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+                        </span>
+                        {data.analytics.realtime.activeUsers} on the site now
+                      </span>
+                    )}
+                  </div>
                   <p className="text-[0.75rem] text-ink-soft mb-5">Everyone who visited the site {rangeLabel} — from Google Analytics.</p>
+                  {data.analytics.realtime && data.analytics.realtime.pages.length > 0 && (
+                    <div className="rounded-xl px-4 py-3 bg-green-50 mb-5">
+                      <div className="text-[0.7rem] text-ink-soft uppercase tracking-wider mb-2">Live right now</div>
+                      {data.analytics.realtime.pages.map((p) => (
+                        <div key={p.page} className="flex justify-between text-[0.8rem] py-1.5 border-b border-ink/5 last:border-0">
+                          <span className="font-semibold truncate pr-3">{p.page}</span>
+                          <span className="text-ink-soft shrink-0">{p.users} {p.users === 1 ? "visitor" : "visitors"}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 mb-5">
                     {[
                       ["Visitors", data.analytics.users ?? 0],

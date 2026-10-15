@@ -71,6 +71,28 @@ async function runReport(
   return json.rows || [];
 }
 
+// Active users in the last ~30 minutes, broken down by page.
+async function runRealtime(propertyId: string, token: string) {
+  const res = await fetch(`${DATA_API}/properties/${propertyId}:runRealtimeReport`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({
+      dimensions: [{ name: "unifiedScreenName" }],
+      metrics: [{ name: "activeUsers" }],
+      limit: 10,
+    }),
+  });
+  const json = await res.json();
+  const pages: { page: string; users: number }[] = (json.rows || [])
+    .map((r: Ga4Row) => ({
+      page: r.dimensionValues?.[0]?.value || "(unknown)",
+      users: Number(r.metricValues?.[0]?.value || 0),
+    }))
+    .filter((p: { users: number }) => p.users > 0)
+    .sort((a: { users: number }, b: { users: number }) => b.users - a.users);
+  return { activeUsers: pages.reduce((s, p) => s + p.users, 0), pages };
+}
+
 // Whole-site analytics for a reporting window — sessions/users/pageviews plus
 // GA4 ecommerce purchases, split by channel and top pages.
 export async function ga4Analytics(since: string, until: string) {
@@ -84,7 +106,7 @@ export async function ga4Analytics(since: string, until: string) {
     }
 
     const dateRanges = [{ startDate: since, endDate: until }];
-    const [totals, daily, channels, pages] = await Promise.all([
+    const [totals, daily, channels, pages, realtime] = await Promise.all([
       runReport(propertyId, token, {
         dateRanges,
         metrics: [
@@ -118,6 +140,7 @@ export async function ga4Analytics(since: string, until: string) {
         orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }],
         limit: 10,
       }),
+      runRealtime(propertyId, token),
     ]);
 
     const t = totals[0]?.metricValues || [];
@@ -148,6 +171,7 @@ export async function ga4Analytics(since: string, until: string) {
         views: Number(r.metricValues?.[0]?.value || 0),
         users: Number(r.metricValues?.[1]?.value || 0),
       })),
+      realtime,
     };
   } catch (e) {
     return { connected: false, error: e instanceof Error ? e.message : String(e) };
