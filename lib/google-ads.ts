@@ -51,8 +51,9 @@ export function googleAdsReady(cfg: GoogleAdsConfig): boolean {
   return !!(cfg.google_ads_client_id && cfg.google_ads_client_secret && cfg.google_ads_dev_token && cfg.google_ads_customer_id && cfg.google_ads_refresh_token);
 }
 
-// Exchange the stored refresh token for a short-lived access token
-async function accessToken(cfg: GoogleAdsConfig): Promise<string> {
+// Exchange the stored refresh token for a short-lived access token.
+// Exported because the same Google OAuth grant also covers GA4/Data Manager.
+export async function googleAccessToken(cfg: GoogleAdsConfig): Promise<string> {
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -72,7 +73,7 @@ async function accessToken(cfg: GoogleAdsConfig): Promise<string> {
 export async function googleAdsQuery(gaql: string): Promise<Record<string, unknown>[]> {
   const cfg = await googleAdsConfig();
   if (!googleAdsReady(cfg)) return [];
-  const token = await accessToken(cfg);
+  const token = await googleAccessToken(cfg);
   const cid = cfg.google_ads_customer_id!.replace(/-/g, "");
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -166,7 +167,7 @@ export async function uploadClickConversion(opts: {
     }
     const action = found.find((a: any) => a.primaryForGoal) || found[0];
 
-    const token = await accessToken(cfg);
+    const token = await googleAccessToken(cfg);
     const res = await fetch("https://datamanager.googleapis.com/v1/events:ingest", {
       method: "POST",
       headers: {

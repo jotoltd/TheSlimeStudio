@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     // conversion uploads (UploadClickConversions is no longer allowed for new
     // integrations). Reconnect Google Ads once after this deploys so the
     // stored refresh token picks up the new scope.
-    scope: "https://www.googleapis.com/auth/adwords https://www.googleapis.com/auth/datamanager",
+    scope: "https://www.googleapis.com/auth/adwords https://www.googleapis.com/auth/datamanager https://www.googleapis.com/auth/analytics.readonly",
     access_type: "offline",
     prompt: "consent", // ensures a refresh token is returned every time
     // Signed scoped state — CSRF protection, and lets the callback authenticate
