@@ -21,6 +21,7 @@ const navSections = [
       { href: "/dashboard/analytics", label: "Analytics", Icon: BarChartIcon },
       { href: "/dashboard/ads", label: "Ads", Icon: TrendingUpIcon },
       { href: "/dashboard/marketing", label: "Marketing", Icon: PhotoIcon },
+      { href: "/dashboard/campaigns", label: "Email Campaigns", Icon: MailIcon },
     ],
   },
   {
