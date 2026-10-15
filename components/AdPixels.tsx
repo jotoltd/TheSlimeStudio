@@ -21,6 +21,28 @@ const CONSENT_KEY = "cookieConsent";
 
 let pixelsLoaded = false;
 let consentChecked = false;
+let loadedSettings: AdSettings | null = null;
+
+// gtag is loaded by the layout with Consent Mode denied-by-default. Always safe
+// to call — if the gtag script itself was blocked (ad blocker), calls just
+// queue onto dataLayer harmlessly.
+function gtagSafe(...args: any[]) {
+  if (typeof window === "undefined") return;
+  window.dataLayer = window.dataLayer || [];
+  if (!window.gtag) window.gtag = (...a: any[]) => window.dataLayer!.push(a);
+  window.gtag(...args);
+}
+
+// Upgrade Consent Mode to full storage once the visitor accepts cookies.
+// Until then GA4/Google Ads operate in cookieless ping mode.
+function grantConsent() {
+  gtagSafe("consent", "update", {
+    ad_storage: "granted",
+    ad_user_data: "granted",
+    ad_personalization: "granted",
+    analytics_storage: "granted",
+  });
+}
 
 export default function AdPixels() {
   const [showBanner, setShowBanner] = useState(false);
@@ -45,9 +67,13 @@ export default function AdPixels() {
       }
     }
 
+    // Always load the Google tag config — consent state only controls whether
+    // storage/third-party pixels are granted, not whether gtag runs.
+    loadPixels();
+
     const consent = localStorage.getItem(CONSENT_KEY);
     if (consent === "accepted") {
-      loadPixels();
+      grantConsent();
     } else if (consent !== "rejected") {
       setShowBanner(true);
     }
@@ -65,31 +91,38 @@ export default function AdPixels() {
       .then(({ data }) => {
         if (!data) return;
         const s = data as AdSettings;
+        loadedSettings = s;
 
+        // GA + Google Ads ride the shared layout gtag tag — no script
+        // injection needed, just config. Works in cookieless mode.
         if (s.ga_enabled && s.ga_measurement_id) {
-          injectGoogleAnalytics(s.ga_measurement_id);
-        }
-        if (s.fb_pixel_enabled && s.fb_pixel_id) {
-          injectFacebookPixel(s.fb_pixel_id);
-        }
-        if (s.tiktok_pixel_enabled && s.tiktok_pixel_id) {
-          injectTikTokPixel(s.tiktok_pixel_id);
+          gtagSafe("config", s.ga_measurement_id);
         }
         if (s.google_ads_enabled && s.google_ads_id) {
-          injectGoogleAds(s.google_ads_id);
-        }
-        if (s.snapchat_pixel_enabled && s.snapchat_pixel_id) {
-          injectSnapchatPixel(s.snapchat_pixel_id);
+          gtagSafe("config", s.google_ads_id);
         }
 
+        maybeLoadThirdPartyPixels();
         trackEvent("PageView");
       });
+  }
+
+  // Meta/TikTok/Snapchat don't support Google Consent Mode — still gated on accept.
+  function maybeLoadThirdPartyPixels() {
+    const s = loadedSettings;
+    if (!s || localStorage.getItem(CONSENT_KEY) !== "accepted") return;
+    if (s.fb_pixel_enabled && s.fb_pixel_id) injectFacebookPixel(s.fb_pixel_id);
+    if (s.tiktok_pixel_enabled && s.tiktok_pixel_id) injectTikTokPixel(s.tiktok_pixel_id);
+    if (s.snapchat_pixel_enabled && s.snapchat_pixel_id) injectSnapchatPixel(s.snapchat_pixel_id);
   }
 
   function choose(consent: "accepted" | "rejected") {
     localStorage.setItem(CONSENT_KEY, consent);
     setShowBanner(false);
-    if (consent === "accepted") loadPixels();
+    if (consent === "accepted") {
+      grantConsent();
+      maybeLoadThirdPartyPixels();
+    }
   }
 
   if (!showBanner) return null;
@@ -120,22 +153,6 @@ export default function AdPixels() {
       </div>
     </div>
   );
-}
-
-function injectGoogleAnalytics(measurementId: string) {
-  if (typeof window === "undefined") return;
-  const script = document.createElement("script");
-  script.async = true;
-  script.src = `https://www.googletagmanager.com/gtag/js?id=${measurementId}`;
-  document.head.appendChild(script);
-
-  window.dataLayer = window.dataLayer || [];
-  function gtag(...args: any[]) {
-    (window as any).dataLayer.push(args);
-  }
-  (window as any).gtag = gtag;
-  gtag("js", new Date());
-  gtag("config", measurementId);
 }
 
 function injectFacebookPixel(pixelId: string) {
@@ -201,22 +218,6 @@ function injectTikTokPixel(pixelId: string) {
     ttq.page();
   })(window, document, "ttq");
   /* eslint-enable */
-}
-
-function injectGoogleAds(conversionId: string) {
-  if (typeof window === "undefined") return;
-  const script = document.createElement("script");
-  script.async = true;
-  script.src = `https://www.googletagmanager.com/gtag/js?id=${conversionId}`;
-  document.head.appendChild(script);
-
-  window.dataLayer = window.dataLayer || [];
-  function gtag(...args: any[]) {
-    (window as any).dataLayer.push(args);
-  }
-  (window as any).gtag = gtag;
-  gtag("js", new Date());
-  gtag("config", conversionId);
 }
 
 function injectSnapchatPixel(pixelId: string) {

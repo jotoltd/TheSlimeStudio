@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Poppins } from "next/font/google";
 import "./globals.css";
 import MaintenanceGate from "@/components/MaintenanceGate";
@@ -94,6 +95,28 @@ export default function RootLayout({
     <html lang="en" className={poppins.variable}>
       <head>
         <meta name="facebook-domain-verification" content="v7vy4a3rp37u3t887z6kbtpw16lqo8" />
+
+        {/* Google tag loads unconditionally with Consent Mode denied — GA4 and
+            Google Ads get cookieless pings until the cookie banner grants
+            storage, at which point AdPixels updates consent to granted. */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-QWN7QR5WH9"
+          strategy="afterInteractive"
+        />
+        <Script id="gtag-init" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('consent', 'default', {
+              ad_storage: 'denied',
+              ad_user_data: 'denied',
+              ad_personalization: 'denied',
+              analytics_storage: 'denied'
+            });
+            gtag('js', new Date());
+            gtag('config', 'G-QWN7QR5WH9');
+          `}
+        </Script>
 
         <script
           type="application/ld+json"
