@@ -6,6 +6,7 @@ const KEYS = [
   "google_ads_client_secret",
   "google_ads_dev_token",
   "google_ads_customer_id",
+  "google_ads_login_customer_id",
   "google_ads_refresh_token",
 ] as const;
 
@@ -56,13 +57,18 @@ export async function googleAdsQuery(gaql: string): Promise<Record<string, unkno
   if (!googleAdsReady(cfg)) return [];
   const token = await accessToken(cfg);
   const cid = cfg.google_ads_customer_id!.replace(/-/g, "");
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+    "developer-token": cfg.google_ads_dev_token!,
+  };
+  // Required when the developer token belongs to a Manager (MCC) account
+  if (cfg.google_ads_login_customer_id) {
+    headers["login-customer-id"] = cfg.google_ads_login_customer_id.replace(/-/g, "");
+  }
   const res = await fetch(`https://googleads.googleapis.com/v18/customers/${cid}/googleAds:search`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      "developer-token": cfg.google_ads_dev_token!,
-    },
+    headers,
     body: JSON.stringify({ query: gaql }),
   });
   const json = await res.json();

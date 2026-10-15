@@ -10,6 +10,7 @@ const ALLOWED_KEYS = [
   "google_ads_client_secret",
   "google_ads_dev_token",
   "google_ads_customer_id",
+  "google_ads_login_customer_id",
 ];
 
 function checkAdmin(req: NextRequest) {
@@ -25,6 +26,7 @@ export async function GET(req: NextRequest) {
     hasClientSecret: !!cfg.google_ads_client_secret,
     hasDevToken: !!cfg.google_ads_dev_token,
     customerId: cfg.google_ads_customer_id || null,
+    loginCustomerId: cfg.google_ads_login_customer_id || null,
     connected: !!cfg.google_ads_refresh_token,
   });
 }

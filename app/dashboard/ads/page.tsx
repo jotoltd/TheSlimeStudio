@@ -680,8 +680,8 @@ function BookingsCard({ bookings, title, note }: { bookings: AdBooking[]; title:
 }
 
 function GoogleApiSection({ api, onChanged }: { api?: NonNullable<Data["google"]>["api"]; onChanged: () => void }) {
-  const [cfg, setCfg] = useState<{ hasClientId: boolean; hasClientSecret: boolean; hasDevToken: boolean; customerId: string | null; connected: boolean } | null>(null);
-  const [form, setForm] = useState({ clientId: "", clientSecret: "", devToken: "", customerId: "" });
+  const [cfg, setCfg] = useState<{ hasClientId: boolean; hasClientSecret: boolean; hasDevToken: boolean; customerId: string | null; loginCustomerId: string | null; connected: boolean } | null>(null);
+  const [form, setForm] = useState({ clientId: "", clientSecret: "", devToken: "", customerId: "", loginCustomerId: "" });
   const [msg, setMsg] = useState("");
   const [flash, setFlash] = useState("");
 
@@ -706,6 +706,7 @@ function GoogleApiSection({ api, onChanged }: { api?: NonNullable<Data["google"]
         google_ads_client_secret: form.clientSecret || undefined,
         google_ads_dev_token: form.devToken || undefined,
         google_ads_customer_id: form.customerId || undefined,
+        google_ads_login_customer_id: form.loginCustomerId || undefined,
       }),
     });
     setMsg(res.ok ? "Saved — now click Connect Google Ads" : "Failed to save");
@@ -787,14 +788,14 @@ function GoogleApiSection({ api, onChanged }: { api?: NonNullable<Data["google"]
 
           <ol className="space-y-4 text-[0.85rem] mb-6">
             <li>
-              <strong>1 · Developer token</strong> — in Google Ads: Admin → <em>API Center</em> → apply for a developer token (choose <em>Basic</em> access). Paste it below.
+              <strong>1 · Free Manager account + developer token</strong> — API Center only exists in Manager accounts, so: go to <a href="https://ads.google.com/home/tools/manager-accounts/" target="_blank" rel="noreferrer" className="text-sky-blue-light hover:underline">ads.google.com → Manager accounts</a>, create one (free, 2 mins, nothing moves or gets billed), then in it: <em>Admin → API Center → apply for a developer token</em> (Basic access). Manager account&apos;s 10-digit ID goes in <em>Manager account ID</em> below.
             </li>
             <li>
               <strong>2 · OAuth app</strong> — at <a href="https://console.cloud.google.com" target="_blank" rel="noreferrer" className="text-sky-blue-light hover:underline">console.cloud.google.com</a>: create a project → <em>APIs &amp; Services → OAuth consent screen</em> (External, add yourself as a test user) → <em>Credentials → Create OAuth client ID → Web application</em> with this exact redirect:
               <div className="mt-1.5 bg-ink/[0.04] rounded-lg px-3 py-2 font-mono text-[0.75rem] break-all select-all">{redirectUri}</div>
             </li>
             <li>
-              <strong>3 · Customer ID</strong> — the 10-digit number top-right of Google Ads (e.g. 123-456-7890). Then click <em>Connect</em> and approve.
+              <strong>3 · Customer ID</strong> — the 10-digit number top-right of <em>your normal Google Ads account</em> (e.g. 123-456-7890) — the one that actually runs the ads. Then click <em>Connect</em> and approve.
             </li>
           </ol>
 
@@ -802,7 +803,8 @@ function GoogleApiSection({ api, onChanged }: { api?: NonNullable<Data["google"]
             <input type="text" placeholder={`Client ID ${cfg?.hasClientId ? "(saved)" : ""}`} value={form.clientId} onChange={(e) => setForm({ ...form, clientId: e.target.value })} className="px-3.5 py-2.5 border border-ink/15 rounded-xl text-[0.82rem] focus:outline-none focus:ring-2 focus:ring-bright-lavender/50" />
             <input type="password" placeholder={`Client secret ${cfg?.hasClientSecret ? "(saved)" : ""}`} value={form.clientSecret} onChange={(e) => setForm({ ...form, clientSecret: e.target.value })} className="px-3.5 py-2.5 border border-ink/15 rounded-xl text-[0.82rem] focus:outline-none focus:ring-2 focus:ring-bright-lavender/50" />
             <input type="password" placeholder={`Developer token ${cfg?.hasDevToken ? "(saved)" : ""}`} value={form.devToken} onChange={(e) => setForm({ ...form, devToken: e.target.value })} className="px-3.5 py-2.5 border border-ink/15 rounded-xl text-[0.82rem] focus:outline-none focus:ring-2 focus:ring-bright-lavender/50" />
-            <input type="text" placeholder={`Customer ID ${cfg?.customerId ? `(saved: ${cfg.customerId})` : "(optional — auto-detected)"}`} value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })} className="px-3.5 py-2.5 border border-ink/15 rounded-xl text-[0.82rem] focus:outline-none focus:ring-2 focus:ring-bright-lavender/50" />
+            <input type="text" placeholder={`Ads customer ID ${cfg?.customerId ? `(saved: ${cfg.customerId})` : "(your ads account, e.g. 123-456-7890)"}`} value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })} className="px-3.5 py-2.5 border border-ink/15 rounded-xl text-[0.82rem] focus:outline-none focus:ring-2 focus:ring-bright-lavender/50" />
+            <input type="text" placeholder={`Manager account ID ${cfg?.loginCustomerId ? `(saved: ${cfg.loginCustomerId})` : "(from step 1)"}`} value={form.loginCustomerId} onChange={(e) => setForm({ ...form, loginCustomerId: e.target.value })} className="px-3.5 py-2.5 border border-ink/15 rounded-xl text-[0.82rem] focus:outline-none focus:ring-2 focus:ring-bright-lavender/50" />
           </div>
           <div className="flex items-center gap-3 flex-wrap">
             <button onClick={saveCredentials} className="px-5 py-2.5 rounded-xl bg-ink/[0.06] font-semibold text-[0.85rem] hover:bg-ink/[0.1]">Save details</button>
