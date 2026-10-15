@@ -8,7 +8,7 @@ type Alert = { level: "warning" | "info"; message: string };
 type NamedRow = Summary & { name?: string; thumbnail?: string | null; quality?: string | null; qualityGood?: boolean | null; video?: { plays: number; completionRate: number; avgWatch: number } | null };
 type DailyPoint = { date: string; spend: number; clicks: number; purchases: number };
 type ManagedEntity = { id: string; name: string; status: string; effectiveStatus: string; dailyBudget: number | null; campaignName?: string; thumbnail?: string | null; targeting?: string; optimisesFor?: string | null };
-type AdBooking = { id: string; name: string; email: string; date: string; total_price: number; payment_status: string; notes: string; created_at: string; kind?: "session" | "event" };
+type AdBooking = { id: string; name: string; email: string; date: string; total_price: number; payment_status: string; notes: string; created_at: string; kind?: "session" | "event"; platform?: "meta" | "google" | "tiktok" | "other" };
 
 type Data = {
   configured: boolean;
@@ -30,6 +30,7 @@ type Data = {
   attributionSplit: { clicked: number; sawOnly: number };
   devices: { device: string; impressions: number; clicks: number; purchases: number }[];
   adBookings: AdBooking[];
+  platformTotals: { platform: string; bookings: number; revenue: number }[];
   google?: {
     tagEnabled: boolean;
     tagId: string | null;
@@ -71,12 +72,19 @@ function placementLabel(platform: string, position: string): string {
   return pos && pos !== "Feed" ? `${p} ${pos}` : `${p} Feed`;
 }
 
+const PLATFORM_TABS: { id: "meta" | "google" | "other"; label: string; color: string }[] = [
+  { id: "meta", label: "Facebook & Instagram", color: "bg-blue-600" },
+  { id: "google", label: "Google", color: "bg-amber-500" },
+  { id: "other", label: "Other sources", color: "bg-ink/40" },
+];
+
 export default function AdsPage() {
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionMsg, setActionMsg] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [budgetEdits, setBudgetEdits] = useState<Record<string, string>>({});
+  const [tab, setTab] = useState<"overview" | "meta" | "google" | "other">("overview");
 
   async function load() {
     setLoading(true);
@@ -192,6 +200,51 @@ export default function AdsPage() {
             );
           })()}
 
+          {/* Platform tabs */}
+          <div className="flex gap-2 flex-wrap mb-8">
+            {[{ id: "overview" as const, label: "Overview" }, ...PLATFORM_TABS].map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id as "overview" | "meta" | "google" | "other")}
+                className={`px-4 py-2 rounded-full text-[0.85rem] font-medium transition-all ${tab === t.id ? "bg-ink text-white shadow-sm" : "bg-white text-ink hover:bg-ink/[0.04] shadow-sm"}`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {/* ===== OVERVIEW TAB ===== */}
+          {tab === "overview" && (
+            <>
+              <div className="grid md:grid-cols-3 gap-4 md:gap-5 mb-8">
+                {PLATFORM_TABS.map((t) => {
+                  const tot = data.platformTotals?.find((p) => p.platform === t.id) || { bookings: 0, revenue: 0 };
+                  const isMeta = t.id === "meta";
+                  return (
+                    <button key={t.id} onClick={() => setTab(t.id as "meta" | "google" | "other")} className="bg-white rounded-[20px] p-6 shadow-sm text-left hover:shadow-md transition-shadow">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className={`w-2.5 h-2.5 rounded-full ${t.color}`} />
+                        <span className="text-[0.75rem] text-ink-soft uppercase tracking-wider font-semibold">{t.label}</span>
+                      </div>
+                      <div className="font-display text-[1.6rem]">{fmt(tot.revenue)}</div>
+                      <div className="text-[0.8rem] text-ink-soft">
+                        {tot.bookings} booking{tot.bookings === 1 ? "" : "s"} attributed
+                        {isMeta && data.summary.month.spend > 0 && ` · ${fmt(data.summary.month.spend)} spent`}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              <BookingsCard
+                bookings={data.adBookings}
+                title="All bookings from ads"
+                note="Every booking that came in tagged from an ad click — Meta, Google, or any other tracked source."
+              />
+            </>
+          )}
+
+          {/* ===== META TAB ===== */}
+          {tab === "meta" && (<>
           {/* Headline stats — last 30 days */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5 mb-8">
             <div className="bg-white rounded-[20px] p-6 shadow-sm border-l-4 border-red-400">
@@ -485,37 +538,16 @@ export default function AdsPage() {
             )}
           </div>
 
-          {/* Attributed bookings */}
-          <div className="bg-white rounded-[20px] p-8 shadow-sm">
-            <h2 className="font-display text-[1.1rem] mb-2">Bookings from Ads</h2>
-            <p className="text-[0.75rem] text-ink-soft mb-6">
-              Real bookings from your database — this is the accurate count. Ads Manager may show fewer purchases because Meta can't always connect a booking back to the original ad click (different device, ad blockers, long gaps).
-            </p>
-            {data.adBookings.length === 0 ? (
-              <div className="text-center py-8 text-ink-soft text-[0.9rem]">No ad-attributed bookings yet.</div>
-            ) : (
-              <div className="space-y-3">
-                {data.adBookings.map((b) => (
-                  <div key={b.id} className="flex items-center justify-between gap-3 py-2 border-b border-ink/[0.06] last:border-0 flex-wrap">
-                    <div className="min-w-0">
-                      <span className="font-medium text-[0.9rem]">{b.name}</span>
-                      {b.kind === "event" && <span className="ml-2 text-[0.6rem] bg-bright-lavender/20 text-ink px-1.5 py-0.5 rounded-full font-medium">Event</span>}
-                      <span className={`ml-2 text-[0.6rem] px-1.5 py-0.5 rounded-full font-medium ${PLATFORM_COLORS[adLabel(b.notes).split(" ")[0]] || "bg-blue-100 text-blue-700"}`}>
-                        {adLabel(b.notes)}
-                      </span>
-                      <div className="text-[0.75rem] text-ink-soft">{b.email} · session {new Date(b.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} · booked {new Date(b.created_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</div>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <div className="font-display text-[0.95rem]">£{Number(b.total_price).toFixed(2)}</div>
-                      <div className={`text-[0.7rem] ${b.payment_status === "paid" ? "text-green-600" : "text-orange-500"}`}>{b.payment_status}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* Meta bookings */}
+          <BookingsCard
+            bookings={data.adBookings.filter((b) => b.platform === "meta")}
+            title="Bookings from Facebook & Instagram ads"
+            note="Real bookings from your database — the accurate count. Ads Manager may show fewer purchases because Meta can't always connect a booking back to the original click."
+          />
+          </>)}
 
-          {/* Google Ads */}
+          {/* ===== GOOGLE TAB ===== */}
+          {tab === "google" && (<>
           {data.google && (
             <div className="bg-white rounded-[20px] p-8 shadow-sm">
               <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
@@ -572,7 +604,65 @@ export default function AdsPage() {
               </div>
             </div>
           )}
+          <BookingsCard
+            bookings={data.adBookings.filter((b) => b.platform === "google")}
+            title="Bookings from Google ads"
+            note="Customers who clicked a Google ad (gclid tracked) and then booked or bought."
+          />
+          </>)}
+
+          {/* ===== OTHER TAB ===== */}
+          {tab === "other" && (
+            <>
+              <div className="bg-white rounded-[20px] p-8 shadow-sm mb-8">
+                <h2 className="font-display text-[1.1rem] mb-2">Other tracked sources</h2>
+                <p className="text-[0.85rem] text-ink-soft leading-relaxed">
+                  Any booking tagged with a source that isn&apos;t Meta or Google lands here — TikTok, Snapchat, newsletter links, or anything with a tracking parameter in the URL.
+                  {data.adBookings.filter((b) => b.platform === "tiktok").length > 0 && " TikTok bookings are being picked up."}
+                </p>
+                <p className="text-[0.8rem] text-ink-soft mt-3">
+                  Tip: add <code className="bg-ink/[0.06] px-1.5 py-0.5 rounded">?utm_source=tiktok</code> (or newsletter, poster, etc.) to any link you share and bookings from it will show up here.
+                </p>
+              </div>
+              <BookingsCard
+                bookings={data.adBookings.filter((b) => b.platform === "other" || b.platform === "tiktok")}
+                title="Bookings from other sources"
+                note="Bookings tagged with a non-Meta, non-Google source."
+              />
+            </>
+          )}
         </>
+      )}
+    </div>
+  );
+}
+
+function BookingsCard({ bookings, title, note }: { bookings: AdBooking[]; title: string; note: string }) {
+  return (
+    <div className="bg-white rounded-[20px] p-8 shadow-sm">
+      <h2 className="font-display text-[1.1rem] mb-2">{title}</h2>
+      <p className="text-[0.75rem] text-ink-soft mb-6">{note}</p>
+      {bookings.length === 0 ? (
+        <div className="text-center py-8 text-ink-soft text-[0.9rem]">No bookings attributed yet.</div>
+      ) : (
+        <div className="space-y-3">
+          {bookings.map((b) => (
+            <div key={b.id} className="flex items-center justify-between gap-3 py-2 border-b border-ink/[0.06] last:border-0 flex-wrap">
+              <div className="min-w-0">
+                <span className="font-medium text-[0.9rem]">{b.name}</span>
+                {b.kind === "event" && <span className="ml-2 text-[0.6rem] bg-bright-lavender/20 text-ink px-1.5 py-0.5 rounded-full font-medium">Event</span>}
+                <span className={`ml-2 text-[0.6rem] px-1.5 py-0.5 rounded-full font-medium ${PLATFORM_COLORS[adLabel(b.notes).split(" ")[0]] || "bg-blue-100 text-blue-700"}`}>
+                  {adLabel(b.notes)}
+                </span>
+                <div className="text-[0.75rem] text-ink-soft">{b.email} · session {new Date(b.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} · booked {new Date(b.created_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</div>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <div className="font-display text-[0.95rem]">£{Number(b.total_price).toFixed(2)}</div>
+                <div className={`text-[0.7rem] ${b.payment_status === "paid" ? "text-green-600" : "text-orange-500"}`}>{b.payment_status}</div>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );

@@ -291,10 +291,29 @@ export async function GET(req: NextRequest) {
     items: googleItems.slice(0, 10),
   };
 
+  const detectPlatform = (notes: string | null): "meta" | "google" | "tiktok" | "other" => {
+    const n = (notes || "").toLowerCase();
+    if (n.includes("google ad") || n.includes("utm:google")) return "google";
+    if (n.includes("tiktok")) return "tiktok";
+    if (n.includes("facebook") || n.includes("instagram") || n.includes("utm:ig") || n.includes("utm:fb") || n.includes("utm:meta") || n.includes("meta ad")) return "meta";
+    return "other";
+  };
+
   const allAdBookings = [
     ...(adBookings || []).map((b) => ({ ...b, kind: "session" as const })),
     ...(adEventBookings || []).map((b) => ({ ...b, date: b.created_at, kind: "event" as const })),
-  ].sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
+  ]
+    .map((b) => ({ ...b, platform: detectPlatform(b.notes) }))
+    .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
+
+  const platformTotals = (["meta", "google", "tiktok", "other"] as const).map((p) => {
+    const items = allAdBookings.filter((b) => b.platform === p);
+    return {
+      platform: p,
+      bookings: items.length,
+      revenue: items.filter((b) => b.payment_status === "paid").reduce((s, b) => s + Number(b.total_price), 0),
+    };
+  });
 
   const attributedRevenue = allAdBookings
     .filter((b) => b.payment_status === "paid")
@@ -380,6 +399,7 @@ export async function GET(req: NextRequest) {
       })),
     },
     adBookings: allAdBookings,
+    platformTotals,
     attributedRevenue,
     comments,
     fbCommentsUnavailable,
