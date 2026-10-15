@@ -334,7 +334,7 @@ function BookingPageInner() {
 
       // Fetch paid booking counts for these instances so capacity decrements correctly
       const instanceIds = (instances || []).map((i: any) => i.id);
-      let bookingCounts: Record<string, number> = {};
+      const bookingCounts: Record<string, number> = {};
       if (instanceIds.length > 0) {
         const { data: paidBookings } = await supabase
           .from("special_event_bookings")

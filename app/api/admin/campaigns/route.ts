@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/lib/auth";
+import { supabaseAdmin } from "@/lib/supabase";
 import { getResend, EMAIL_FROM, logEmail } from "@/lib/email";
 import {
   buildAudience,
@@ -43,12 +44,33 @@ export async function GET(req: NextRequest) {
     remaining: c.recipients?.length || 0,
   }));
 
+  // Engagement per campaign — the email webhook logs opens/clicks as
+  // campaign_open:{id} / campaign_click:{id} in email_logs.
+  const { data: engagement } = await supabaseAdmin
+    .from("email_logs")
+    .select("type, recipient")
+    .like("type", "campaign_%");
+  const stats: Record<string, { opens: number; clicks: number; bounces: number }> = {};
+  const seen = new Set<string>(); // dedupe opens/clicks per recipient
+  for (const r of engagement || []) {
+    const m = r.type.match(/^campaign_(open|click|bounce|complaint):(.+)$/);
+    if (!m) continue;
+    const [, kind, id] = m;
+    if (kind !== "bounce" && seen.has(`${r.type}:${r.recipient}`)) continue;
+    seen.add(`${r.type}:${r.recipient}`);
+    const s = (stats[id] ||= { opens: 0, clicks: 0, bounces: 0 });
+    if (kind === "open") s.opens++;
+    else if (kind === "click") s.clicks++;
+    else s.bounces++;
+  }
+  const statsByCampaign = campaigns.map((c) => ({ ...c, stats: stats[c.id] || { opens: 0, clicks: 0, bounces: 0 } }));
+
   const unsub = await unsubscribedEmails();
   return NextResponse.json({
     configured: !!process.env.RESEND_API_KEY,
     segments: SEGMENTS,
     counts,
-    campaigns,
+    campaigns: statsByCampaign,
     unsubscribed: unsub.size,
   });
 }

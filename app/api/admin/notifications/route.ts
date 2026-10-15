@@ -62,7 +62,7 @@ export async function GET(req: Request) {
 
     // Event titles for special event bookings
     const eventIds = Array.from(new Set((eventsRes.data || []).map((b) => b.event_id).filter(Boolean)));
-    let eventTitles: Record<string, string> = {};
+    const eventTitles: Record<string, string> = {};
     if (eventIds.length) {
       const { data: events } = await supabaseAdmin
         .from("special_events")

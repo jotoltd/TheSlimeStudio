@@ -5,7 +5,7 @@ import crypto from "crypto";
 // Events carry the same event_id as the matching browser event so Meta dedupes.
 
 const PIXEL_ID = process.env.META_PIXEL_ID || "1084510120839736";
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.theslimestudio.co.uk";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://theslimestudio.co.uk";
 
 function sha256(value: string): string {
   return crypto.createHash("sha256").update(value.trim().toLowerCase()).digest("hex");

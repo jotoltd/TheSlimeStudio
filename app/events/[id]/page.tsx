@@ -73,7 +73,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
 
   // Fetch booking counts
   const instanceIds = (instances || []).map((i: any) => i.id);
-  let bookingCounts: Record<string, number> = {};
+  const bookingCounts: Record<string, number> = {};
   if (instanceIds.length > 0) {
     const { data: bookings } = await supabaseAdmin
       .from("special_event_bookings")

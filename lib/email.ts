@@ -83,6 +83,9 @@ export function adSourceLabel(adSource: string): string {
 export function emailWrapper(content: string): string {
   return `
     <div style="font-family: 'Poppins', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
+      <div style="text-align: center; margin-bottom: 24px;">
+        <img src="https://theslimestudio.co.uk/images/logo.png" alt="The Slime Studio" width="180" style="max-width: 180px; height: auto;" />
+      </div>
       ${content}
       <p style="color: #ff2d78; font-size: 0.9rem; margin-top: 24px;">
         The Slime Studio

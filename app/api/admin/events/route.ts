@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
 
   // Fetch instances for each event
   const eventIds = (events || []).map((e: any) => e.id);
-  let instancesMap: Record<string, any[]> = {};
+  const instancesMap: Record<string, any[]> = {};
 
   if (eventIds.length > 0) {
     let instanceQuery = supabaseAdmin
@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
 
     // Fetch booking counts for each instance
     const instanceIds = (instances || []).map((i: any) => i.id);
-    let bookingCounts: Record<string, number> = {};
+    const bookingCounts: Record<string, number> = {};
     if (instanceIds.length > 0) {
       const { data: bookings } = await supabaseAdmin
         .from("special_event_bookings")
@@ -164,7 +164,7 @@ export async function POST(req: NextRequest) {
     };
 
     // If title changed and no explicit slug provided, regenerate slug
-    let updateData = { ...event };
+    const updateData = { ...event };
     if (event.title && !event.slug) {
       const newSlug = await uniqueSlug(generateSlug(event.title), id);
       updateData.slug = newSlug;

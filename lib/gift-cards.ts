@@ -69,8 +69,22 @@ export async function redeemGiftCard(
     shop_order_id: refs.shopOrderId || null,
   });
   if (redemptionError) {
-    console.error("Failed to record redemption:", redemptionError);
-    // Don't fail the redemption if history recording fails
+    // Roll the balance back — a spent card with no audit record is worse
+    // than a failed checkout retry.
+    console.error("Failed to record redemption, restoring balance:", redemptionError);
+    const { error: rollbackError } = await supabaseAdmin
+      .from("gift_cards")
+      .update({
+        balance: giftCard.balance,
+        status: giftCard.status,
+        redeemed_at: giftCard.redeemed_at,
+      })
+      .eq("id", giftCard.id)
+      .eq("balance", newBalance);
+    if (rollbackError) {
+      console.error("Rollback failed — gift card balance deducted without record:", rollbackError);
+    }
+    return { success: false, error: "Failed to redeem gift card — please try again", status: 500 };
   }
 
   return { success: true, remainingBalance: newBalance, redeemedAmount: amount };

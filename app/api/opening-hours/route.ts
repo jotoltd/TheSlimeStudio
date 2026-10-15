@@ -1,11 +1,16 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { verifyToken } from "@/lib/auth";
+import { expireStalePendingBookings, expireStalePendingEventBookings } from "@/lib/create-booking";
 
 export const runtime = "nodejs";
 
 // GET — public, returns weekly schedule + date overrides
 export async function GET() {
+  // Customers hit this on every booking page load — sweep abandoned
+  // checkouts after responding so cleanup doesn't depend on admin traffic.
+  after(() => Promise.all([expireStalePendingBookings(), expireStalePendingEventBookings()]).then(() => undefined).catch(() => {}));
+
   const { data: weekly, error: weeklyErr } = await supabaseAdmin
     .from("opening_hours")
     .select("*")

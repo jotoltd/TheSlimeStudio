@@ -6,6 +6,7 @@ type CampaignRow = {
   id: string; name: string; subject: string; audience: string;
   status: "sending" | "sent" | "failed"; total: number; sent: number; failed: number;
   remaining: number; createdAt: string; sentAt?: string;
+  stats?: { opens: number; clicks: number; bounces: number };
 };
 
 const PRESETS = [
@@ -215,8 +216,11 @@ export default function CampaignsPage() {
                 <div className={`px-2.5 py-1 rounded-full text-[0.72rem] font-semibold ${c.status === "sent" ? "bg-green-100 text-green-700" : c.status === "sending" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}>
                   {c.status === "sending" ? `sending ${c.sent}/${c.total}` : c.status}
                 </div>
-                <div className="text-[0.78rem] text-ink-soft w-28 text-right">
+                <div className="text-[0.78rem] text-ink-soft w-40 text-right">
                   {c.sent} sent{c.failed ? ` · ${c.failed} failed` : ""}
+                  {c.stats && c.sent > 0 && (
+                    <div className="text-[0.72rem]">{c.stats.opens} opens · {c.stats.clicks} clicks{c.stats.bounces ? ` · ${c.stats.bounces} bounced` : ""}</div>
+                  )}
                 </div>
                 <button onClick={() => remove(c.id)} className="text-[0.72rem] text-ink-soft hover:text-red-600">Delete</button>
               </div>

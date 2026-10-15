@@ -348,8 +348,8 @@ export default function PartiesPage() {
               <a href="mailto:studio@theslimestudio.co.uk" className="text-[0.95rem] text-ink hover:text-[#ff2d78] transition-colors">
                 <Heart size={14} /> Email: studio@theslimestudio.co.uk
               </a>
-              <a href="https://www.theslimestudio.co.uk" target="_blank" rel="noopener noreferrer" className="text-[0.95rem] text-ink hover:text-[#ff2d78] transition-colors">
-                <Heart size={14} /> Website: www.theslimestudio.co.uk
+              <a href="https://theslimestudio.co.uk" target="_blank" rel="noopener noreferrer" className="text-[0.95rem] text-ink hover:text-[#ff2d78] transition-colors">
+                <Heart size={14} /> Website: theslimestudio.co.uk
               </a>
             </div>
           </div>

@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
 
   // Fetch upcoming instances for these events
   const eventIds = (events || []).map((e: any) => e.id);
-  let instancesMap: Record<string, any[]> = {};
+  const instancesMap: Record<string, any[]> = {};
 
   if (eventIds.length > 0) {
     let instanceQuery = supabaseAdmin
@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
 
     // Fetch booking counts
     const instanceIds = (instances || []).map((i: any) => i.id);
-    let bookingCounts: Record<string, number> = {};
+    const bookingCounts: Record<string, number> = {};
     if (instanceIds.length > 0) {
       const { data: bookings } = await supabaseAdmin
         .from("special_event_bookings")

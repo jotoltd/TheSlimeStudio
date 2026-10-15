@@ -119,7 +119,7 @@ async function createStripeCheckout(booking: any, event: any, instance: any, tot
     return NextResponse.json({ error: "Payment not configured" }, { status: 500 });
   }
 
-  const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://www.theslimestudio.co.uk";
+  const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://theslimestudio.co.uk";
 
   const res = await fetch("https://api.stripe.com/v1/checkout/sessions", {
     method: "POST",
@@ -171,7 +171,7 @@ async function createSumUpCheckout(booking: any, event: any, instance: any, tota
     return NextResponse.json({ error: "Payment not configured" }, { status: 500 });
   }
 
-  const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://www.theslimestudio.co.uk";
+  const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://theslimestudio.co.uk";
 
   const checkoutRef = `SLM-EVENT-${booking.id.slice(0, 8)}`;
 

@@ -31,8 +31,8 @@ export async function GET(req: NextRequest) {
 
   const customerEmails = (data || []).map((c) => c.email);
 
-  let bookingsMap: Record<string, { count: number; total: number; upcoming: number }> = {};
-  let loyaltyMap: Record<string, { stamps: number; rewards: number }> = {};
+  const bookingsMap: Record<string, { count: number; total: number; upcoming: number }> = {};
+  const loyaltyMap: Record<string, { stamps: number; rewards: number }> = {};
 
   if (customerEmails.length > 0) {
     const [{ data: bookings }, { data: loyalty }] = await Promise.all([
