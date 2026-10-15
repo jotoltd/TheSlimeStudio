@@ -1,11 +1,14 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import type { NextRequest } from "next/server";
 
-const BASE_SECRET = process.env.AUTH_SECRET || "slime-studio-secret-key-change-me";
+// No fallback: a default secret would let anyone forge customer sessions.
+const BASE_SECRET = process.env.AUTH_SECRET;
 
 // Derive a distinct secret for customer sessions. This means a customer token can
 // never be replayed as an admin token (and vice versa), even though both are HMACs.
-const CUSTOMER_SECRET = createHmac("sha256", BASE_SECRET).update("customer-session-v1").digest("hex");
+const CUSTOMER_SECRET = BASE_SECRET
+  ? createHmac("sha256", BASE_SECRET).update("customer-session-v1").digest("hex")
+  : "";
 
 export const CUSTOMER_COOKIE = "customer_token";
 export const CUSTOMER_SESSION_DAYS = 30;
@@ -18,6 +21,7 @@ export type CustomerSession = {
 };
 
 export function createCustomerToken(payload: { sub: string; email: string; name: string }): string {
+  if (!CUSTOMER_SECRET) throw new Error("AUTH_SECRET is not configured");
   const body = {
     ...payload,
     type: "customer",
@@ -30,6 +34,7 @@ export function createCustomerToken(payload: { sub: string; email: string; name:
 }
 
 export function verifyCustomerToken(token: string): CustomerSession | null {
+  if (!CUSTOMER_SECRET) return null;
   try {
     const [data, sig] = token.split(".");
     if (!data || !sig) return null;

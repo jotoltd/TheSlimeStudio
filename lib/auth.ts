@@ -1,6 +1,12 @@
 import { scryptSync, randomBytes, timingSafeEqual, createHmac } from "crypto";
 
-const AUTH_SECRET = process.env.AUTH_SECRET || "slime-studio-secret-key-change-me";
+// No fallback on purpose: a shared default secret lets anyone forge an admin
+// session. If AUTH_SECRET is missing, every token function fails closed —
+// creation throws, verification rejects.
+const AUTH_SECRET = process.env.AUTH_SECRET;
+if (!AUTH_SECRET) {
+  console.error("AUTH_SECRET env var is not set — admin token signing/verification is disabled");
+}
 
 export function hashPassword(password: string): string {
   const salt = randomBytes(16).toString("hex");
@@ -17,12 +23,14 @@ export function verifyPassword(password: string, stored: string): boolean {
 }
 
 export function createToken(payload: Record<string, unknown>): string {
+  if (!AUTH_SECRET) throw new Error("AUTH_SECRET is not configured");
   const data = Buffer.from(JSON.stringify({ ...payload, type: "admin", iat: Date.now() })).toString("base64url");
   const sig = createHmac("sha256", AUTH_SECRET).update(data).digest("base64url");
   return `${data}.${sig}`;
 }
 
 export function verifyToken(token: string): Record<string, unknown> | null {
+  if (!AUTH_SECRET) return null;
   try {
     const [data, sig] = token.split(".");
     if (!data || !sig) return null;
@@ -45,12 +53,14 @@ export function verifyToken(token: string): Record<string, unknown> | null {
 // "admin", verifyToken rejects it, so a leaked state value can never be used
 // as an admin session cookie.
 export function createScopedToken(scope: string, payload: Record<string, unknown>): string {
+  if (!AUTH_SECRET) throw new Error("AUTH_SECRET is not configured");
   const data = Buffer.from(JSON.stringify({ ...payload, type: `scope:${scope}`, iat: Date.now() })).toString("base64url");
   const sig = createHmac("sha256", AUTH_SECRET).update(`${scope}:${data}`).digest("base64url");
   return `${data}.${sig}`;
 }
 
 export function verifyScopedToken(scope: string, token: string): Record<string, unknown> | null {
+  if (!AUTH_SECRET) return null;
   try {
     const [data, sig] = token.split(".");
     if (!data || !sig) return null;
