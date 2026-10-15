@@ -165,7 +165,23 @@ export async function deleteCampaign(id: string): Promise<void> {
 const escapeHtml = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-export function renderCampaignHtml(c: Pick<Campaign, "heading" | "body" | "ctaText" | "ctaUrl">, recipient: { email: string; name?: string }): string {
+// Tag internal links so GA4 reports them under the Email channel and the
+// site's own ad-attribution picks up the campaign (utm params are captured
+// at landing and stored with the booking).
+function trackableUrl(url: string, campaignTag: string): string {
+  try {
+    const u = new URL(url);
+    if (!/theslimestudio\.co\.uk$/.test(u.hostname) || u.searchParams.has("utm_source")) return url;
+    u.searchParams.set("utm_source", "email");
+    u.searchParams.set("utm_medium", "email");
+    u.searchParams.set("utm_campaign", campaignTag);
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
+export function renderCampaignHtml(c: Pick<Campaign, "heading" | "body" | "ctaText" | "ctaUrl"> & { campaignTag?: string }, recipient: { email: string; name?: string }): string {
   const firstName = (recipient.name || "").trim().split(/\s+/)[0] || "there";
   const personalize = (s: string) => escapeHtml(s).replace(/\{\{name\}\}/gi, escapeHtml(firstName));
 
@@ -178,7 +194,7 @@ export function renderCampaignHtml(c: Pick<Campaign, "heading" | "body" | "ctaTe
 
   const cta = c.ctaText && c.ctaUrl
     ? `<div style="text-align: center; margin: 28px 0;">
-        <a href="${c.ctaUrl}" style="display: inline-block; background: linear-gradient(135deg, #ff2d78, #a855f7); color: #ffffff; text-decoration: none; font-weight: 600; font-size: 1rem; padding: 14px 36px; border-radius: 999px;">${escapeHtml(c.ctaText)}</a>
+        <a href="${trackableUrl(c.ctaUrl, c.campaignTag || "campaign")}" style="display: inline-block; background: linear-gradient(135deg, #ff2d78, #a855f7); color: #ffffff; text-decoration: none; font-weight: 600; font-size: 1rem; padding: 14px 36px; border-radius: 999px;">${escapeHtml(c.ctaText)}</a>
       </div>`
     : "";
 
@@ -212,7 +228,7 @@ export async function sendCampaignBatch(campaign: Campaign): Promise<Campaign> {
         from: EMAIL_FROM,
         to,
         subject: campaign.subject.replace(/\{\{name\}\}/gi, firstName),
-        html: renderCampaignHtml(campaign, { email: to, name: r.name }),
+        html: renderCampaignHtml({ ...campaign, campaignTag: campaign.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || campaign.id }, { email: to, name: r.name }),
       });
       if (res.error) throw new Error(res.error.message || "send failed");
       campaign.sent++;

@@ -126,7 +126,7 @@ export async function POST(req: NextRequest) {
   // Rendered preview for the composer iframe
   if (body.action === "preview") {
     const html = renderCampaignHtml(
-      { heading: body.heading || "", body: body.body || "", ctaText: body.ctaText, ctaUrl: body.ctaUrl },
+      { heading: body.heading || "", body: body.body || "", ctaText: body.ctaText, ctaUrl: body.ctaUrl, campaignTag: "preview" },
       { email: "preview@example.com", name: "Sam" }
     );
     return NextResponse.json({ html });
@@ -144,7 +144,7 @@ export async function POST(req: NextRequest) {
         to,
         subject: `[TEST] ${String(body.subject || "Untitled campaign")}`,
         html: renderCampaignHtml(
-          { heading: body.heading || "", body: body.body || "", ctaText: body.ctaText, ctaUrl: body.ctaUrl },
+          { heading: body.heading || "", body: body.body || "", ctaText: body.ctaText, ctaUrl: body.ctaUrl, campaignTag: "test" },
           { email: to, name: "Test" }
         ),
       });

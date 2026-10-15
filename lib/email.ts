@@ -75,6 +75,9 @@ export function adSourceLabel(adSource: string): string {
   if (m) {
     const map: Record<string, string> = { ig: "Instagram", instagram: "Instagram", fb: "Facebook", facebook: "Facebook", meta: "Meta", google: "Google", tiktok: "TikTok", snapchat: "Snapchat" };
     const platform = map[m[1].toLowerCase()] || m[1];
+    if (platform.toLowerCase() === "email") {
+      return `Email${m[2] ? ` — campaign "${m[2]}"` : ""}`;
+    }
     return `${platform} Ad${m[2] ? ` — campaign "${m[2]}"` : ""}`;
   }
   return inner;
