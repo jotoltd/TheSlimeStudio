@@ -8,6 +8,7 @@ import {
   HomeIcon, DollarIcon, CalendarIcon, ClockIcon, ShoppingBagIcon,
   PackageIcon, MailIcon, UsersIcon, SettingsIcon, FileTextIcon,
   InboxIcon, DownloadIcon, GiftIcon, PhotoIcon, TagIcon, TrendingUpIcon, BellIcon,
+  BarChartIcon,
 } from "@/components/AdminIcons";
 
 const navSections = [
@@ -17,6 +18,7 @@ const navSections = [
       { href: "/dashboard", label: "Dashboard", Icon: HomeIcon },
       { href: "/dashboard/notifications", label: "Notifications", Icon: BellIcon, badge: true },
       { href: "/dashboard/revenue", label: "Revenue", Icon: DollarIcon },
+      { href: "/dashboard/analytics", label: "Analytics", Icon: BarChartIcon },
       { href: "/dashboard/ads", label: "Ads", Icon: TrendingUpIcon },
       { href: "/dashboard/marketing", label: "Marketing", Icon: PhotoIcon },
     ],
