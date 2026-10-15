@@ -20,6 +20,13 @@ const fmtWhen = (iso?: string | null) =>
 
 const PRESETS = [
   {
+    id: "halloween", label: "Halloween sessions",
+    name: "Halloween sessions", subject: "Halloween slime sessions — Oct 26–31 only",
+    heading: "Something spooky is coming, {{name}}…",
+    body: "The Slime Studio is going full Halloween this October half term — and you're invited.\n\nFrom Oct 26–31, our regular slime sessions get a spooky makeover: creepy colours, glittery slime, and a gloriously messy hour of Halloween fun. Fancy dress very much welcome!\n\nHalf term slots always sell out — book now to grab yours before they vanish.",
+    ctaText: "Book a spooky slot", ctaUrl: "https://theslimestudio.co.uk/booking",
+  },
+  {
     id: "sessions", label: "Session promo",
     name: "Session promo", subject: "Make your own slime at The Slime Studio",
     heading: "Time to get slimy, {{name}}!",
