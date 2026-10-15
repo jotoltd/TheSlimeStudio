@@ -48,7 +48,6 @@ export async function ga4PropertyId(token: string): Promise<string | null> {
         return id;
       }
     }
-    _pidCache = { at: Date.now(), id: null };
     return null;
   } catch {
     return null;
