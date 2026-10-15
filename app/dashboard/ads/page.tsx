@@ -58,15 +58,6 @@ type Data = {
     byPlatform?: Record<"meta" | "google" | "tiktok" | "other", { bookings: number; revenue: number }>;
   };
   range?: { key: string; since: string; until: string };
-  analytics?: {
-    connected: boolean;
-    error?: string;
-    sessions?: number; users?: number; newUsers?: number; pageViews?: number;
-    purchases?: number; purchaseRevenue?: number; bounceRate?: number;
-    channels?: { channel: string; sessions: number; purchases: number; revenue: number }[];
-    topPages?: { path: string; views: number; users: number }[];
-    realtime?: { activeUsers: number; pages: { page: string; users: number }[] };
-  };
   comments: { adName: string; platform: string; author: string; text: string; time: string; replyUrl: string | null }[];
   fbCommentsUnavailable?: boolean;
 };
@@ -368,78 +359,6 @@ export default function AdsPage() {
                       </div>
                     </div>
                   )}
-                </div>
-              )}
-              {data.analytics?.connected && (
-                <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm mb-8">
-                  <div className="flex items-center justify-between mb-1">
-                    <h2 className="font-display text-[1.1rem]">Website analytics</h2>
-                    {data.analytics.realtime && (
-                      <span className="flex items-center gap-1.5 text-[0.75rem] font-semibold text-green-700">
-                        <span className="relative flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-                        </span>
-                        {data.analytics.realtime.activeUsers} on the site now
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[0.75rem] text-ink-soft mb-5">Everyone who visited the site {rangeLabel} — from Google Analytics.</p>
-                  {data.analytics.realtime && data.analytics.realtime.pages.length > 0 && (
-                    <div className="rounded-xl px-4 py-3 bg-green-50 mb-5">
-                      <div className="text-[0.7rem] text-ink-soft uppercase tracking-wider mb-2">Live right now</div>
-                      {data.analytics.realtime.pages.map((p) => (
-                        <div key={p.page} className="flex justify-between text-[0.8rem] py-1.5 border-b border-ink/5 last:border-0">
-                          <span className="font-semibold truncate pr-3">{p.page}</span>
-                          <span className="text-ink-soft shrink-0">{p.users} {p.users === 1 ? "visitor" : "visitors"}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 mb-5">
-                    {[
-                      ["Visitors", data.analytics.users ?? 0],
-                      ["New visitors", data.analytics.newUsers ?? 0],
-                      ["Sessions", data.analytics.sessions ?? 0],
-                      ["Page views", data.analytics.pageViews ?? 0],
-                      ["Purchases", data.analytics.purchases ?? 0],
-                      ["Bounce rate", `${Math.round((data.analytics.bounceRate ?? 0) * 100)}%`],
-                    ].map(([label, value]) => (
-                      <div key={label as string} className="rounded-xl px-4 py-3 bg-ink/[0.03]">
-                        <div className="text-[0.7rem] text-ink-soft uppercase tracking-wider">{label}</div>
-                        <div className="font-display text-[1.5rem]">{value}</div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    {data.analytics.channels && data.analytics.channels.length > 0 && (
-                      <div className="rounded-xl px-4 py-3 bg-ink/[0.03]">
-                        <div className="text-[0.7rem] text-ink-soft uppercase tracking-wider mb-2">Where visitors came from</div>
-                        {data.analytics.channels.map((c) => (
-                          <div key={c.channel} className="flex justify-between text-[0.8rem] py-1.5 border-b border-ink/5 last:border-0">
-                            <span className="font-semibold">{c.channel}</span>
-                            <span className="text-ink-soft">{c.sessions} sessions{c.purchases > 0 ? ` · ${c.purchases} purchases` : ""}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {data.analytics.topPages && data.analytics.topPages.length > 0 && (
-                      <div className="rounded-xl px-4 py-3 bg-ink/[0.03]">
-                        <div className="text-[0.7rem] text-ink-soft uppercase tracking-wider mb-2">Top pages</div>
-                        {data.analytics.topPages.map((p) => (
-                          <div key={p.path} className="flex justify-between text-[0.8rem] py-1.5 border-b border-ink/5 last:border-0">
-                            <span className="font-semibold truncate pr-3">{p.path}</span>
-                            <span className="text-ink-soft shrink-0">{p.views} views</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-              {data.analytics && !data.analytics.connected && (
-                <div className="bg-amber-50 border border-amber-200 rounded-[20px] p-4 mb-8 text-[0.8rem] text-amber-900">
-                  Analytics not connected{data.analytics.error ? `: ${data.analytics.error}` : " — reconnect Google on the Ads tab to grant the analytics scope"}.
                 </div>
               )}
               <BookingsCard

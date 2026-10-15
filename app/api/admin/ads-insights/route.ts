@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { verifyToken } from "@/lib/auth";
 import { googleAdsQuery, googleAdsConfig, googleAdsReady } from "@/lib/google-ads";
-import { ga4Analytics } from "@/lib/google-analytics";
 
 export const runtime = "nodejs";
 
@@ -252,12 +251,11 @@ export async function GET(req: NextRequest) {
   const gadsConnected = googleAdsReady(gadsCfg);
   const gadsQuery = (q: string) =>
     (gadsConnected ? googleAdsQuery(q) : Promise.resolve([])).catch((e) => { gadsApiError = e.message; return [] as Record<string, unknown>[]; });
-  const [gadsDaily, gadsCampaigns, gadsAds, analytics] = await Promise.all([
+  const [gadsDaily, gadsCampaigns, gadsAds] = await Promise.all([
     gadsQuery(`SELECT segments.date, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions FROM campaign WHERE segments.date BETWEEN '${since}' AND '${until}'`),
     gadsQuery(`SELECT campaign.name, campaign.status, campaign_budget.amount_micros, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.ctr, metrics.average_cpc, metrics.conversions, metrics.conversions_value FROM campaign WHERE segments.date BETWEEN '${since}' AND '${until}'`),
     // GAQL doesn't allow metrics in WHERE — filter zero-impression ads below
     gadsQuery(`SELECT ad_group_ad.ad.name, ad_group.name, campaign.name, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.ctr, metrics.average_cpc, metrics.conversions, metrics.conversions_value FROM ad_group_ad WHERE segments.date BETWEEN '${since}' AND '${until}'`),
-    ga4Analytics(since, until),
   ]);
 
   // Real bookings attributed to ads, from our own DB — sessions + special events
@@ -517,7 +515,6 @@ export async function GET(req: NextRequest) {
     comments,
     fbCommentsUnavailable,
     google,
-    analytics,
   });
 }
 
