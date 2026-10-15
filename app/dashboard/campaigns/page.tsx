@@ -9,6 +9,15 @@ type CampaignRow = {
   stats?: { opens: number; clicks: number; bounces: number };
 };
 
+type RecipientRow = {
+  email: string; name: string; sent: boolean; failed: boolean;
+  opens: number; clicks: number; bounced: boolean; complained: boolean;
+  lastOpen?: string | null; lastClick?: string | null; sentAt?: string | null;
+};
+
+const fmtWhen = (iso?: string | null) =>
+  iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "—";
+
 const PRESETS = [
   {
     id: "sessions", label: "Session promo",
@@ -48,7 +57,17 @@ export default function CampaignsPage() {
   const [msg, setMsg] = useState("");
   const [sending, setSending] = useState<string | null>(null); // campaign id while batches run
   const [testing, setTesting] = useState(false);
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [detail, setDetail] = useState<RecipientRow[] | "loading" | null>(null);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  async function toggleDetail(id: string) {
+    if (expanded === id) { setExpanded(null); setDetail(null); return; }
+    setExpanded(id);
+    setDetail("loading");
+    const res = await fetch(`/api/admin/campaigns?id=${id}`);
+    setDetail(res.ok ? (await res.json()).recipients : []);
+  }
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/campaigns");
@@ -206,23 +225,62 @@ export default function CampaignsPage() {
         {data?.campaigns?.length ? (
           <div className="space-y-2">
             {data.campaigns.map((c) => (
-              <div key={c.id} className="flex flex-wrap items-center gap-3 py-3 border-b border-ink/5 last:border-0 text-[0.85rem]">
-                <div className="flex-1 min-w-[180px]">
-                  <div className="font-semibold">{c.name}</div>
-                  <div className="text-[0.75rem] text-ink-soft">{c.subject}</div>
+              <div key={c.id} className="border-b border-ink/5 last:border-0">
+                <div className="flex flex-wrap items-center gap-3 py-3 text-[0.85rem]">
+                  <div className="flex-1 min-w-[180px]">
+                    <div className="font-semibold">{c.name}</div>
+                    <div className="text-[0.75rem] text-ink-soft">{c.subject}</div>
+                  </div>
+                  <div className="text-ink-soft text-[0.78rem]">{new Date(c.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</div>
+                  <div className="text-ink-soft text-[0.78rem]">{data.segments[c.audience] || c.audience}</div>
+                  <div className={`px-2.5 py-1 rounded-full text-[0.72rem] font-semibold ${c.status === "sent" ? "bg-green-100 text-green-700" : c.status === "sending" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}>
+                    {c.status === "sending" ? `sending ${c.sent}/${c.total}` : c.status}
+                  </div>
+                  <div className="text-[0.78rem] text-ink-soft w-40 text-right">
+                    {c.sent} sent{c.failed ? ` · ${c.failed} failed` : ""}
+                    {c.stats && c.sent > 0 && (
+                      <div className="text-[0.72rem]">{c.stats.opens} opens · {c.stats.clicks} clicks{c.stats.bounces ? ` · ${c.stats.bounces} bounced` : ""}</div>
+                    )}
+                  </div>
+                  <button onClick={() => toggleDetail(c.id)} className="text-[0.72rem] text-bright-lavender hover:underline">
+                    {expanded === c.id ? "Hide" : "Details"}
+                  </button>
+                  <button onClick={() => remove(c.id)} className="text-[0.72rem] text-ink-soft hover:text-red-600">Delete</button>
                 </div>
-                <div className="text-ink-soft text-[0.78rem]">{new Date(c.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</div>
-                <div className="text-ink-soft text-[0.78rem]">{data.segments[c.audience] || c.audience}</div>
-                <div className={`px-2.5 py-1 rounded-full text-[0.72rem] font-semibold ${c.status === "sent" ? "bg-green-100 text-green-700" : c.status === "sending" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}>
-                  {c.status === "sending" ? `sending ${c.sent}/${c.total}` : c.status}
-                </div>
-                <div className="text-[0.78rem] text-ink-soft w-40 text-right">
-                  {c.sent} sent{c.failed ? ` · ${c.failed} failed` : ""}
-                  {c.stats && c.sent > 0 && (
-                    <div className="text-[0.72rem]">{c.stats.opens} opens · {c.stats.clicks} clicks{c.stats.bounces ? ` · ${c.stats.bounces} bounced` : ""}</div>
-                  )}
-                </div>
-                <button onClick={() => remove(c.id)} className="text-[0.72rem] text-ink-soft hover:text-red-600">Delete</button>
+                {expanded === c.id && (
+                  <div className="pb-4 pl-2">
+                    {detail === "loading" ? (
+                      <p className="text-[0.8rem] text-ink-soft py-2">Loading…</p>
+                    ) : detail && detail.length > 0 ? (
+                      <div className="rounded-xl bg-ink/[0.03] px-4 py-3 max-h-[400px] overflow-y-auto">
+                        <div className="grid grid-cols-[1fr_70px_90px_90px_110px] gap-2 text-[0.68rem] uppercase tracking-wider text-ink-soft pb-2 border-b border-ink/10">
+                          <span>Recipient</span><span>Sent</span><span>Opened</span><span>Clicked</span><span>Status</span>
+                        </div>
+                        {detail.map((r) => (
+                          <div key={r.email} className="grid grid-cols-[1fr_70px_90px_90px_110px] gap-2 py-2 border-b border-ink/5 last:border-0 text-[0.78rem] items-center">
+                            <div className="min-w-0">
+                              <div className="font-semibold truncate">{r.name || r.email}</div>
+                              {r.name && <div className="text-[0.7rem] text-ink-soft truncate">{r.email}</div>}
+                            </div>
+                            <span className="text-ink-soft">{r.sent ? "✓" : r.failed ? "failed" : "—"}</span>
+                            <span className="text-ink-soft">{r.opens > 0 ? `${r.opens}× · ${fmtWhen(r.lastOpen)}` : "—"}</span>
+                            <span className="text-ink-soft">{r.clicks > 0 ? `${r.clicks}× · ${fmtWhen(r.lastClick)}` : "—"}</span>
+                            <span>
+                              {r.complained ? <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[0.68rem] font-semibold">spam report</span>
+                                : r.bounced ? <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[0.68rem] font-semibold">bounced</span>
+                                : r.clicks > 0 ? <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[0.68rem] font-semibold">clicked</span>
+                                : r.opens > 0 ? <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[0.68rem] font-semibold">opened</span>
+                                : r.sent ? <span className="px-2 py-0.5 rounded-full bg-ink/[0.06] text-ink-soft text-[0.68rem] font-semibold">delivered</span>
+                                : <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[0.68rem] font-semibold">failed</span>}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[0.8rem] text-ink-soft py-2">No engagement yet — opens and clicks appear here as they happen.</p>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>

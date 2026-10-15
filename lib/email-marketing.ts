@@ -19,6 +19,7 @@ export type Campaign = {
   audience: string;
   status: "sending" | "sent" | "failed";
   recipients: Recipient[]; // queue shrinks as batches go out
+  names?: Record<string, string>; // email -> name snapshot for reporting
   total: number;
   sent: number;
   failed: number;

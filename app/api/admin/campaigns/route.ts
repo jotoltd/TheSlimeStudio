@@ -26,6 +26,49 @@ function checkAdmin(req: NextRequest) {
 export async function GET(req: NextRequest) {
   if (!checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  // Per-recipient detail for a single campaign — who sent/opened/clicked/bounced
+  const campaignId = req.nextUrl.searchParams.get("id");
+  if (campaignId) {
+    const [{ data: sends }, { data: events }, campaign] = await Promise.all([
+      supabaseAdmin.from("email_logs").select("recipient, status, created_at").eq("type", `campaign:${campaignId}`),
+      supabaseAdmin.from("email_logs").select("type, recipient, created_at").like("type", `campaign_%:${campaignId}`),
+      loadCampaign(campaignId),
+    ]);
+
+    const people = new Map<string, {
+      email: string; name: string; sent: boolean; failed: boolean;
+      opens: number; clicks: number; bounced: boolean; complained: boolean;
+      lastOpen?: string; lastClick?: string; sentAt?: string;
+    }>();
+    const person = (email: string) => {
+      if (!people.has(email)) people.set(email, {
+        email, name: campaign?.names?.[email] || "",
+        sent: false, failed: false, opens: 0, clicks: 0, bounced: false, complained: false,
+      });
+      return people.get(email)!;
+    };
+
+    for (const s of sends || []) {
+      const p = person(s.recipient);
+      p.sent = s.status === "sent";
+      p.failed = s.status !== "sent";
+      p.sentAt = s.created_at;
+    }
+    for (const e of events || []) {
+      const p = person(e.recipient);
+      const kind = e.type.split("_")[1]?.split(":")[0];
+      if (kind === "open") { p.opens++; p.lastOpen = e.created_at; }
+      else if (kind === "click") { p.clicks++; p.lastClick = e.created_at; }
+      else if (kind === "bounce") p.bounced = true;
+      else if (kind === "complaint") p.complained = true;
+    }
+
+    return NextResponse.json({
+      recipients: Array.from(people.values())
+        .sort((a, b) => (b.opens + b.clicks) - (a.opens + a.clicks) || (a.email > b.email ? 1 : -1)),
+    });
+  }
+
   // Counts per segment (audience builds are cheap — a handful of select queries)
   const counts: Record<string, number> = {};
   await Promise.all(
@@ -40,7 +83,8 @@ export async function GET(req: NextRequest) {
 
   const campaigns = (await listCampaigns()).map((c) => ({
     ...c,
-    recipients: undefined, // don't ship the queue to the client
+    recipients: undefined, // don't ship the queue/names to the client
+    names: undefined,
     remaining: c.recipients?.length || 0,
   }));
 
@@ -133,6 +177,7 @@ export async function POST(req: NextRequest) {
       audience,
       status: "sending",
       recipients,
+      names: Object.fromEntries(recipients.map((r) => [r.email, r.name]).filter(([, n]) => n)),
       total: recipients.length,
       sent: 0,
       failed: 0,
