@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { verifyToken } from "@/lib/auth";
+import { googleAdsQuery, googleAdsConfig, googleAdsReady } from "@/lib/google-ads";
 
 export const runtime = "nodejs";
 
@@ -237,6 +238,17 @@ export async function GET(req: NextRequest) {
     if (ad.name && thumb) thumbnailByAdName[ad.name] = thumb;
   }
 
+  // Live Google Ads metrics — only queried when the API connection is set up
+  let gadsApiError: string | null = null;
+  const gadsCfg = await googleAdsConfig();
+  const gadsConnected = googleAdsReady(gadsCfg);
+  const gadsQuery = (q: string) =>
+    (gadsConnected ? googleAdsQuery(q) : Promise.resolve([])).catch((e) => { gadsApiError = e.message; return [] as Record<string, unknown>[]; });
+  const [gadsDaily, gadsCampaigns] = await Promise.all([
+    gadsQuery("SELECT segments.date, metrics.cost_micros, metrics.impressions, metrics.clicks FROM campaign WHERE segments.date DURING LAST_30_DAYS"),
+    gadsQuery("SELECT campaign.name, campaign.status, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.ctr FROM campaign WHERE segments.date DURING LAST_30_DAYS"),
+  ]);
+
   // Real bookings attributed to ads, from our own DB — sessions + special events
   const [{ data: adBookings }, { data: adEventBookings }, { data: googleBookings }, { data: googleEventBookings }, { data: googleGiftCards }, { data: gadsSettings }] = await Promise.all([
     supabaseAdmin
@@ -282,6 +294,30 @@ export async function GET(req: NextRequest) {
     ...(googleGiftCards || []).map((g) => ({ id: g.id, name: g.purchaser_name || "Customer", email: g.code, value: Number(g.initial_value || 0), status: "paid", kind: "Gift card", at: g.created_at })),
   ].sort((a, b) => (b.at || "").localeCompare(a.at || ""));
 
+  // Aggregate GAQL rows into daily + per-campaign summaries
+  const gadsMicros = (v: unknown) => Number(v || 0) / 1_000_000;
+  const gadsDailyMap = new Map<string, { spend: number; impressions: number; clicks: number }>();
+  for (const r of gadsDaily as any[]) {
+    const d = r.segments?.date || "";
+    const cur = gadsDailyMap.get(d) || { spend: 0, impressions: 0, clicks: 0 };
+    cur.spend += gadsMicros(r.metrics?.costMicros);
+    cur.impressions += Number(r.metrics?.impressions || 0);
+    cur.clicks += Number(r.metrics?.clicks || 0);
+    gadsDailyMap.set(d, cur);
+  }
+  const gadsCampaignMap = new Map<string, { name: string; status: string; spend: number; impressions: number; clicks: number }>();
+  for (const r of gadsCampaigns as any[]) {
+    const name = r.campaign?.name || "Unknown";
+    const cur = gadsCampaignMap.get(name) || { name, status: r.campaign?.status || "", spend: 0, impressions: 0, clicks: 0 };
+    cur.spend += gadsMicros(r.metrics?.costMicros);
+    cur.impressions += Number(r.metrics?.impressions || 0);
+    cur.clicks += Number(r.metrics?.clicks || 0);
+    gadsCampaignMap.set(name, cur);
+  }
+  const gadsDailyRows = Array.from(gadsDailyMap.entries()).map(([date, v]) => ({ date, ...v })).sort((a, b) => a.date.localeCompare(b.date));
+  const gadsCampaignRows = Array.from(gadsCampaignMap.values()).sort((a, b) => b.spend - a.spend);
+  const gadsTotals = gadsDailyRows.reduce((s, d) => ({ spend: s.spend + d.spend, impressions: s.impressions + d.impressions, clicks: s.clicks + d.clicks }), { spend: 0, impressions: 0, clicks: 0 });
+
   const google = {
     tagEnabled: !!gadsSettings?.google_ads_enabled,
     tagId: gadsSettings?.google_ads_id || null,
@@ -289,6 +325,14 @@ export async function GET(req: NextRequest) {
     conversions: googleItems.length,
     revenue: googleItems.filter((i) => i.status === "paid").reduce((s, i) => s + i.value, 0),
     items: googleItems.slice(0, 10),
+    api: {
+      connected: gadsConnected,
+      error: gadsApiError,
+      ...gadsTotals,
+      ctr: gadsTotals.impressions > 0 ? gadsTotals.clicks / gadsTotals.impressions : 0,
+      daily: gadsDailyRows,
+      campaigns: gadsCampaignRows,
+    },
   };
 
   const detectPlatform = (notes: string | null): "meta" | "google" | "tiktok" | "other" => {

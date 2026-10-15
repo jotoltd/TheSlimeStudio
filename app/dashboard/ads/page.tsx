@@ -38,6 +38,16 @@ type Data = {
     conversions: number;
     revenue: number;
     items: { id: string; name: string; email: string; value: number; status: string; kind: string; at: string }[];
+    api?: {
+      connected: boolean;
+      error: string | null;
+      spend: number;
+      impressions: number;
+      clicks: number;
+      ctr: number;
+      daily: { date: string; spend: number; impressions: number; clicks: number }[];
+      campaigns: { name: string; status: string; spend: number; impressions: number; clicks: number }[];
+    };
   };
   attributedRevenue: number;
   comments: { adName: string; platform: string; author: string; text: string; time: string; replyUrl: string | null }[];
@@ -548,6 +558,7 @@ export default function AdsPage() {
 
           {/* ===== GOOGLE TAB ===== */}
           {tab === "google" && (<>
+          <GoogleApiSection api={data.google?.api} onChanged={load} />
           {data.google && (
             <div className="bg-white rounded-[20px] p-8 shadow-sm">
               <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
@@ -665,6 +676,147 @@ function BookingsCard({ bookings, title, note }: { bookings: AdBooking[]; title:
         </div>
       )}
     </div>
+  );
+}
+
+function GoogleApiSection({ api, onChanged }: { api?: NonNullable<Data["google"]>["api"]; onChanged: () => void }) {
+  const [cfg, setCfg] = useState<{ hasClientId: boolean; hasClientSecret: boolean; hasDevToken: boolean; customerId: string | null; connected: boolean } | null>(null);
+  const [form, setForm] = useState({ clientId: "", clientSecret: "", devToken: "", customerId: "" });
+  const [msg, setMsg] = useState("");
+  const [flash, setFlash] = useState("");
+
+  useEffect(() => {
+    fetch("/api/admin/google-ads").then((r) => r.ok ? r.json() : null).then((j) => j && setCfg(j));
+    const p = new URLSearchParams(window.location.search);
+    if (p.get("g") === "connected") setFlash("Google Ads connected — your stats are loading in.");
+    if (p.get("gerr")) setFlash(`Connection failed: ${p.get("gerr")}`);
+  }, []);
+
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const redirectUri = `${origin}/api/admin/google-ads/callback`;
+  const canConnect = cfg?.hasClientId && cfg?.hasClientSecret && cfg?.hasDevToken;
+
+  async function saveCredentials() {
+    setMsg("");
+    const res = await fetch("/api/admin/google-ads", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        google_ads_client_id: form.clientId || undefined,
+        google_ads_client_secret: form.clientSecret || undefined,
+        google_ads_dev_token: form.devToken || undefined,
+        google_ads_customer_id: form.customerId || undefined,
+      }),
+    });
+    setMsg(res.ok ? "Saved — now click Connect Google Ads" : "Failed to save");
+    fetch("/api/admin/google-ads").then((r) => r.ok ? r.json() : null).then((j) => j && setCfg(j));
+  }
+
+  const maxSpend = Math.max(...(api?.daily || []).map((d) => d.spend), 0.01);
+
+  return (
+    <>
+      {flash && <div className="rounded-xl px-4 py-3 text-[0.85rem] mb-6 bg-blue-50 border border-blue-200 text-blue-800">{flash}</div>}
+
+      {api?.connected ? (
+        <div className="bg-white rounded-[20px] p-8 shadow-sm mb-8">
+          <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
+            <div>
+              <h2 className="font-display text-[1.1rem] mb-1">Google Ads — live account data</h2>
+              <p className="text-[0.75rem] text-ink-soft">Spend, views and clicks straight from your Google Ads account · last 30 days.</p>
+            </div>
+            <button
+              onClick={async () => { await fetch("/api/admin/google-ads", { method: "DELETE" }); onChanged(); }}
+              className="text-[0.75rem] text-red-500 hover:underline"
+            >
+              Disconnect
+            </button>
+          </div>
+          {api.error ? (
+            <div className="rounded-xl px-4 py-3 text-[0.85rem] bg-red-50 border border-red-200 text-red-800">
+              Couldn&apos;t load Google Ads data: {api.error}
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="rounded-xl px-4 py-3 bg-red-50"><div className="text-[0.7rem] text-ink-soft uppercase tracking-wider">Spend</div><div className="font-display text-[1.4rem]">{fmt(api.spend)}</div></div>
+                <div className="rounded-xl px-4 py-3 bg-ink/[0.03]"><div className="text-[0.7rem] text-ink-soft uppercase tracking-wider">Views</div><div className="font-display text-[1.4rem]">{api.impressions.toLocaleString()}</div></div>
+                <div className="rounded-xl px-4 py-3 bg-ink/[0.03]"><div className="text-[0.7rem] text-ink-soft uppercase tracking-wider">Clicks</div><div className="font-display text-[1.4rem]">{api.clicks.toLocaleString()}</div></div>
+                <div className="rounded-xl px-4 py-3 bg-ink/[0.03]"><div className="text-[0.7rem] text-ink-soft uppercase tracking-wider">Click rate</div><div className="font-display text-[1.4rem]">{(api.ctr * 100).toFixed(1)}%</div></div>
+              </div>
+              {api.daily.length > 0 && (
+                <div className="flex items-end gap-[3px] h-24 mb-6">
+                  {api.daily.map((d) => (
+                    <div key={d.date} className="flex-1 min-w-0" title={`${d.date}: ${fmt(d.spend)} · ${d.clicks} clicks`}>
+                      <div className={`w-full rounded-t ${d.spend > 0 ? "bg-amber-400" : "bg-ink/[0.06]"}`} style={{ height: `${Math.max((d.spend / maxSpend) * 90, 2)}px` }} />
+                    </div>
+                  ))}
+                </div>
+              )}
+              {api.campaigns.length > 0 && (
+                <table className="w-full text-[0.85rem]">
+                  <thead>
+                    <tr className="text-left text-[0.7rem] text-ink-soft uppercase tracking-wider border-b border-ink/[0.08]">
+                      <th className="pb-2 pr-4">Campaign</th>
+                      <th className="pb-2 pr-4">Status</th>
+                      <th className="pb-2 pr-4 text-right">Views</th>
+                      <th className="pb-2 pr-4 text-right">Clicks</th>
+                      <th className="pb-2 text-right">Spend</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {api.campaigns.map((c) => (
+                      <tr key={c.name} className="border-b border-ink/[0.05] last:border-0">
+                        <td className="py-2.5 pr-4 font-medium">{c.name}</td>
+                        <td className="py-2.5 pr-4"><span className={`text-[0.65rem] px-1.5 py-0.5 rounded-full font-medium ${c.status === "ENABLED" ? "bg-green-100 text-green-700" : "bg-ink/[0.08] text-ink-soft"}`}>{c.status === "ENABLED" ? "Live" : c.status}</span></td>
+                        <td className="py-2.5 pr-4 text-right">{c.impressions.toLocaleString()}</td>
+                        <td className="py-2.5 pr-4 text-right">{c.clicks.toLocaleString()}</td>
+                        <td className="py-2.5 text-right">{fmt(c.spend)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </>
+          )}
+        </div>
+      ) : (
+        <div className="bg-white rounded-[20px] p-8 shadow-sm mb-8 border-2 border-amber-200">
+          <h2 className="font-display text-[1.1rem] mb-1">Connect Google Ads</h2>
+          <p className="text-[0.8rem] text-ink-soft mb-5">Three setup steps (done once) unlock live spend, views and clicks right here — bookings are already tracked.</p>
+
+          <ol className="space-y-4 text-[0.85rem] mb-6">
+            <li>
+              <strong>1 · Developer token</strong> — in Google Ads: Admin → <em>API Center</em> → apply for a developer token (choose <em>Basic</em> access). Paste it below.
+            </li>
+            <li>
+              <strong>2 · OAuth app</strong> — at <a href="https://console.cloud.google.com" target="_blank" rel="noreferrer" className="text-sky-blue-light hover:underline">console.cloud.google.com</a>: create a project → <em>APIs &amp; Services → OAuth consent screen</em> (External, add yourself as a test user) → <em>Credentials → Create OAuth client ID → Web application</em> with this exact redirect:
+              <div className="mt-1.5 bg-ink/[0.04] rounded-lg px-3 py-2 font-mono text-[0.75rem] break-all select-all">{redirectUri}</div>
+            </li>
+            <li>
+              <strong>3 · Customer ID</strong> — the 10-digit number top-right of Google Ads (e.g. 123-456-7890). Then click <em>Connect</em> and approve.
+            </li>
+          </ol>
+
+          <div className="grid md:grid-cols-2 gap-3 mb-4">
+            <input type="text" placeholder={`Client ID ${cfg?.hasClientId ? "(saved)" : ""}`} value={form.clientId} onChange={(e) => setForm({ ...form, clientId: e.target.value })} className="px-3.5 py-2.5 border border-ink/15 rounded-xl text-[0.82rem] focus:outline-none focus:ring-2 focus:ring-bright-lavender/50" />
+            <input type="password" placeholder={`Client secret ${cfg?.hasClientSecret ? "(saved)" : ""}`} value={form.clientSecret} onChange={(e) => setForm({ ...form, clientSecret: e.target.value })} className="px-3.5 py-2.5 border border-ink/15 rounded-xl text-[0.82rem] focus:outline-none focus:ring-2 focus:ring-bright-lavender/50" />
+            <input type="password" placeholder={`Developer token ${cfg?.hasDevToken ? "(saved)" : ""}`} value={form.devToken} onChange={(e) => setForm({ ...form, devToken: e.target.value })} className="px-3.5 py-2.5 border border-ink/15 rounded-xl text-[0.82rem] focus:outline-none focus:ring-2 focus:ring-bright-lavender/50" />
+            <input type="text" placeholder={`Customer ID ${cfg?.customerId ? `(saved: ${cfg.customerId})` : "(optional — auto-detected)"}`} value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })} className="px-3.5 py-2.5 border border-ink/15 rounded-xl text-[0.82rem] focus:outline-none focus:ring-2 focus:ring-bright-lavender/50" />
+          </div>
+          <div className="flex items-center gap-3 flex-wrap">
+            <button onClick={saveCredentials} className="px-5 py-2.5 rounded-xl bg-ink/[0.06] font-semibold text-[0.85rem] hover:bg-ink/[0.1]">Save details</button>
+            <a
+              href={canConnect ? "/api/admin/google-ads/connect" : undefined}
+              className={`px-5 py-2.5 rounded-xl font-semibold text-[0.85rem] ${canConnect ? "bg-gradient-to-r from-amber-400 to-orange-500 text-white hover:opacity-90" : "bg-ink/[0.04] text-ink-soft pointer-events-none"}`}
+            >
+              Connect Google Ads →
+            </a>
+            {msg && <span className="text-[0.8rem] text-ink-soft">{msg}</span>}
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
