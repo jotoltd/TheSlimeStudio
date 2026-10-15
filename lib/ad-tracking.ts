@@ -70,9 +70,12 @@ const GOOGLE_ADS_SEND_TO = "AW-18466024911/uMtICLeZq4AdEM_bpOVE";
 const AD_SOURCE_KEY = "adSource";
 const AD_SOURCE_TTL = 30 * 24 * 60 * 60 * 1000;
 
-export function setAdSource(label: string) {
+export function setAdSource(label: string, gclid?: string | null) {
   if (typeof window === "undefined" || !label) return;
-  localStorage.setItem(AD_SOURCE_KEY, JSON.stringify({ s: label, t: Date.now() }));
+  localStorage.setItem(
+    AD_SOURCE_KEY,
+    JSON.stringify({ s: label, t: Date.now(), ...(gclid ? { g: gclid } : {}) })
+  );
 }
 
 export function getAdSource(): string | null {
@@ -91,6 +94,20 @@ export function getAdSource(): string | null {
     }
   }
   localStorage.removeItem(AD_SOURCE_KEY);
+  return null;
+}
+
+// The raw Google click id captured at landing. Uploaded server-side as an
+// offline conversion so ad-attributed sales count even when the browser tag
+// was blocked (consent banner, ad blockers).
+export function getGclid(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const parsed = JSON.parse(localStorage.getItem(AD_SOURCE_KEY) || "");
+    if (parsed?.g && typeof parsed.t === "number" && Date.now() - parsed.t < AD_SOURCE_TTL) {
+      return parsed.g;
+    }
+  } catch {}
   return null;
 }
 

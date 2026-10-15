@@ -6,7 +6,7 @@ import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useCart } from "@/components/CartContext";
-import { trackInitiateCheckout } from "@/lib/ad-tracking";
+import { trackInitiateCheckout, getGclid } from "@/lib/ad-tracking";
 
 const DELIVERY_FEE = 3.95;
 const FREE_DELIVERY_THRESHOLD = 30;
@@ -146,6 +146,7 @@ export default function CheckoutPage() {
           notes,
           discountCode: appliedDiscount?.code,
           giftCardCode: giftCardBalance !== null ? giftCardCode : null,
+          gclid: getGclid(),
         }),
       });
       const data = await res.json();

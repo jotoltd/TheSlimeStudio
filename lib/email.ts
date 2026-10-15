@@ -70,7 +70,7 @@ export const CONTACT_EMAIL = "studio@theslimestudio.co.uk";
 
 // Turns "[Ad: Facebook/Instagram Ad, utm:ig/My Campaign]" into "Instagram Ad — campaign My Campaign"
 export function adSourceLabel(adSource: string): string {
-  const inner = adSource.replace(/^\[Ad:\s*/i, "").replace(/\]\s*$/, "").trim();
+  const inner = adSource.replace(/\s*\[gclid:[^\]]*\]/gi, "").replace(/^\[Ad:\s*/i, "").replace(/\]\s*$/, "").trim();
   const m = inner.match(/utm:([a-z]+)(?:\/([^\],]+))?/i);
   if (m) {
     const map: Record<string, string> = { ig: "Instagram", instagram: "Instagram", fb: "Facebook", facebook: "Facebook", meta: "Meta", google: "Google", tiktok: "TikTok", snapchat: "Snapchat" };

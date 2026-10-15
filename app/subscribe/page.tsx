@@ -6,7 +6,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { supabase, type SubscriptionSettings } from "@/lib/supabase";
 import { useContent } from "@/lib/useContent";
-import { trackPurchase, stashPurchaseEmail } from "@/lib/ad-tracking";
+import { trackPurchase, stashPurchaseEmail, getGclid } from "@/lib/ad-tracking";
 
 function SubscribePageInner() {
   const searchParams = useSearchParams();
@@ -79,6 +79,7 @@ function SubscribePageInner() {
           email: form.email.trim(),
           price: Number(settings?.price || 0),
           boxName: settings?.box_name || "Slime Subscription",
+          gclid: getGclid(),
         }),
       });
       const data = await res.json();

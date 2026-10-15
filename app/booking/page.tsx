@@ -8,7 +8,7 @@ import Calendar from "@/components/Calendar";
 import { supabase, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, PRICE_PER_PERSON, MAX_DAILY_BOOKINGS as DEFAULT_MAX } from "@/lib/supabase";
 import type { BookingSettings, OpeningHour, DateOverride } from "@/lib/supabase";
 import { useContent } from "@/lib/useContent";
-import { trackPurchase, trackInitiateCheckout, getMetaCookies, getAdSource, setAdSource } from "@/lib/ad-tracking";
+import { trackPurchase, trackInitiateCheckout, getMetaCookies, getAdSource, setAdSource, getGclid } from "@/lib/ad-tracking";
 
 const InlinePayment = lazy(() => import("@/components/InlinePayment"));
 
@@ -90,7 +90,7 @@ function BookingPageInner() {
         if (fbclid) adParts.push("Facebook/Instagram Ad");
         if (gclid) adParts.push("Google Ad");
         if (utmSource) adParts.push(`utm:${utmSource}${utmCampaign ? `/${utmCampaign}` : ""}`);
-        setAdSource(`[Ad: ${adParts.join(", ")}]`);
+        setAdSource(`[Ad: ${adParts.join(", ")}]`, gclid);
         // Clean up URL so the ad params don't persist across navigation
         const url = new URL(window.location.href);
         url.searchParams.delete("fbclid");
@@ -179,6 +179,7 @@ function BookingPageInner() {
             discountCode: fallback.discountCode,
             giftCardCode: fallback.giftCardCode,
             giftCardAmount: fallback.giftCardAmount,
+            gclid: getGclid(),
           }),
         }).then((res) => res.json()).then((data) => {
           if (data.success) {
@@ -527,6 +528,7 @@ function BookingPageInner() {
             giftCardCode: giftCardBalance !== null ? giftCardCode : null,
             giftCardAmount: giftCardCover,
             adSource,
+            gclid: getGclid(),
             ...getMetaCookies(),
           }),
         });
@@ -568,6 +570,7 @@ function BookingPageInner() {
           giftCardCode: giftCardBalance !== null ? giftCardCode : null,
           giftCardAmount: giftCardCover,
           adSource,
+          gclid: getGclid(),
           ...getMetaCookies(),
         }),
       });
@@ -758,6 +761,7 @@ function BookingPageInner() {
                             giftCardCode: giftCardBalance !== null ? giftCardCode : null,
                             giftCardAmount: giftCardCover,
                             adSource: getAdSource(),
+                            gclid: getGclid(),
                           }),
                         });
                         const data = await res.json();

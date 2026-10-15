@@ -33,7 +33,7 @@ const AD_COLORS: Record<string, string> = {
 
 function parseAdSource(notes: string | null | undefined): { label: string; platform: string; campaign: string | null; detail: string } | null {
   if (!notes || !notes.startsWith("[Ad:")) return null;
-  const inner = notes.slice(4).replace(/\]\s*$/, "").trim();
+  const inner = notes.replace(/\s*\[gclid:[^\]]*\]/gi, "").slice(4).replace(/\]\s*$/, "").trim();
   const parts = inner.split(",").map((p) => p.trim());
   const utm = parts.find((p) => p.startsWith("utm:"));
   const utmValue = utm ? utm.slice(4) : null;

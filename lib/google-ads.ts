@@ -105,3 +105,103 @@ export async function listAccessibleCustomers(accessToken: string, devToken: str
   const json = await res.json();
   return (json.resourceNames || []).map((r: string) => r.replace("customers/", ""));
 }
+
+// --- Offline click conversions ---------------------------------------------
+//
+// The browser-side gtag conversion is consent-gated and often blocked, so
+// Google Ads was reporting 0 conversions despite real ad-attributed sales.
+// Instead we store the raw gclid with the booking and upload a click
+// conversion server-side once payment is confirmed.
+//
+// The gclid travels through the booking/notes field as a `[gclid:...]` tag.
+
+export function sanitizeGclid(gclid: unknown): string | null {
+  if (typeof gclid !== "string") return null;
+  const clean = gclid.replace(/[^A-Za-z0-9_.\-]/g, "").slice(0, 255);
+  return clean || null;
+}
+
+// Append the click id to an ad-source note: "[Ad: Google Ad] [gclid:AbC...]"
+export function withGclidTag(notes: string | null | undefined, gclid: unknown): string | null {
+  const tag = sanitizeGclid(gclid);
+  const base = notes || "";
+  return [base, tag ? `[gclid:${tag}]` : null].filter(Boolean).join(" ") || null;
+}
+
+export function gclidFromNotes(notes: string | null | undefined): string | null {
+  const m = notes?.match(/\[gclid:([A-Za-z0-9_.\-]+)\]/);
+  return m?.[1] || null;
+}
+
+// Uploads a Purchase conversion attributed to the stored click via the Data
+// Manager API (new accounts aren't allowlisted for the legacy
+// UploadClickConversions service). Requires the OAuth token to have been
+// granted the `datamanager` scope — see the connect route.
+//
+// The destination is the UPLOAD_CLICKS "import" conversion action (the web
+// gtag action is secondary so consenting visitors aren't double-counted).
+export async function uploadClickConversion(opts: {
+  gclid: string;
+  value: number;
+  orderId: string;
+  currencyCode?: string;
+}): Promise<boolean> {
+  try {
+    const cfg = await googleAdsConfig();
+    if (!googleAdsReady(cfg) || !opts.gclid) return false;
+    const cid = cfg.google_ads_customer_id!.replace(/-/g, "");
+
+    // Find the enabled UPLOAD_CLICKS purchase action — the import destination
+    const actions = await googleAdsQuery(
+      `SELECT conversion_action.id, conversion_action.name, conversion_action.primary_for_goal
+       FROM conversion_action
+       WHERE conversion_action.category = 'PURCHASE' AND conversion_action.type = 'UPLOAD_CLICKS' AND conversion_action.status = 'ENABLED'`
+    );
+    const found = actions
+      .map((r: any) => r.conversionAction)
+      .filter((a: any) => a?.id);
+    if (found.length === 0) {
+      console.error("[google-ads] no enabled UPLOAD_CLICKS purchase action — create one in Google Ads (Goals > Import from clicks)");
+      return false;
+    }
+    const action = found.find((a: any) => a.primaryForGoal) || found[0];
+
+    const token = await accessToken(cfg);
+    const res = await fetch("https://datamanager.googleapis.com/v1/events:ingest", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        destinations: [
+          {
+            operatingAccount: { accountType: "GOOGLE_ADS", accountId: cid },
+            ...(cfg.google_ads_login_customer_id
+              ? { loginAccount: { accountType: "GOOGLE_ADS", accountId: cfg.google_ads_login_customer_id.replace(/-/g, "") } }
+              : {}),
+            productDestinationId: String(action.id),
+          },
+        ],
+        events: [
+          {
+            eventSource: "WEB",
+            eventTimestamp: new Date().toISOString(),
+            transactionId: opts.orderId,
+            conversionValue: opts.value,
+            currency: opts.currencyCode || "GBP",
+            adIdentifiers: { gclid: opts.gclid },
+          },
+        ],
+      }),
+    });
+    if (!res.ok) {
+      console.error("[google-ads] conversion ingest failed:", res.status, await res.text());
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error("[google-ads] conversion ingest error:", e);
+    return false;
+  }
+}

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getStripeModeAsync, getStripeKeysForMode } from "@/lib/stripe";
 import { sendCapiEvent, metaContextFromRequest } from "@/lib/capi";
+import { withGclidTag } from "@/lib/google-ads";
 
 export const runtime = "nodejs";
 
@@ -73,7 +74,7 @@ export async function POST(req: NextRequest) {
       quantity,
       total_price: totalPrice,
       payment_status: "pending",
-      notes: body.adSource || null,
+      notes: withGclidTag(body.adSource || null, body.gclid),
     })
     .select()
     .single();
@@ -186,7 +187,7 @@ async function createSumUpCheckout(booking: any, event: any, instance: any, tota
       currency: "GBP",
       merchant_code: process.env.SUMUP_MERCHANT_CODE || "",
       description: `${event.title} — ${instance.date} ${instance.start_time}`,
-      return_url: `${origin}/events/${event.slug || event.id}?booked=1&qty=${booking.quantity}&total=${total}&date=${encodeURIComponent(instance.date)}&time=${encodeURIComponent(instance.start_time)}`,
+      return_url: `${origin}/events/${event.slug || event.id}?booked=1&qty=${booking.quantity}&total=${total}&date=${encodeURIComponent(instance.date)}&time=${encodeURIComponent(instance.start_time)}&ref=${checkoutRef}`,
     }),
   });
 

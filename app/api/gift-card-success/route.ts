@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getStripeAsync } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase";
 import { verifySumUpPayment } from "@/lib/payment";
+import { gclidFromNotes, uploadClickConversion } from "@/lib/google-ads";
 
 export const runtime = "nodejs";
 
@@ -19,7 +20,7 @@ export async function GET(req: NextRequest) {
       }
       const { data: card } = await supabaseAdmin
         .from("gift_cards")
-        .select("id, code, balance, expiry_date, purchaser_email")
+        .select("id, code, balance, expiry_date, purchaser_email, ad_source")
         .eq("payment_reference", sumupRef)
         .single();
       if (!card) {
@@ -31,6 +32,12 @@ export async function GET(req: NextRequest) {
         .update({ status: "active" })
         .eq("id", card.id)
         .eq("status", "pending");
+      // Google Ads offline conversion — orderId matches the browser tag's
+      // transaction_id (the card code shown on the success page).
+      const gclid = gclidFromNotes(card.ad_source);
+      if (gclid) {
+        await uploadClickConversion({ gclid, value: card.balance, orderId: card.code }).catch(() => {});
+      }
       return NextResponse.json({
         giftCard: {
           code: card.code,
@@ -70,7 +77,7 @@ export async function GET(req: NextRequest) {
 
     const { data: giftCard } = await supabaseAdmin
       .from("gift_cards")
-      .select("id, code, balance, expiry_date, purchaser_email")
+      .select("id, code, balance, expiry_date, purchaser_email, ad_source")
       .eq("code", giftCardCode)
       .single();
 
@@ -84,6 +91,11 @@ export async function GET(req: NextRequest) {
       .update({ status: "active" })
       .eq("id", giftCard.id)
       .eq("status", "pending");
+
+    const gclid = gclidFromNotes(giftCard.ad_source);
+    if (gclid) {
+      await uploadClickConversion({ gclid, value: giftCard.balance, orderId: giftCard.code }).catch(() => {});
+    }
 
     return NextResponse.json({
       giftCard: {

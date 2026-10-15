@@ -41,7 +41,7 @@ export default function AdPixels() {
         if (fbclid) adParts.push("Facebook/Instagram Ad");
         if (gclid) adParts.push("Google Ad");
         if (utmSource) adParts.push(`utm:${utmSource}${utmCampaign ? `/${utmCampaign}` : ""}`);
-        setAdSource(`[Ad: ${adParts.join(", ")}]`);
+        setAdSource(`[Ad: ${adParts.join(", ")}]`, gclid);
       }
     }
 

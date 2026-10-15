@@ -7,7 +7,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { supabase } from "@/lib/supabase";
 import type { ShopOrder } from "@/lib/supabase";
-import { trackPurchase } from "@/lib/ad-tracking";
+import { trackPurchase, getGclid } from "@/lib/ad-tracking";
 
 function SuccessContent() {
   const params = useSearchParams();
@@ -22,7 +22,7 @@ function SuccessContent() {
       fetch("/api/sumup-confirm-shop-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ checkoutRef: sumupRef }),
+        body: JSON.stringify({ checkoutRef: sumupRef, gclid: getGclid() }),
       }).then(() => {
         // Then fetch the order from DB
         supabase

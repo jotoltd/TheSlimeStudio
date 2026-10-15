@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripeAsync } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase";
+import { withGclidTag } from "@/lib/google-ads";
 
 export const runtime = "nodejs";
 
@@ -66,7 +67,10 @@ export async function POST(req: NextRequest) {
 
   // Insert with ad_source; retry without it if the column hasn't been added yet
   const insertCard = async (record: Record<string, any>) => {
-    const withSource = { ...record, ad_source: typeof adSource === "string" && adSource.startsWith("[Ad:") ? adSource : null };
+    const withSource = {
+      ...record,
+      ad_source: typeof adSource === "string" && adSource.startsWith("[Ad:") ? withGclidTag(adSource, body.gclid) : null,
+    };
     const { error } = await supabaseAdmin.from("gift_cards").insert(withSource);
     if (error && String(error.message).includes("ad_source")) {
       const { error: retry } = await supabaseAdmin.from("gift_cards").insert(record);

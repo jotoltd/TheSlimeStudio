@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripeAsync } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase";
+import { sanitizeGclid } from "@/lib/google-ads";
 
 export const runtime = "nodejs";
 
@@ -33,6 +34,7 @@ export async function POST(req: NextRequest) {
     notes?: string;
     discountCode?: string;
     giftCardCode?: string;
+    gclid?: string;
   };
 
   if (!items || items.length === 0) {
@@ -172,6 +174,7 @@ export async function POST(req: NextRequest) {
         shipping_city: shippingCity || "",
         shipping_postcode: shippingPostcode || "",
         notes: notes || "",
+        gclid: sanitizeGclid(body.gclid) || "",
         discount_code: discountCode || "",
         discount_amount: String(discountAmount.toFixed(2)),
         gift_card_code: giftCardCode || "",

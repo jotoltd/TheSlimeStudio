@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripeAsync, getStripeModeAsync } from "@/lib/stripe";
 import { supabase } from "@/lib/supabase";
+import { sanitizeGclid } from "@/lib/google-ads";
 
 export const runtime = "nodejs";
 
@@ -52,6 +53,8 @@ export async function POST(req: NextRequest) {
         subscriberId,
         type: "subscription",
         stripeMode: mode,
+        price: String(price),
+        gclid: sanitizeGclid(body.gclid) || "",
       },
       success_url: `${origin}/subscribe?status=paid&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/subscribe?status=cancelled`,

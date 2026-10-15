@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
-import { getMetaCookies, getAdSource, trackPurchase, stashPurchaseEmail } from "@/lib/ad-tracking";
+import { getMetaCookies, getAdSource, getGclid, trackPurchase, stashPurchaseEmail } from "@/lib/ad-tracking";
 
 type EventInstance = {
   id: string;
@@ -51,10 +51,10 @@ export default function EventDetailClient({
   const bookedTotal = searchParams.get("total");
   const bookedDate = searchParams.get("date");
   const bookedTime = searchParams.get("time");
-  const bookedSid = searchParams.get("sid");
+  const bookedSid = searchParams.get("sid") || searchParams.get("ref");
 
   // Browser Purchase event — eventID matches the server-side Conversions API
-  // event (Stripe session id) so Meta dedupes the pair.
+  // event (Stripe session id or SumUp checkout ref) so Meta dedupes the pair.
   useEffect(() => {
     if (booked && bookedSid) {
       trackPurchase(parseFloat(bookedTotal || "0") || 0, "GBP", bookedSid);
@@ -119,6 +119,7 @@ export default function EventDetailClient({
           phone: phone.trim() || undefined,
           quantity: bookingQty,
           adSource,
+          gclid: getGclid(),
           ...getMetaCookies(),
         }),
       });

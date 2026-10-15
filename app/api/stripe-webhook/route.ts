@@ -5,6 +5,7 @@ import { sendOrderConfirmationEmail } from "@/lib/email";
 import { createPaidBooking, awardReferrerReward } from "@/lib/create-booking";
 import { redeemGiftCard } from "@/lib/gift-cards";
 import { sendCapiEvent } from "@/lib/capi";
+import { gclidFromNotes, uploadClickConversion, sanitizeGclid } from "@/lib/google-ads";
 
 export const runtime = "nodejs";
 
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
       case "checkout.session.completed": {
         const session = event.data.object as {
           id: string;
-          metadata?: { bookingId?: string; subscriberId?: string; type?: string; order_number?: string; gift_card_code?: string; booking_type?: string; event_booking_id?: string; adSource?: string; fbp?: string; fbc?: string; cip?: string; cua?: string };
+          metadata?: { bookingId?: string; subscriberId?: string; type?: string; order_number?: string; gift_card_code?: string; booking_type?: string; event_booking_id?: string; adSource?: string; gclid?: string; price?: string; fbp?: string; fbc?: string; cip?: string; cua?: string };
           payment_status: string;
         };
 
@@ -64,6 +65,13 @@ export async function POST(req: NextRequest) {
               .eq("id", session.metadata.event_booking_id)
               .single();
             if (booking) {
+              // Google Ads offline conversion — orderId matches the browser
+              // tag's transaction_id (the Stripe session id in the sid param).
+              const gclid = gclidFromNotes(booking.notes);
+              if (gclid) {
+                await uploadClickConversion({ gclid, value: booking.total_price, orderId: session.id }).catch(() => {});
+              }
+
               // Server-side Purchase event — the browser pixel on the event
               // confirmation page can't always be relied on.
               await sendCapiEvent({
@@ -117,6 +125,22 @@ export async function POST(req: NextRequest) {
             .update({ status: "active" })
             .eq("code", session.metadata.gift_card_code)
             .eq("status", "pending");
+
+          // Google Ads offline conversion — the card's ad_source carries the
+          // gclid; orderId matches the browser tag's transaction_id (card code).
+          const { data: card } = await supabaseAdmin
+            .from("gift_cards")
+            .select("ad_source, initial_value, balance")
+            .eq("code", session.metadata.gift_card_code)
+            .single();
+          const cardGclid = gclidFromNotes(card?.ad_source);
+          if (cardGclid && card) {
+            await uploadClickConversion({
+              gclid: cardGclid,
+              value: Number(card.initial_value ?? card.balance) || 0,
+              orderId: session.metadata.gift_card_code,
+            }).catch(() => {});
+          }
         }
 
         if (session.metadata?.bookingId && session.metadata?.type !== "subscription") {
@@ -131,6 +155,15 @@ export async function POST(req: NextRequest) {
             .from("subscribers")
             .update({ status: "active", payment_status: "paid" })
             .eq("id", session.metadata.subscriberId);
+
+          const subGclid = sanitizeGclid(session.metadata?.gclid);
+          if (subGclid) {
+            await uploadClickConversion({
+              gclid: subGclid,
+              value: parseFloat(session.metadata.price || "0") || 0,
+              orderId: session.id,
+            }).catch(() => {});
+          }
         }
 
         // Shop order: mark as paid and decrement stock
@@ -161,6 +194,13 @@ export async function POST(req: NextRequest) {
                   .update({ stock: newStock })
                   .eq("id", item.product_id);
               }
+            }
+
+            // Google Ads offline conversion — gclid travels via session
+            // metadata; orderId matches the browser tag's transaction_id.
+            const orderGclid = sanitizeGclid(session.metadata?.gclid);
+            if (orderGclid) {
+              await uploadClickConversion({ gclid: orderGclid, value: order.total, orderId: order.id }).catch(() => {});
             }
 
             // Referral codes reward the referrer on a confirmed order
@@ -263,6 +303,7 @@ export async function POST(req: NextRequest) {
             phone?: string;
             discountCode?: string;
             adSource?: string;
+            gclid?: string;
             fbp?: string;
             fbc?: string;
             cip?: string;
@@ -303,6 +344,7 @@ export async function POST(req: NextRequest) {
             isParty: md.type === "party",
             discountCode: md.discountCode || null,
             adSource: md.adSource || null,
+            gclid: md.gclid || null,
           });
           if (result.created) {
             console.warn(`[stripe-webhook] Recovered booking ${result.bookingId} for ${intent.id} — client never confirmed it.`);

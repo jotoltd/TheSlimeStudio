@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { getAdSource } from "@/lib/ad-tracking";
+import { getAdSource, getGclid } from "@/lib/ad-tracking";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
@@ -96,6 +96,7 @@ export default function GiftCardPage() {
           paymentMethod: paymentProvider,
           customerId,
           adSource: getAdSource(),
+          gclid: getGclid(),
         }),
       });
 

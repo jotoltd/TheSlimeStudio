@@ -12,6 +12,7 @@ import {
 } from "@/lib/create-booking";
 import { redeemRewardCode } from "@/lib/loyalty-rewards";
 import { redeemGiftCard } from "@/lib/gift-cards";
+import { gclidFromNotes, uploadClickConversion } from "@/lib/google-ads";
 
 export const runtime = "nodejs";
 
@@ -28,6 +29,7 @@ export async function POST(req: NextRequest) {
     discountCode?: string;
     giftCardCode?: string;
     giftCardAmount?: number;
+    gclid?: string;
   };
 
   const { checkoutRef } = body;
@@ -91,6 +93,11 @@ export async function POST(req: NextRequest) {
       // Instead, send notifications directly here.
       await sendNotificationsAndLoyalty(booking);
 
+      const gclid = gclidFromNotes(booking.notes);
+      if (gclid) {
+        await uploadClickConversion({ gclid, value: booking.total_price, orderId: checkoutRef }).catch(() => {});
+      }
+
       // Server-side Purchase — event_id matches the browser event fired on
       // the booking page after the SumUp redirect (checkoutRef).
       const meta = metaContextFromRequest(req, body);
@@ -130,6 +137,7 @@ export async function POST(req: NextRequest) {
       totalPrice: body.totalPrice ?? verification.amount ?? 0,
       isParty: false,
       discountCode: body.discountCode || null,
+      gclid: body.gclid || null,
     };
 
     if (!fallbackDetails.email || !fallbackDetails.date || !fallbackDetails.timeSlot) {

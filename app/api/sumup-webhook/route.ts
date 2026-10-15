@@ -11,6 +11,7 @@ import {
   type BookingDetails,
 } from "@/lib/create-booking";
 import { redeemRewardCode } from "@/lib/loyalty-rewards";
+import { gclidFromNotes, uploadClickConversion } from "@/lib/google-ads";
 
 export const runtime = "nodejs";
 
@@ -81,6 +82,11 @@ export async function POST(req: NextRequest) {
           .from("special_event_bookings")
           .update({ payment_status: "paid" })
           .eq("id", eventBooking.id);
+
+        const eventGclid = gclidFromNotes(eventBooking.notes);
+        if (eventGclid) {
+          await uploadClickConversion({ gclid: eventGclid, value: eventBooking.total_price, orderId: checkoutRef }).catch(() => {});
+        }
 
         await sendCapiEvent({
           eventName: "Purchase",
@@ -168,6 +174,11 @@ export async function POST(req: NextRequest) {
       }
       if (booking.discount_code) {
         await awardReferrerReward(booking.discount_code).catch(() => {});
+      }
+
+      const gclid = gclidFromNotes(booking.notes);
+      if (gclid) {
+        await uploadClickConversion({ gclid, value: booking.total_price, orderId: checkoutRef }).catch(() => {});
       }
 
       console.warn(`[sumup-webhook] Recovered booking ${booking.id} for ${checkoutRef} — client never confirmed.`);

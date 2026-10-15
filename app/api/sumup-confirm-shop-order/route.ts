@@ -4,11 +4,12 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { sendOrderConfirmationEmail } from "@/lib/email";
 import { redeemGiftCard } from "@/lib/gift-cards";
 import { awardReferrerReward } from "@/lib/create-booking";
+import { sanitizeGclid, uploadClickConversion } from "@/lib/google-ads";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
-  const { checkoutRef } = await req.json() as { checkoutRef: string };
+  const { checkoutRef, gclid } = await req.json() as { checkoutRef: string; gclid?: string };
 
   if (!checkoutRef) {
     return NextResponse.json({ error: "Missing checkout reference" }, { status: 400 });
@@ -54,6 +55,13 @@ export async function POST(req: NextRequest) {
       .from("shop_orders")
       .update({ payment_status: "paid" })
       .eq("id", order.id);
+
+    // Google Ads offline conversion — orderId matches the browser tag's
+    // transaction_id (the order id used on the success page).
+    const cleanGclid = sanitizeGclid(gclid);
+    if (cleanGclid) {
+      await uploadClickConversion({ gclid: cleanGclid, value: order.total, orderId: order.id }).catch(() => {});
+    }
 
     // Decrement stock
     for (const item of order.items) {

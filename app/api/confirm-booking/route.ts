@@ -70,6 +70,7 @@ export async function POST(req: NextRequest) {
     isParty,
     discountCode: body.discountCode || intent.metadata?.discountCode || null,
     adSource: body.adSource || intent.metadata?.adSource || null,
+    gclid: body.gclid || intent.metadata?.gclid || null,
   });
 
   if (!result.bookingId) {

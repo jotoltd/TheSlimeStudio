@@ -1,5 +1,6 @@
 import { supabaseAdmin, STAMPS_PER_REWARD } from "@/lib/supabase";
 import { generateRewardCode, redeemRewardCode } from "@/lib/loyalty-rewards";
+import { withGclidTag, uploadClickConversion } from "@/lib/google-ads";
 import {
   getResend,
   EMAIL_FROM,
@@ -23,6 +24,7 @@ export type BookingDetails = {
   isParty?: boolean;
   discountCode?: string | null;
   adSource?: string | null;
+  gclid?: string | null;
 };
 
 export type CreateBookingResult = {
@@ -70,7 +72,7 @@ export async function expireStalePendingEventBookings() {
 export async function createPaidBooking(details: BookingDetails): Promise<CreateBookingResult> {
   const {
     paymentRef, name, email, phone, date, timeSlot,
-    people, totalPrice, isParty, discountCode, adSource,
+    people, totalPrice, isParty, discountCode, adSource, gclid,
   } = details;
 
   // Idempotency: has this payment already produced a booking?
@@ -101,7 +103,7 @@ export async function createPaidBooking(details: BookingDetails): Promise<Create
       payment_status: "paid",
       stripe_session_id: paymentRef,
       discount_code: discountCode || null,
-      notes: adSource || null,
+      notes: withGclidTag(adSource, gclid),
       admin_notes: overCapacity
         ? "⚠️ OVER CAPACITY — payment was taken after the slot filled up. Review and contact the customer."
         : "",
@@ -137,6 +139,12 @@ export async function createPaidBooking(details: BookingDetails): Promise<Create
   }
   if (discountCode) {
     await awardReferrerReward(discountCode).catch(() => {});
+  }
+
+  // Google Ads offline conversion — orderId matches the browser tag's
+  // transaction_id so the pair dedupes if both delivered.
+  if (gclid) {
+    await uploadClickConversion({ gclid, value: totalPrice, orderId: paymentRef }).catch(() => {});
   }
 
   return { created: true, bookingId: data.id, overCapacity };
