@@ -85,18 +85,23 @@ function BookingPageInner() {
       const gclid = params.get("gclid");
       const utmSource = params.get("utm_source");
       const utmCampaign = params.get("utm_campaign");
+      const utmContent = params.get("utm_content");
       if (fbclid || gclid || utmSource) {
         const adParts: string[] = [];
         if (fbclid) adParts.push("Facebook/Instagram Ad");
         if (gclid) adParts.push("Google Ad");
-        if (utmSource) adParts.push(`utm:${utmSource}${utmCampaign ? `/${utmCampaign}` : ""}`);
+        if (utmSource) adParts.push(`utm:${utmSource}${utmCampaign ? `/${utmCampaign}` : ""}${utmContent ? ` > ${utmContent}` : ""}`);
         setAdSource(`[Ad: ${adParts.join(", ")}]`, gclid);
         // Clean up URL so the ad params don't persist across navigation
         const url = new URL(window.location.href);
         url.searchParams.delete("fbclid");
         url.searchParams.delete("gclid");
         url.searchParams.delete("utm_source");
+        url.searchParams.delete("utm_medium");
         url.searchParams.delete("utm_campaign");
+        url.searchParams.delete("utm_term");
+        url.searchParams.delete("utm_content");
+        url.searchParams.delete("gad_source");
         window.history.replaceState({}, "", url.toString());
       }
     }

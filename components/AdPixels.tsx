@@ -58,11 +58,12 @@ export default function AdPixels() {
       const gclid = params.get("gclid");
       const utmSource = params.get("utm_source");
       const utmCampaign = params.get("utm_campaign");
+      const utmContent = params.get("utm_content");
       if (fbclid || gclid || utmSource) {
         const adParts: string[] = [];
         if (fbclid) adParts.push("Facebook/Instagram Ad");
         if (gclid) adParts.push("Google Ad");
-        if (utmSource) adParts.push(`utm:${utmSource}${utmCampaign ? `/${utmCampaign}` : ""}`);
+        if (utmSource) adParts.push(`utm:${utmSource}${utmCampaign ? `/${utmCampaign}` : ""}${utmContent ? ` > ${utmContent}` : ""}`);
         setAdSource(`[Ad: ${adParts.join(", ")}]`, gclid);
       }
     }

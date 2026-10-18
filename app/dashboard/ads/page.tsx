@@ -78,11 +78,12 @@ function safeDecode(s: string): string {
 }
 
 function adLabel(notes: string): string {
-  const m = notes.match(/utm:([a-z]+)(?:\/([^\],]+))?/i);
+  const m = notes.match(/utm:([a-z]+)(?:\/([^>,]+?))?(?:\s*>\s*([^,\]]+))?(?=[,\]]|$)/i);
   if (m) {
-    const map: Record<string, string> = { ig: "Instagram", instagram: "Instagram", fb: "Facebook", facebook: "Facebook", google: "Google", tiktok: "TikTok" };
+    const map: Record<string, string> = { ig: "Meta", instagram: "Meta", fb: "Meta", facebook: "Meta", meta: "Meta", google: "Google", tiktok: "TikTok" };
     const base = `${map[m[1].toLowerCase()] || m[1]} Ad`;
-    return m[2] ? `${base} · ${safeDecode(m[2]).replace(/\+/g, " ")}` : base;
+    const parts = [m[2], m[3]].filter(Boolean).map((p) => safeDecode(p!.trim()).replace(/\+/g, " "));
+    return parts.length ? `${base} · ${parts.join(" · ")}` : base;
   }
   if (notes.includes("Google Ad")) return "Google Ad";
   if (notes.includes("Facebook/Instagram")) return "Meta Ad";
@@ -957,7 +958,7 @@ function GoogleApiSection({ api, onChanged, rangeLabel }: { api?: NonNullable<Da
                   (Google&apos;s read-only access tier doesn&apos;t allow remote changes — upgrading to Standard access unlocks it later.)
                 </p>
                 <p className="text-[0.75rem] text-ink-soft leading-relaxed">
-                  <strong>Tip — see which campaign a booking came from:</strong> in Google Ads, add <code className="bg-ink/[0.06] px-1 py-0.5 rounded">utm_campaign={"{"}campaignid{"}"}</code> to each ad&apos;s tracking options (or set <em>Final URL suffix</em> to <code className="bg-ink/[0.06] px-1 py-0.5 rounded">utm_source=google&utm_campaign=YourCampaignName</code> at campaign level). Bookings will then show the campaign name next to the Google Ad badge.
+                  <strong>Attribution:</strong> bookings from Google and Meta ads now show the campaign and ad name in the badge (e.g. <em>Meta Ad · Local Bookings - Sales · Slime Sessions — Book Online</em>) — tracking parameters are added automatically at click time.
                 </p>
               </div>
             </>

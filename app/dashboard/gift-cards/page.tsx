@@ -39,7 +39,7 @@ type Redemption = {
 };
 
 const AD_PLATFORMS: Record<string, string> = {
-  ig: "Instagram", fb: "Facebook", facebook: "Facebook", instagram: "Instagram",
+  ig: "Instagram", fb: "Facebook", facebook: "Facebook", instagram: "Instagram", meta: "Meta",
   google: "Google", gclid: "Google", tiktok: "TikTok", tt: "TikTok", snapchat: "Snapchat",
 };
 
