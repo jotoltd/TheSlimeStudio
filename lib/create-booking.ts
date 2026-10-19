@@ -58,6 +58,15 @@ export async function expireStalePendingEventBookings() {
     .lt("created_at", cutoff);
 }
 
+export async function expireStalePendingGiftCards() {
+  const cutoff = new Date(Date.now() - ABANDONED_CHECKOUT_MS).toISOString();
+  await supabaseAdmin
+    .from("gift_cards")
+    .update({ status: "cancelled" })
+    .eq("status", "pending")
+    .lt("created_at", cutoff);
+}
+
 /**
  * Creates a paid booking for a payment that has ALREADY been captured.
  *

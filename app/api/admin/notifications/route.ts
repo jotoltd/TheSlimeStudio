@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { verifyToken } from "@/lib/auth";
-import { expireStalePendingBookings } from "@/lib/create-booking";
+import { expireStalePendingBookings, expireStalePendingGiftCards } from "@/lib/create-booking";
 
 export const runtime = "nodejs";
 
@@ -24,8 +24,8 @@ export async function GET(req: Request) {
   }
   try {
     // This route is polled every 60s while the dashboard is open, so it
-    // doubles as the sweep for abandoned pending bookings.
-    await expireStalePendingBookings();
+    // doubles as the sweep for abandoned pending bookings/gift cards.
+    await Promise.all([expireStalePendingBookings(), expireStalePendingGiftCards()]);
 
     const [lastSeenRes, dismissedRes, bookingsRes, eventsRes, ordersRes, cardsRes, enquiriesRes] = await Promise.all([
       supabaseAdmin.from("site_content").select("value").eq("key", LAST_SEEN_KEY).maybeSingle(),
@@ -48,6 +48,7 @@ export async function GET(req: Request) {
       supabaseAdmin
         .from("gift_cards")
         .select("id, code, purchaser_name, initial_value, created_at, purchased_at")
+        .in("status", ["active", "used", "expired"])
         .order("created_at", { ascending: false })
         .limit(15),
       supabaseAdmin
