@@ -11,6 +11,16 @@ ALTER TABLE public.subscribers ADD COLUMN IF NOT EXISTS payment_status TEXT DEFA
 ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS stripe_mode TEXT DEFAULT 'test';
 ALTER TABLE public.special_event_bookings ADD COLUMN IF NOT EXISTS notes TEXT;
 ALTER TABLE public.gift_cards ADD COLUMN IF NOT EXISTS ad_source TEXT;
+ALTER TABLE public.gift_cards ADD COLUMN IF NOT EXISTS customer_id UUID REFERENCES customers(id) ON DELETE SET NULL;
+DO $$
+DECLARE c record;
+BEGIN
+  FOR c IN SELECT conname FROM pg_constraint WHERE conrelid = 'public.gift_cards'::regclass AND contype = 'c'
+  LOOP
+    EXECUTE format('ALTER TABLE public.gift_cards DROP CONSTRAINT %I', c.conname);
+  END LOOP;
+END $$;
+ALTER TABLE public.gift_cards ADD CONSTRAINT gift_cards_status_check CHECK (status IN ('pending', 'active', 'used', 'expired', 'cancelled'));
 
 -- RLS policies for enquiries (anon can insert and select)
 ALTER TABLE public.enquiries ENABLE ROW LEVEL SECURITY;
