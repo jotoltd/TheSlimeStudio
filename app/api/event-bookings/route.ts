@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getStripeModeAsync, getStripeKeysForMode } from "@/lib/stripe";
 import { sendCapiEvent, metaContextFromRequest } from "@/lib/capi";
-import { withGclidTag } from "@/lib/google-ads";
+import { withGclidTag, notesForStripeMetadata, sanitizeAdSource } from "@/lib/google-ads";
 
 export const runtime = "nodejs";
 
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
       quantity,
       total_price: totalPrice,
       payment_status: "pending",
-      notes: withGclidTag(body.adSource || null, body.gclid),
+      notes: withGclidTag(sanitizeAdSource(body.adSource), body.gclid),
     })
     .select()
     .single();
@@ -139,7 +139,7 @@ async function createStripeCheckout(booking: any, event: any, instance: any, tot
       "metadata[booking_type]": "special_event",
       "metadata[instance_id]": instance.id,
       "metadata[event_id]": event.id,
-      "metadata[adSource]": booking.notes || "",
+      "metadata[adSource]": notesForStripeMetadata(booking.notes),
       "metadata[fbp]": (meta?.fbp || "").slice(0, 400),
       "metadata[fbc]": (meta?.fbc || "").slice(0, 400),
       "metadata[cip]": (meta?.clientIp || "").slice(0, 100),

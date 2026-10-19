@@ -6,7 +6,7 @@ import { awardLoyaltyStamp, awardReferrerReward } from "@/lib/create-booking";
 import { redeemGiftCard } from "@/lib/gift-cards";
 import { getResend, EMAIL_FROM, bookingConfirmationHtml, logEmail, emailEnabled, emailTemplates } from "@/lib/email";
 import { sendCapiEvent, metaContextFromRequest } from "@/lib/capi";
-import { withGclidTag, uploadClickConversion, sanitizeGclid } from "@/lib/google-ads";
+import { withGclidTag, uploadClickConversion, sanitizeGclid, sanitizeAdSource } from "@/lib/google-ads";
 
 export const runtime = "nodejs";
 
@@ -135,7 +135,7 @@ export async function POST(req: NextRequest) {
         stripe_session_id: `free_${Date.now()}`,
         is_party: false,
         discount_code: discountCode || null,
-        notes: withGclidTag(body.adSource || null, body.gclid),
+        notes: withGclidTag(sanitizeAdSource(body.adSource), body.gclid),
       })
       .select("id")
       .single();
@@ -253,7 +253,7 @@ export async function POST(req: NextRequest) {
         discountCode: discountCode || "",
         giftCardCode: giftCardCode || "",
         giftCardAmount: String(Number(body.giftCardAmount) || ""),
-        adSource: body.adSource || "",
+        adSource: sanitizeAdSource(body.adSource) || "",
         gclid: (sanitizeGclid(body.gclid) || "").slice(0, 255),
         // Meta click context — lets the Conversions API Purchase event match
         // back to the ad click even when the browser pixel was blocked.

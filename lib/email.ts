@@ -68,19 +68,27 @@ export async function emailEnabled(type: string): Promise<boolean> {
 export const EMAIL_FROM = "The Slime Studio <noreply@theslimestudio.co.uk>";
 export const CONTACT_EMAIL = "studio@theslimestudio.co.uk";
 
-// Turns "[Ad: Facebook/Instagram Ad, utm:ig/My Campaign]" into "Instagram Ad — campaign My Campaign"
+// utm params are attacker-controlled and this label is interpolated into
+// email HTML — escape anything we pass through.
+const escapeHtml = (s: string) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+// Turns "[Ad: Facebook/Instagram Ad, utm:ig/My Campaign > My Ad]" into
+// 'Meta Ad — campaign "My Campaign", ad "My Ad"'
 export function adSourceLabel(adSource: string): string {
   const inner = adSource.replace(/\s*\[gclid:[^\]]*\]/gi, "").replace(/^\[Ad:\s*/i, "").replace(/\]\s*$/, "").trim();
-  const m = inner.match(/utm:([a-z]+)(?:\/([^\],]+))?/i);
+  const m = inner.match(/utm:([a-z]+)(?:\/([^\],>]+))?(?:\s*>\s*([^\],]+))?/i);
   if (m) {
-    const map: Record<string, string> = { ig: "Instagram", instagram: "Instagram", fb: "Facebook", facebook: "Facebook", meta: "Meta", google: "Google", tiktok: "TikTok", snapchat: "Snapchat" };
-    const platform = map[m[1].toLowerCase()] || m[1];
+    const map: Record<string, string> = { ig: "Meta", instagram: "Meta", fb: "Meta", facebook: "Meta", meta: "Meta", google: "Google", tiktok: "TikTok", snapchat: "Snapchat" };
+    const platform = escapeHtml(map[m[1].toLowerCase()] || m[1]);
+    const campaign = m[2]?.trim();
+    const adName = m[3]?.trim();
     if (platform.toLowerCase() === "email") {
-      return `Email${m[2] ? ` — campaign "${m[2]}"` : ""}`;
+      return `Email${campaign ? ` — campaign "${escapeHtml(campaign)}"` : ""}`;
     }
-    return `${platform} Ad${m[2] ? ` — campaign "${m[2]}"` : ""}`;
+    return `${platform} Ad${campaign ? ` — campaign "${escapeHtml(campaign)}"` : ""}${adName ? `, ad "${escapeHtml(adName)}"` : ""}`;
   }
-  return inner;
+  return escapeHtml(inner);
 }
 
 export function emailWrapper(content: string): string {

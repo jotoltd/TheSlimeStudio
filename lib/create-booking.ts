@@ -1,6 +1,6 @@
 import { supabaseAdmin, STAMPS_PER_REWARD } from "@/lib/supabase";
 import { generateRewardCode, redeemRewardCode } from "@/lib/loyalty-rewards";
-import { withGclidTag, uploadClickConversion } from "@/lib/google-ads";
+import { withGclidTag, uploadClickConversion, sanitizeAdSource } from "@/lib/google-ads";
 import {
   getResend,
   EMAIL_FROM,
@@ -103,7 +103,7 @@ export async function createPaidBooking(details: BookingDetails): Promise<Create
       payment_status: "paid",
       stripe_session_id: paymentRef,
       discount_code: discountCode || null,
-      notes: withGclidTag(adSource, gclid),
+      notes: withGclidTag(sanitizeAdSource(adSource), gclid),
       admin_notes: overCapacity
         ? "⚠️ OVER CAPACITY — payment was taken after the slot filled up. Review and contact the customer."
         : "",

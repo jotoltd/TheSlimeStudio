@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripeAsync } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase";
-import { withGclidTag } from "@/lib/google-ads";
+import { withGclidTag, sanitizeAdSource } from "@/lib/google-ads";
 
 export const runtime = "nodejs";
 
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
   const insertCard = async (record: Record<string, any>) => {
     const withSource = {
       ...record,
-      ad_source: typeof adSource === "string" && adSource.startsWith("[Ad:") ? withGclidTag(adSource, body.gclid) : null,
+      ad_source: withGclidTag(sanitizeAdSource(adSource), body.gclid),
     };
     const { error } = await supabaseAdmin.from("gift_cards").insert(withSource);
     if (error && String(error.message).includes("ad_source")) {

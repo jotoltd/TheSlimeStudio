@@ -85,11 +85,15 @@ const GOOGLE_ADS_SEND_TO = "AW-18466024911/uMtICLeZq4AdEM_bpOVE";
 const AD_SOURCE_KEY = "adSource";
 const AD_SOURCE_TTL = 30 * 24 * 60 * 60 * 1000;
 
+// Cap the stored label — utm params are attacker-controlled and this string
+// ends up in booking notes and Stripe metadata (500-char limit per value).
+const AD_SOURCE_LABEL_MAX = 400;
+
 export function setAdSource(label: string, gclid?: string | null) {
   if (typeof window === "undefined" || !label) return;
   localStorage.setItem(
     AD_SOURCE_KEY,
-    JSON.stringify({ s: label, t: Date.now(), ...(gclid ? { g: gclid } : {}) })
+    JSON.stringify({ s: label.slice(0, AD_SOURCE_LABEL_MAX), t: Date.now(), ...(gclid ? { g: gclid } : {}) })
   );
 }
 
@@ -99,13 +103,15 @@ export function getAdSource(): string | null {
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw);
-    if (parsed?.s && parsed?.t && Date.now() - parsed.t < AD_SOURCE_TTL) return parsed.s;
+    if (parsed?.s && parsed?.t && Date.now() - parsed.t < AD_SOURCE_TTL) {
+      return String(parsed.s).slice(0, AD_SOURCE_LABEL_MAX);
+    }
   } catch {
     // Pre-TTL format stored the bare label — re-stamp it so ad clicks from
     // before this deploy still attribute, then let it age out normally.
     if (raw.startsWith("[Ad:")) {
       setAdSource(raw);
-      return raw;
+      return raw.slice(0, AD_SOURCE_LABEL_MAX);
     }
   }
   localStorage.removeItem(AD_SOURCE_KEY);

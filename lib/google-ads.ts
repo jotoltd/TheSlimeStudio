@@ -130,8 +130,28 @@ export function withGclidTag(notes: string | null | undefined, gclid: unknown): 
 }
 
 export function gclidFromNotes(notes: string | null | undefined): string | null {
-  const m = notes?.match(/\[gclid:([A-Za-z0-9_.\-]+)\]/);
+  // Last match wins — withGclidTag appends the real click id at the end, so a
+  // crafted [gclid:...] inside an attacker-controlled adSource can't shadow it.
+  const m = notes?.match(/\[gclid:([A-Za-z0-9_.\-]+)\](?![\s\S]*\[gclid:)/);
   return m?.[1] || null;
+}
+
+// adSource is client-controlled — only accept the "[Ad: ...]" shape the tracker
+// writes and cap it so it can't blow up notes or Stripe metadata consumers.
+export function sanitizeAdSource(value: unknown): string | null {
+  return typeof value === "string" && value.startsWith("[Ad:") ? value.slice(0, 500) : null;
+}
+
+// Stripe metadata values cap at 500 chars. Truncate an over-long notes string
+// but keep the trailing [gclid:...] tag whole — the webhook restores notes
+// from this metadata and reads the click id back out of it.
+export function notesForStripeMetadata(notes: string | null | undefined): string {
+  const n = notes || "";
+  if (n.length <= 500) return n;
+  const tag = n.match(/\s*\[gclid:[^\]]*\]\s*$/)?.[0] || "";
+  // A tag longer than the limit can't be preserved whole — a truncated one
+  // won't parse as a gclid anyway, so the final slice is just the hard cap.
+  return (n.slice(0, Math.max(0, 500 - tag.length)).trimEnd() + tag).slice(0, 500);
 }
 
 // Uploads a Purchase conversion attributed to the stored click via the Data

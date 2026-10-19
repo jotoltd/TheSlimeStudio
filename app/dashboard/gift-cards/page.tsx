@@ -39,7 +39,7 @@ type Redemption = {
 };
 
 const AD_PLATFORMS: Record<string, string> = {
-  ig: "Instagram", fb: "Facebook", facebook: "Facebook", instagram: "Instagram", meta: "Meta",
+  ig: "Meta", fb: "Meta", facebook: "Meta", instagram: "Meta", meta: "Meta",
   google: "Google", gclid: "Google", tiktok: "TikTok", tt: "TikTok", snapchat: "Snapchat",
 };
 
@@ -54,7 +54,7 @@ const AD_COLORS: Record<string, string> = {
 
 function parseAdSource(notes: string | null | undefined): { label: string; platform: string; detail: string } | null {
   if (!notes || !notes.startsWith("[Ad:")) return null;
-  const inner = notes.slice(4).replace(/\]\s*$/, "").trim();
+  const inner = notes.replace(/\s*\[gclid:[^\]]*\]/gi, "").slice(4).replace(/\]\s*$/, "").trim();
   const parts = inner.split(",").map((p) => p.trim());
   const utm = parts.find((p) => p.startsWith("utm:"));
   const utmSource = utm ? utm.slice(4).split("/")[0].toLowerCase() : null;
@@ -62,7 +62,7 @@ function parseAdSource(notes: string | null | undefined): { label: string; platf
     ? (AD_PLATFORMS[utmSource] || utmSource)
     : parts.some((p) => p === "Google Ad") ? "Google"
     : parts.some((p) => p.includes("Facebook/Instagram")) ? "Meta" : "Unknown";
-  return { label: `${platform} Ad`, platform, detail: inner };
+  return { label: platform.toLowerCase() === "email" ? "Email" : `${platform} Ad`, platform, detail: inner };
 }
 
 function AdSourceBadge({ notes }: { notes: string | null | undefined }) {

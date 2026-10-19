@@ -3,7 +3,7 @@ import { randomBytes } from "crypto";
 import { getSumUpKey, isSumUpConfigured } from "@/lib/payment";
 import { supabaseAdmin } from "@/lib/supabase";
 import { sendCapiEvent, metaContextFromRequest } from "@/lib/capi";
-import { withGclidTag } from "@/lib/google-ads";
+import { withGclidTag, sanitizeAdSource } from "@/lib/google-ads";
 
 export const runtime = "nodejs";
 
@@ -167,7 +167,7 @@ export async function POST(req: NextRequest) {
       stripe_session_id: checkoutRef,
       discount_code: discountCode || null,
       discount_amount: 0,
-      notes: withGclidTag(body.adSource || null, body.gclid),
+      notes: withGclidTag(sanitizeAdSource(body.adSource), body.gclid),
     }).select().single();
 
     if (insertError || !booking) {

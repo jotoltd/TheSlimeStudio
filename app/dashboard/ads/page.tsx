@@ -80,8 +80,9 @@ function safeDecode(s: string): string {
 function adLabel(notes: string): string {
   const m = notes.match(/utm:([a-z]+)(?:\/([^>,]+?))?(?:\s*>\s*([^,\]]+))?(?=[,\]]|$)/i);
   if (m) {
-    const map: Record<string, string> = { ig: "Meta", instagram: "Meta", fb: "Meta", facebook: "Meta", meta: "Meta", google: "Google", tiktok: "TikTok" };
-    const base = `${map[m[1].toLowerCase()] || m[1]} Ad`;
+    const map: Record<string, string> = { ig: "Meta", instagram: "Meta", fb: "Meta", facebook: "Meta", meta: "Meta", google: "Google", tiktok: "TikTok", email: "Email" };
+    const platform = map[m[1].toLowerCase()] || m[1];
+    const base = platform.toLowerCase() === "email" ? "Email" : `${platform} Ad`;
     const parts = [m[2], m[3]].filter(Boolean).map((p) => safeDecode(p!.trim()).replace(/\+/g, " "));
     return parts.length ? `${base} · ${parts.join(" · ")}` : base;
   }
@@ -958,7 +959,7 @@ function GoogleApiSection({ api, onChanged, rangeLabel }: { api?: NonNullable<Da
                   (Google&apos;s read-only access tier doesn&apos;t allow remote changes — upgrading to Standard access unlocks it later.)
                 </p>
                 <p className="text-[0.75rem] text-ink-soft leading-relaxed">
-                  <strong>Attribution:</strong> bookings from Google and Meta ads now show the campaign and ad name in the badge (e.g. <em>Meta Ad · Local Bookings - Sales · Slime Sessions — Book Online</em>) — tracking parameters are added automatically at click time.
+                  <strong>Attribution:</strong> bookings from Google and Meta ads show the campaign and ad name in the badge (e.g. <em>Meta Ad · Local Bookings - Sales · Slime Sessions — Book Online</em>) when ads pass <code className="bg-ink/[0.06] px-1 py-0.5 rounded">utm_campaign</code> / <code className="bg-ink/[0.06] px-1 py-0.5 rounded">utm_content</code> — set via Meta&apos;s <em>URL parameters</em> (url_tags) and Google&apos;s <em>tracking template</em>.
                 </p>
               </div>
             </>

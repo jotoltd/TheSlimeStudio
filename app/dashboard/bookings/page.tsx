@@ -14,8 +14,8 @@ function todayISO() {
 }
 
 const AD_PLATFORMS: Record<string, string> = {
-  ig: "Instagram", instagram: "Instagram",
-  fb: "Facebook", facebook: "Facebook",
+  ig: "Meta", instagram: "Meta",
+  fb: "Meta", facebook: "Meta",
   meta: "Meta",
   google: "Google",
   tiktok: "TikTok",
@@ -31,14 +31,18 @@ const AD_COLORS: Record<string, string> = {
   Snapchat: "bg-yellow-100 text-yellow-800",
 };
 
-function parseAdSource(notes: string | null | undefined): { label: string; platform: string; campaign: string | null; detail: string } | null {
+function parseAdSource(notes: string | null | undefined): { label: string; platform: string; campaign: string | null; adName: string | null; detail: string } | null {
   if (!notes || !notes.startsWith("[Ad:")) return null;
   const inner = notes.replace(/\s*\[gclid:[^\]]*\]/gi, "").slice(4).replace(/\]\s*$/, "").trim();
   const parts = inner.split(",").map((p) => p.trim());
   const utm = parts.find((p) => p.startsWith("utm:"));
   const utmValue = utm ? utm.slice(4) : null;
   const utmSource = utmValue ? utmValue.split("/")[0].toLowerCase() : null;
-  const campaign = utmValue && utmValue.includes("/") ? utmValue.split("/").slice(1).join("/") : null;
+  const campaignRaw = utmValue && utmValue.includes("/") ? utmValue.split("/").slice(1).join("/") : null;
+  // The stored tag carries "campaign > ad name" — split them for display.
+  const campaignParts = campaignRaw ? campaignRaw.split(/\s*>\s*/) : [];
+  const campaign = campaignParts[0]?.trim() || null;
+  const adName = campaignParts.length > 1 ? campaignParts.slice(1).join(" > ").trim() || null : null;
 
   let platform: string;
   if (utmSource) {
@@ -51,14 +55,18 @@ function parseAdSource(notes: string | null | undefined): { label: string; platf
     platform = "Unknown";
   }
 
-  return { label: `${platform} Ad`, platform, campaign, detail: inner };
+  return { label: platform.toLowerCase() === "email" ? "Email" : `${platform} Ad`, platform, campaign, adName, detail: inner };
 }
 
 function AdSourceBadge({ notes, className = "" }: { notes: string | null | undefined; className?: string }) {
   const ad = parseAdSource(notes);
   if (!ad) return null;
   const color = AD_COLORS[ad.platform] || "bg-purple-100 text-purple-700";
-  const title = ad.campaign ? `${ad.detail} · campaign: ${ad.campaign}` : ad.detail;
+  const title = [
+    ad.detail,
+    ad.campaign ? `campaign: ${ad.campaign}` : null,
+    ad.adName ? `ad: ${ad.adName}` : null,
+  ].filter(Boolean).join(" · ");
   return (
     <span className={`text-[0.6rem] ${color} px-1.5 py-0.5 rounded-full font-medium ${className}`} title={title}>
       {ad.label}
