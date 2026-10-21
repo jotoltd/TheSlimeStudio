@@ -18,7 +18,6 @@ export async function POST(req: NextRequest) {
     people,
     totalPrice,
     discountCode,
-    giftCardCode,
   } = body as {
     name: string;
     email: string;

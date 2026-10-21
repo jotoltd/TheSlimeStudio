@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, Suspense, lazy } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, Suspense, lazy } from "react";
 import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -17,6 +17,41 @@ function todayISO() {
   d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
   return d.toISOString().split("T")[0];
 }
+
+type EventInfo = {
+  id: string;
+  title: string;
+  slug: string;
+  category: string;
+  image_url: string | null;
+  price: number;
+  pricing_model: string;
+  duration_minutes: number;
+  is_active: boolean;
+};
+
+type EventInstance = {
+  id: string;
+  date: string;
+  start_time: string;
+  capacity: number;
+  event: EventInfo | null;
+};
+
+type DayEvent = {
+  event_id: string;
+  event_slug: string;
+  instance_id: string;
+  title: string;
+  category: string;
+  image_url: string | null;
+  start_time: string;
+  duration_minutes: number;
+  price: number;
+  pricing_model: string;
+  spots_remaining: number;
+  capacity: number;
+};
 
 function BookingPageInner() {
   const { content: c } = useContent();
@@ -36,7 +71,7 @@ function BookingPageInner() {
   const [bookingId, setBookingId] = useState("");
   const [blockedDates, setBlockedDates] = useState<string[]>([]);
   const [eventDates, setEventDates] = useState<string[]>([]);
-  const [dayEvents, setDayEvents] = useState<any[]>([]);
+  const [dayEvents, setDayEvents] = useState<DayEvent[]>([]);
   const [pricePerPerson, setPricePerPerson] = useState(PRICE_PER_PERSON);
   const [timeSlots, setTimeSlots] = useState<string[]>(DEFAULT_SLOTS);
   const [slotCapacity, setSlotCapacity] = useState(DEFAULT_CAP);
@@ -59,7 +94,7 @@ function BookingPageInner() {
   const [giftCardCode, setGiftCardCode] = useState("");
   const [giftCardBalance, setGiftCardBalance] = useState<number | null>(null);
   const [giftCardChecking, setGiftCardChecking] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<DayEvent | null>(null);
   const [selectedSession, setSelectedSession] = useState<string>("slime"); // "slime" or event instance id
   const [evtQty, setEvtQty] = useState(1);
   const [evtName, setEvtName] = useState("");
@@ -69,6 +104,9 @@ function BookingPageInner() {
   const [evtMsg, setEvtMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [giftCardError, setGiftCardError] = useState("");
 
+  // Mount-time snapshot: the payment-redirect handler below runs once on load
+  // and uses these values as fallbacks when the API doesn't echo them back.
+  const mount = useRef({ date, email, people, timeSlot, finalPrice: people * pricePerPerson }).current;
 
   useEffect(() => {
     // Auto-apply referral code from tracking link
@@ -146,7 +184,7 @@ function BookingPageInner() {
       .then(({ data: instData }) => {
         if (instData) {
           const dates = new Set<string>();
-          instData.forEach((inst: any) => dates.add(inst.date));
+          instData.forEach((inst: { date: string }) => dates.add(inst.date));
           setEventDates(Array.from(dates));
         }
       });
@@ -191,9 +229,9 @@ function BookingPageInner() {
             setBookingId(data.bookingId);
             setName(data.name || "");
             setEmail(data.email || "");
-            setDate(data.date || date);
-            setTimeSlot(data.timeSlot || timeSlot);
-            setPeople(data.people || people);
+            setDate(data.date || mount.date);
+            setTimeSlot(data.timeSlot || mount.timeSlot);
+            setPeople(data.people || mount.people);
             setStatus("paid");
             trackPurchase(Number(data.totalPrice || 0), "GBP", sumupRef, data.email);
           } else {
@@ -235,7 +273,7 @@ function BookingPageInner() {
           // The Stripe webhook creates the booking if this request never lands.
         }).finally(() => {
           setStatus("paid");
-          trackPurchase(finalPrice, "GBP", piId, email || undefined);
+          trackPurchase(mount.finalPrice, "GBP", piId, mount.email || undefined);
           // Clean up URL
           const url = new URL(window.location.href);
           url.searchParams.delete("payment_intent");
@@ -252,10 +290,10 @@ function BookingPageInner() {
         window.history.replaceState({}, "", url.toString());
       }
     }
-  }, []);
+  }, [mount]);
 
   // Compute which time slots are available for a given date
-  function getSlotsForDate(forDate: string): { slots: string[]; isOpen: boolean } {
+  const getSlotsForDate = useCallback((forDate: string): { slots: string[]; isOpen: boolean } => {
     // Check date override first
     const override = dateOverrides.find((o) => o.date === forDate);
     if (override) {
@@ -269,7 +307,72 @@ function BookingPageInner() {
     }
     // Fall back to global time slots from settings
     return { slots: globalSlots, isOpen: true };
-  }
+  }, [dateOverrides, openingHours, globalSlots]);
+
+  const loadAvailability = useCallback(async (forDate: string) => {
+    setLoadingSlots(true);
+    const { data } = await supabase.from("bookings").select("time_slot, people, payment_status").eq("date", forDate).eq("payment_status", "paid");
+    const used: Record<string, number> = {};
+    (data || []).forEach((b: { time_slot: string; people: number; payment_status: string }) => {
+      used[b.time_slot] = (used[b.time_slot] || 0) + b.people;
+    });
+    const currentSlots = getSlotsForDate(forDate).slots;
+    const rem: Record<string, number> = {};
+    currentSlots.forEach((slot) => {
+      rem[slot] = Math.max(0, slotCapacity - (used[slot] || 0));
+    });
+    setRemaining(rem);
+    setLoadingSlots(false);
+
+    // Fetch events for this date directly from supabase
+    try {
+      const { data: instances } = await supabase
+        .from("special_event_instances")
+        .select("*, event:special_events(id, title, slug, category, image_url, price, pricing_model, duration_minutes, is_active)")
+        .eq("date", forDate)
+        .eq("status", "open");
+
+      // Fetch paid booking counts for these instances so capacity decrements correctly
+      const typedInstances = (instances || []) as EventInstance[];
+      const instanceIds = typedInstances.map((i) => i.id);
+      const bookingCounts: Record<string, number> = {};
+      if (instanceIds.length > 0) {
+        const { data: paidBookings } = await supabase
+          .from("special_event_bookings")
+          .select("instance_id, quantity")
+          .in("instance_id", instanceIds)
+          .eq("payment_status", "paid");
+        ((paidBookings || []) as { instance_id: string; quantity: number }[]).forEach((b) => {
+          bookingCounts[b.instance_id] = (bookingCounts[b.instance_id] || 0) + b.quantity;
+        });
+      }
+
+      const dayEvts: DayEvent[] = [];
+      typedInstances.forEach((inst) => {
+        if (inst.event && inst.event.is_active) {
+          const bookedCount = bookingCounts[inst.id] || 0;
+          dayEvts.push({
+            event_id: inst.event.id,
+            event_slug: inst.event.slug,
+            instance_id: inst.id,
+            title: inst.event.title,
+            category: inst.event.category,
+            image_url: inst.event.image_url,
+            start_time: inst.start_time,
+            duration_minutes: inst.event.duration_minutes,
+            price: inst.event.price,
+            pricing_model: inst.event.pricing_model,
+            spots_remaining: inst.capacity - bookedCount,
+            capacity: inst.capacity,
+          });
+        }
+      });
+      dayEvts.sort((a, b) => a.start_time.localeCompare(b.start_time));
+      setDayEvents(dayEvts);
+    } catch {
+      setDayEvents([]);
+    }
+  }, [getSlotsForDate, slotCapacity]);
 
   // Get closed dates for calendar (dates with no override and weekly schedule says closed)
   function getClosedDates(): string[] {
@@ -303,7 +406,7 @@ function BookingPageInner() {
     // loadAvailability handles an empty regular-slot list and still loads events.
     loadAvailability(date);
     setTimeSlot("");
-  }, [date, slotCapacity, openingHours, dateOverrides, globalSlots]);
+  }, [date, getSlotsForDate, loadAvailability]);
 
 
   function isSlotInPast(slot: string, forDate: string) {
@@ -312,70 +415,6 @@ function BookingPageInner() {
     const slotTime = new Date(forDate + "T00:00:00");
     slotTime.setHours(h, m, 0, 0);
     return slotTime.getTime() < now.getTime();
-  }
-
-  async function loadAvailability(forDate: string) {
-    setLoadingSlots(true);
-    const { data } = await supabase.from("bookings").select("time_slot, people, payment_status").eq("date", forDate).eq("payment_status", "paid");
-    const used: Record<string, number> = {};
-    (data || []).forEach((b: { time_slot: string; people: number; payment_status: string }) => {
-      used[b.time_slot] = (used[b.time_slot] || 0) + b.people;
-    });
-    const currentSlots = getSlotsForDate(forDate).slots;
-    const rem: Record<string, number> = {};
-    currentSlots.forEach((slot) => {
-      rem[slot] = Math.max(0, slotCapacity - (used[slot] || 0));
-    });
-    setRemaining(rem);
-    setLoadingSlots(false);
-
-    // Fetch events for this date directly from supabase
-    try {
-      const { data: instances } = await supabase
-        .from("special_event_instances")
-        .select("*, event:special_events(id, title, slug, category, image_url, price, pricing_model, duration_minutes, is_active)")
-        .eq("date", forDate)
-        .eq("status", "open");
-
-      // Fetch paid booking counts for these instances so capacity decrements correctly
-      const instanceIds = (instances || []).map((i: any) => i.id);
-      const bookingCounts: Record<string, number> = {};
-      if (instanceIds.length > 0) {
-        const { data: paidBookings } = await supabase
-          .from("special_event_bookings")
-          .select("instance_id, quantity")
-          .in("instance_id", instanceIds)
-          .eq("payment_status", "paid");
-        (paidBookings || []).forEach((b: any) => {
-          bookingCounts[b.instance_id] = (bookingCounts[b.instance_id] || 0) + b.quantity;
-        });
-      }
-
-      const dayEvts: any[] = [];
-      (instances || []).forEach((inst: any) => {
-        if (inst.event && inst.event.is_active) {
-          const bookedCount = bookingCounts[inst.id] || 0;
-          dayEvts.push({
-            event_id: inst.event.id,
-            event_slug: inst.event.slug,
-            instance_id: inst.id,
-            title: inst.event.title,
-            category: inst.event.category,
-            image_url: inst.event.image_url,
-            start_time: inst.start_time,
-            duration_minutes: inst.event.duration_minutes,
-            price: inst.event.price,
-            pricing_model: inst.event.pricing_model,
-            spots_remaining: inst.capacity - bookedCount,
-            capacity: inst.capacity,
-          });
-        }
-      });
-      dayEvts.sort((a, b) => a.start_time.localeCompare(b.start_time));
-      setDayEvents(dayEvts);
-    } catch {
-      setDayEvents([]);
-    }
   }
 
   const maxPeopleForSlot = timeSlot ? remaining[timeSlot] ?? slotCapacity : slotCapacity;
@@ -641,7 +680,7 @@ function BookingPageInner() {
                 </div>
                 <h2 className="font-display text-xl md:text-2xl mb-2">Booking Confirmed!</h2>
                 <p className="text-ink-soft text-sm">
-                  We've sent a confirmation to <strong className="text-ink">{email}</strong>. See you soon!
+                  We&apos;ve sent a confirmation to <strong className="text-ink">{email}</strong>. See you soon!
                 </p>
               </div>
 
@@ -726,7 +765,7 @@ function BookingPageInner() {
               <div className="text-4xl md:text-5xl mb-4">😕</div>
               <h2 className="font-display text-xl md:text-2xl mb-3">Payment Cancelled</h2>
               <p className="text-ink-soft mb-6">
-                Payment wasn't completed, so no booking has been made. You can try again below.
+                Payment wasn&apos;t completed, so no booking has been made. You can try again below.
               </p>
               <button onClick={() => setStatus("idle")} className="btn-primary">
                 Try Again
@@ -829,7 +868,7 @@ function BookingPageInner() {
                   <div className="text-sm text-ink-soft py-4 text-center">Checking availability...</div>
                 ) : timeSlots.length === 0 && dayEvents.length === 0 ? (
                   <div className="text-sm text-ink-soft py-4 text-center bg-ink/[0.03] rounded-xl">
-                    We're closed on this day. Please choose another date.
+                    We&apos;re closed on this day. Please choose another date.
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -1075,7 +1114,7 @@ function BookingPageInner() {
                 {appliedDiscount ? (
                   <div className="flex items-center justify-between bg-green-50 border-2 border-green-200 rounded-xl p-3">
                     <div>
-                      <span className="text-[0.85rem] font-medium text-green-700">Code "{appliedDiscount.code}" applied</span>
+                      <span className="text-[0.85rem] font-medium text-green-700">Code &quot;{appliedDiscount.code}&quot; applied</span>
                       <span className="text-[0.8rem] text-green-600 ml-2">−£{appliedDiscount.discountAmount.toFixed(2)}</span>
                     </div>
                     <button type="button" onClick={removeDiscount} className="text-[0.8rem] text-ink-soft hover:text-[#ff2d78]">Remove</button>
@@ -1184,7 +1223,7 @@ function BookingPageInner() {
                       <li>I understand that slime making can be messy. The Slime Studio cannot accept responsibility for staining or damage to clothing or personal belongings, so suitable clothing should be worn.</li>
                     </ul>
                     <p className="font-medium text-ink mb-1">Taking Your Slime Home</p>
-                    <p className="mb-2">Once slime, charms or other items made or supplied during a session have left The Slime Studio premises, their use, storage and supervision are the responsibility of the customer and/or the child's parent or guardian. The Slime Studio does not accept responsibility for how slime, charms or other items are played with or used once they have left the premises. Children should be appropriately supervised when playing with their slime and charms, particularly where small parts are present.</p>
+                    <p className="mb-2">Once slime, charms or other items made or supplied during a session have left The Slime Studio premises, their use, storage and supervision are the responsibility of the customer and/or the child&apos;s parent or guardian. The Slime Studio does not accept responsibility for how slime, charms or other items are played with or used once they have left the premises. Children should be appropriately supervised when playing with their slime and charms, particularly where small parts are present.</p>
                   </div>
                 )}
                 <label className="flex items-start gap-3 cursor-pointer">
@@ -1197,7 +1236,7 @@ function BookingPageInner() {
                   <span className="text-[0.8rem] text-ink-soft leading-relaxed">
                     I confirm that I am aged 18 or over and have read and agree to The Slime Studio Participation Terms & Consent. Where I am booking for or accompanying children, I confirm that I am authorised to accept these terms on their behalf.
                     {termsPreAgreed && (
-                      <span className="block text-[0.75rem] text-green-600 mt-1">Previously agreed — you won't need to re-agree on future bookings.</span>
+                      <span className="block text-[0.75rem] text-green-600 mt-1">Previously agreed — you won&apos;t need to re-agree on future bookings.</span>
                     )}
                   </span>
                 </label>
@@ -1251,7 +1290,7 @@ function BookingPageInner() {
                 </div>
                 <div className="flex gap-3">
                   <span className="text-[1.1rem] flex-shrink-0">👕</span>
-                  <p>Slime-making can get a little messy! We provide aprons, but we recommend wearing clothes you don't mind getting a bit sticky.</p>
+                  <p>Slime-making can get a little messy! We provide aprons, but we recommend wearing clothes you don&apos;t mind getting a bit sticky.</p>
                 </div>
                 <div className="flex gap-3">
                   <span className="text-[1.1rem] flex-shrink-0">👶</span>
@@ -1259,7 +1298,7 @@ function BookingPageInner() {
                 </div>
                 <div className="flex gap-3">
                   <span className="text-[1.1rem] flex-shrink-0">📍</span>
-                  <p>We're at <strong className="text-ink">Unit A, Feathers Yard, Holt, NR25 6BF</strong>. Walk-ins are welcome too, subject to availability.</p>
+                  <p>We&apos;re at <strong className="text-ink">Unit A, Feathers Yard, Holt, NR25 6BF</strong>. Walk-ins are welcome too, subject to availability.</p>
                 </div>
               </div>
             )}

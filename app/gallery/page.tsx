@@ -85,11 +85,13 @@ export default function GalleryPage() {
           className="fixed inset-0 z-[2000] bg-ink/80 flex items-center justify-center p-4"
           onClick={() => setLightbox(null)}
         >
-          <div className="relative max-w-3xl max-h-[85vh]">
-            <img
+          <div className="relative w-[80vw] max-w-3xl h-[85vh]">
+            <Image
               src={lightbox.image_url}
               alt={lightbox.caption}
-              className="max-w-full max-h-[85vh] rounded-2xl object-contain"
+              fill
+              sizes="(max-width: 768px) 80vw, 768px"
+              className="rounded-2xl object-contain"
             />
             {lightbox.caption && (
               <p className="text-white text-center text-[0.9rem] mt-3">

@@ -192,7 +192,7 @@ export default function CheckoutPage() {
         <div className="container max-w-4xl">
           {cancelled && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 text-center text-[0.9rem] text-red-700">
-              Your payment was cancelled. Your cart has been preserved — try again when you're ready.
+              Your payment was cancelled. Your cart has been preserved — try again when you&apos;re ready.
             </div>
           )}
 
@@ -319,7 +319,7 @@ export default function CheckoutPage() {
                 <div className="mt-4">
                   {appliedDiscount ? (
                     <div className="flex items-center justify-between bg-green-50 border-2 border-green-200 rounded-xl p-3">
-                      <span className="text-[0.85rem] font-medium text-green-700">Code "{appliedDiscount.code}" applied</span>
+                      <span className="text-[0.85rem] font-medium text-green-700">Code &quot;{appliedDiscount.code}&quot; applied</span>
                       <button type="button" onClick={removeDiscount} className="text-[0.8rem] text-ink-soft hover:text-[#ff2d78]">Remove</button>
                     </div>
                   ) : (

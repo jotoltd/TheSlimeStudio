@@ -90,7 +90,7 @@ export async function googleAdsQuery(gaql: string): Promise<Record<string, unkno
     body: JSON.stringify({ query: gaql }),
   });
   const text = await res.text();
-  let json: any = null;
+  let json: { error?: { message?: string }; results?: Record<string, unknown>[] };
   try { json = JSON.parse(text); } catch {
     throw new Error(`Google Ads API returned HTTP ${res.status} (not JSON): ${text.slice(0, 160)}`);
   }
@@ -179,13 +179,13 @@ export async function uploadClickConversion(opts: {
        WHERE conversion_action.category = 'PURCHASE' AND conversion_action.type = 'UPLOAD_CLICKS' AND conversion_action.status = 'ENABLED'`
     );
     const found = actions
-      .map((r: any) => r.conversionAction)
-      .filter((a: any) => a?.id);
+      .map((r) => r.conversionAction as { id?: string; primaryForGoal?: boolean } | undefined)
+      .filter((a): a is { id?: string; primaryForGoal?: boolean } => !!a?.id);
     if (found.length === 0) {
       console.error("[google-ads] no enabled UPLOAD_CLICKS purchase action — create one in Google Ads (Goals > Import from clicks)");
       return false;
     }
-    const action = found.find((a: any) => a.primaryForGoal) || found[0];
+    const action = found.find((a) => a.primaryForGoal) || found[0];
 
     const token = await googleAccessToken(cfg);
     const res = await fetch("https://datamanager.googleapis.com/v1/events:ingest", {

@@ -3,7 +3,6 @@ import { verifySumUpPayment } from "@/lib/payment";
 import { supabaseAdmin } from "@/lib/supabase";
 import { sendCapiEvent } from "@/lib/capi";
 import {
-  createPaidBooking,
   sendCustomerConfirmation,
   sendAdminNotification,
   awardLoyaltyStamp,

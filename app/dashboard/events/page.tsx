@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Image from "next/image";
 import PageHeader from "@/components/PageHeader";
 import { useToast } from "@/components/Toast";
 import { supabase } from "@/lib/supabase";
@@ -134,9 +135,9 @@ export default function EventsPage() {
     setForm({
       title: e.title,
       description: e.description,
-      event_type: e.event_type as any,
+      event_type: e.event_type as "one_off" | "recurring",
       category: e.category,
-      pricing_model: e.pricing_model as any,
+      pricing_model: e.pricing_model as "per_person" | "fixed_ticket",
       price: String(e.price),
       capacity: String(e.capacity),
       duration_minutes: String(e.duration_minutes),
@@ -353,7 +354,7 @@ export default function EventsPage() {
               <label className="block text-sm font-medium mb-1.5">Event Type</label>
               <select
                 value={form.event_type}
-                onChange={(e) => setForm({ ...form, event_type: e.target.value as any })}
+                onChange={(e) => setForm({ ...form, event_type: e.target.value as "one_off" | "recurring" })}
                 className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
               >
                 <option value="one_off">One-off (single date)</option>
@@ -364,7 +365,7 @@ export default function EventsPage() {
               <label className="block text-sm font-medium mb-1.5">Pricing Model</label>
               <select
                 value={form.pricing_model}
-                onChange={(e) => setForm({ ...form, pricing_model: e.target.value as any })}
+                onChange={(e) => setForm({ ...form, pricing_model: e.target.value as "per_person" | "fixed_ticket" })}
                 className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
               >
                 <option value="per_person">Per Person</option>
@@ -500,7 +501,7 @@ export default function EventsPage() {
               <label className="block text-sm font-medium mb-1.5">Event Image (optional)</label>
               {form.image_url ? (
                 <div className="relative w-full h-32 rounded-xl overflow-hidden border-2 border-ink/15">
-                  <img src={form.image_url} alt="Event" className="w-full h-full object-cover" />
+                  <Image src={form.image_url} alt="Event" fill sizes="(max-width: 768px) 100vw, 600px" className="object-cover" />
                   <button
                     type="button"
                     onClick={() => setForm({ ...form, image_url: "" })}
@@ -603,7 +604,7 @@ export default function EventsPage() {
         <div className="text-center py-12 text-ink-soft text-sm">Loading...</div>
       ) : events.length === 0 ? (
         <div className="text-center py-12 text-ink-soft text-sm">
-          No events yet. Click "New Event" to create one.
+          No events yet. Click &quot;New Event&quot; to create one.
         </div>
       ) : (
         <div className="space-y-4">

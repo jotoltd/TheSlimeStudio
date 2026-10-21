@@ -17,7 +17,6 @@ function loadStripeInstance(key: string): Promise<Stripe | null> {
 }
 
 function PaymentForm({
-  clientSecret,
   amount,
   email,
   onSuccess,

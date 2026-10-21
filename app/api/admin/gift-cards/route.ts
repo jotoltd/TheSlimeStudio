@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Flatten the joined customer object for easier frontend use
-  const giftCards = (data || []).map((card: any) => ({
+  const giftCards = (data || []).map((card: Record<string, unknown> & { customer?: { name?: string; email?: string } | null }) => ({
     ...card,
     customer_name: card.customer?.name || null,
     customer_email: card.customer?.email || null,

@@ -218,7 +218,7 @@ export default function LoyaltyPage() {
               </div>
               <p className="text-[0.95rem] text-ink mb-1">No loyalty card yet</p>
               <p className="text-[0.85rem] text-ink-soft mb-4">
-                You'll automatically get a stamp when you book a paid session online. Make sure to use the same email each time!
+                You&apos;ll automatically get a stamp when you book a paid session online. Make sure to use the same email each time!
               </p>
               <a href="/booking" className="btn-primary inline-block">
                 Book a Session

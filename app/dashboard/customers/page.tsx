@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type CustomerBooking = {
   id: string;
@@ -31,6 +31,7 @@ export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -50,14 +51,10 @@ export default function CustomersPage() {
     setLoadingBookings(false);
   }
 
-  useEffect(() => {
-    loadCustomers();
-  }, [page]);
-
-  async function loadCustomers() {
+  const loadCustomers = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams();
-    if (search) params.set("q", search);
+    if (appliedSearch) params.set("q", appliedSearch);
     params.set("page", String(page));
     const res = await fetch(`/api/admin/customers?${params}`);
     const data = await res.json();
@@ -67,12 +64,16 @@ export default function CustomersPage() {
       setTotal(data.total || 0);
     }
     setLoading(false);
-  }
+  }, [appliedSearch, page]);
+
+  useEffect(() => {
+    loadCustomers();
+  }, [loadCustomers]);
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     setPage(1);
-    loadCustomers();
+    setAppliedSearch(search);
   }
 
   return (
@@ -98,7 +99,7 @@ export default function CustomersPage() {
         {search && (
           <button
             type="button"
-            onClick={() => { setSearch(""); setPage(1); }}
+            onClick={() => { setSearch(""); setAppliedSearch(""); setPage(1); }}
             className="px-4 py-2.5 rounded-xl bg-ink/5 text-ink text-sm hover:bg-ink/10"
           >
             Clear

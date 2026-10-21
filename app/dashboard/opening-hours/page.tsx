@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase, type OpeningHour, type DateOverride, TIME_SLOTS as DEFAULT_SLOTS } from "@/lib/supabase";
+import { type OpeningHour, type DateOverride, TIME_SLOTS as DEFAULT_SLOTS } from "@/lib/supabase";
 import { useToast } from "@/components/Toast";
 import PageHeader from "@/components/PageHeader";
 

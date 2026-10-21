@@ -628,7 +628,7 @@ export default function MarketingPage() {
           {/* Ad copy */}
           <div className="bg-white rounded-[20px] p-6 shadow-sm">
             <h2 className="font-display text-[1rem] mb-1">5 · Ad text — paste into Ads Manager</h2>
-            <p className="text-[0.75rem] text-ink-soft mb-4">Copy these into the "Primary text" and "Headline" fields when creating the ad.</p>
+            <p className="text-[0.75rem] text-ink-soft mb-4">Copy these into the &quot;Primary text&quot; and &quot;Headline&quot; fields when creating the ad.</p>
             <div className="space-y-3">
               <div>
                 <div className="flex items-center justify-between mb-1.5">

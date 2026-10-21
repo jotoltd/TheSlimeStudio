@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 type EmailLog = {
@@ -93,7 +93,28 @@ export default function EmailsPage() {
   const [preview, setPreview] = useState<{ subject: string; html: string } | null>(null);
   const [previewTick, setPreviewTick] = useState(0);
 
-  useEffect(() => { loadAll(); }, [filter]);
+  const tplIdRef = useRef(tplId);
+  tplIdRef.current = tplId;
+
+  const loadAll = useCallback(async () => {
+    setLoading(true);
+    const res = await fetch("/api/admin/emails");
+    if (res.ok) {
+      const json = await res.json();
+      setData(json);
+      const tpl = EMAIL_TEMPLATES.find((t) => t.id === tplIdRef.current)!;
+      const draft: Record<string, string> = {};
+      tpl.fields.forEach((f) => { draft[f.key] = json.templates?.[f.key] || ""; });
+      setTplDraft(draft);
+    }
+    let query = supabase.from("email_logs").select("*");
+    if (filter !== "all") query = query.eq("type", filter);
+    const { data: logRows } = await query.order("created_at", { ascending: false }).limit(100);
+    if (logRows) setLogs(logRows as EmailLog[]);
+    setLoading(false);
+  }, [filter]);
+
+  useEffect(() => { loadAll(); }, [loadAll]);
   useEffect(() => {
     const t = setTimeout(() => {
       fetch("/api/admin/email-preview", {
@@ -107,23 +128,6 @@ export default function EmailsPage() {
     return () => clearTimeout(t);
   }, [tplId, tplDraft, previewTick]);
 
-  async function loadAll() {
-    setLoading(true);
-    const res = await fetch("/api/admin/emails");
-    if (res.ok) {
-      const json = await res.json();
-      setData(json);
-      const tpl = EMAIL_TEMPLATES.find((t) => t.id === tplId)!;
-      const draft: Record<string, string> = {};
-      tpl.fields.forEach((f) => { draft[f.key] = json.templates?.[f.key] || ""; });
-      setTplDraft(draft);
-    }
-    let query = supabase.from("email_logs").select("*");
-    if (filter !== "all") query = query.eq("type", filter);
-    const { data: logRows } = await query.order("created_at", { ascending: false }).limit(100);
-    if (logRows) setLogs(logRows as EmailLog[]);
-    setLoading(false);
-  }
 
   async function toggle(key: string, value: boolean) {
     setData((d) => d && { ...d, settings: { ...d.settings, [key]: value } });

@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { subscriberId, name, email, price, boxName } = body as {
+  const { subscriberId, email, price, boxName } = body as {
     subscriberId: string;
     name: string;
     email: string;

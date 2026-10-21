@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
   expiryDate.setMonth(expiryDate.getMonth() + 3);
 
   // Insert with ad_source; retry without it if the column hasn't been added yet
-  const insertCard = async (record: Record<string, any>) => {
+  const insertCard = async (record: Record<string, unknown>) => {
     const withSource = {
       ...record,
       ad_source: withGclidTag(sanitizeAdSource(adSource), body.gclid),

@@ -1,10 +1,10 @@
 declare global {
   interface Window {
-    dataLayer?: any[];
-    fbq?: (...args: any[]) => void;
-    gtag?: (...args: any[]) => void;
-    ttq?: any;
-    snaptr?: (...args: any[]) => void;
+    dataLayer?: unknown[];
+    fbq?: (...args: unknown[]) => void;
+    gtag?: (...args: unknown[]) => void;
+    ttq?: { track: (event: string, params?: Record<string, unknown>) => void };
+    snaptr?: (...args: unknown[]) => void;
   }
 }
 
@@ -45,7 +45,7 @@ const GA4_EVENT: Record<TrackEventName, string | null> = {
 
 export function trackEvent(
   event: TrackEventName,
-  params?: Record<string, any>,
+  params?: Record<string, unknown>,
   eventId?: string
 ): void {
   if (typeof window === "undefined") return;
@@ -170,6 +170,46 @@ export function trackPurchase(value: number, currency = "GBP", transactionId?: s
       ...(resolvedEmail ? { user_data: { email: resolvedEmail } } : {}),
     });
   }
+}
+
+// Where a sale actually came from, based on the "[Ad: ...]" note stored on it.
+// Only Meta and Google are real paid channels — email campaign links and other
+// shared tracking links land in their own buckets so they don't inflate ad
+// numbers or hide inside "organic".
+export type BookingSource = "meta" | "google" | "email" | "other" | "organic";
+
+export function classifyBookingSource(notes: string | null | undefined): BookingSource {
+  const n = (notes || "").toLowerCase();
+  if (!n.startsWith("[ad:")) return "organic";
+  if (n.includes("utm:email")) return "email";
+  if (n.includes("google ad") || n.includes("utm:google") || n.includes("[gclid:")) return "google";
+  if (n.includes("facebook") || n.includes("instagram") || n.includes("meta ad") || /utm:(ig|fb|meta)\b/.test(n)) return "meta";
+  return "other";
+}
+
+function safeDecode(s: string): string {
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return s;
+  }
+}
+
+// Human-readable badge text, e.g. "Meta Ad · Spring Promo · Book Now".
+export function bookingSourceLabel(notes: string | null | undefined): string {
+  const src = classifyBookingSource(notes);
+  if (src === "organic") return "Organic";
+  const inner = (notes || "").replace(/\s*\[gclid:[^\]]*\]/gi, "").replace(/^\[ad:\s*/i, "").replace(/\]\s*$/, "");
+  const utm = inner.match(/utm:([a-z0-9]+)(?:\/([^>,]+?))?(?:\s*>\s*([^,\]]+))?(?=[,\]]|$)/i);
+  const detail = utm
+    ? [utm[2], utm[3]].filter((p): p is string => !!p).map((p) => safeDecode(p.trim()).replace(/\+/g, " ")).join(" · ")
+    : "";
+  const base =
+    src === "meta" ? "Meta Ad" :
+    src === "google" ? "Google Ad" :
+    src === "email" ? "Email" :
+    utm?.[1] ? `${utm[1].charAt(0).toUpperCase() + utm[1].slice(1)} link` : "Tracked link";
+  return detail ? `${base} · ${detail}` : base;
 }
 
 export function trackLead(value?: number, currency = "GBP") {

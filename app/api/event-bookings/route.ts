@@ -6,6 +6,17 @@ import { withGclidTag, notesForStripeMetadata, sanitizeAdSource } from "@/lib/go
 
 export const runtime = "nodejs";
 
+type BookingRow = {
+  id: string;
+  quantity: number;
+  email: string;
+  name: string;
+  phone: string | null;
+  notes: string | null;
+};
+type EventRow = { id: string; title: string; slug: string | null; price: string };
+type InstanceRow = { id: string; date: string; start_time: string };
+
 // POST — create a booking for an event instance
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -53,7 +64,7 @@ export async function POST(req: NextRequest) {
     .select("quantity")
     .eq("instance_id", instance_id)
     .eq("payment_status", "paid");
-  const booked = (existingBookings || []).reduce((sum: number, b: any) => sum + b.quantity, 0);
+  const booked = (existingBookings || []).reduce((sum: number, b: { quantity: number }) => sum + b.quantity, 0);
   const remaining = capacity - booked;
 
   if (quantity > remaining) {
@@ -110,7 +121,7 @@ export async function POST(req: NextRequest) {
   return createStripeCheckout(booking, event, instance, totalPrice, meta);
 }
 
-async function createStripeCheckout(booking: any, event: any, instance: any, total: number, meta?: { clientIp: string | null; userAgent: string | null; fbp: string | null; fbc: string | null }) {
+async function createStripeCheckout(booking: BookingRow, event: EventRow, instance: InstanceRow, total: number, meta?: { clientIp: string | null; userAgent: string | null; fbp: string | null; fbc: string | null }) {
   const mode = await getStripeModeAsync();
   const keys = getStripeKeysForMode(mode);
   const STRIPE_SECRET = keys.secretKey;
@@ -165,7 +176,7 @@ async function createStripeCheckout(booking: any, event: any, instance: any, tot
   return NextResponse.json({ url: data.url });
 }
 
-async function createSumUpCheckout(booking: any, event: any, instance: any, total: number) {
+async function createSumUpCheckout(booking: BookingRow, event: EventRow, instance: InstanceRow, total: number) {
   const SUMUP_KEY = process.env.SUMUP_API_KEY;
   if (!SUMUP_KEY) {
     return NextResponse.json({ error: "Payment not configured" }, { status: 500 });

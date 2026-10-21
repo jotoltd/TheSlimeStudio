@@ -215,7 +215,7 @@ export default function PartiesPage() {
             <div className="text-2xl mb-3">🎂</div>
             <h3 className="font-display text-[1rem] text-ink mb-2">Bring Your Own Cake & Food</h3>
             <p className="text-[0.9rem] text-ink-soft leading-relaxed">
-              You're welcome to bring your own birthday cake or party food to enjoy during your session.
+              You&apos;re welcome to bring your own birthday cake or party food to enjoy during your session.
               Alternatively, we can suggest local companies who will deliver food to the studio at an extra cost —
               just ask when enquiring!
             </p>

@@ -4,6 +4,9 @@ import { verifyToken } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
+type EventRow = { id: string } & Record<string, unknown>;
+type InstanceRow = { id: string; event_id: string; date: string; booked_count?: number } & Record<string, unknown>;
+
 // GET — list all events with their instances (admin)
 export async function GET(req: NextRequest) {
   const token = req.cookies.get("admin_token")?.value;
@@ -22,8 +25,8 @@ export async function GET(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   // Fetch instances for each event
-  const eventIds = (events || []).map((e: any) => e.id);
-  const instancesMap: Record<string, any[]> = {};
+  const eventIds = (events || []).map((e: EventRow) => e.id);
+  const instancesMap: Record<string, InstanceRow[]> = {};
 
   if (eventIds.length > 0) {
     let instanceQuery = supabaseAdmin
@@ -40,13 +43,13 @@ export async function GET(req: NextRequest) {
     const { data: instances, error: instError } = await instanceQuery;
     if (instError) return NextResponse.json({ error: instError.message }, { status: 500 });
 
-    (instances || []).forEach((inst: any) => {
+    ((instances || []) as InstanceRow[]).forEach((inst) => {
       if (!instancesMap[inst.event_id]) instancesMap[inst.event_id] = [];
       instancesMap[inst.event_id].push(inst);
     });
 
     // Fetch booking counts for each instance
-    const instanceIds = (instances || []).map((i: any) => i.id);
+    const instanceIds = (instances || []).map((i: { id: string }) => i.id);
     const bookingCounts: Record<string, number> = {};
     if (instanceIds.length > 0) {
       const { data: bookings } = await supabaseAdmin
@@ -54,18 +57,18 @@ export async function GET(req: NextRequest) {
         .select("instance_id, quantity, payment_status")
         .in("instance_id", instanceIds)
         .eq("payment_status", "paid");
-      (bookings || []).forEach((b: any) => {
+      (bookings || []).forEach((b: { instance_id: string; quantity: number }) => {
         bookingCounts[b.instance_id] = (bookingCounts[b.instance_id] || 0) + b.quantity;
       });
     }
 
     // Add booking count to each instance
-    Object.values(instancesMap).flat().forEach((inst: any) => {
+    Object.values(instancesMap).flat().forEach((inst) => {
       inst.booked_count = bookingCounts[inst.id] || 0;
     });
   }
 
-  const eventsWithInstances = (events || []).map((e: any) => ({
+  const eventsWithInstances = (events || []).map((e: EventRow) => ({
     ...e,
     instances: instancesMap[e.id] || [],
   }));
@@ -159,7 +162,7 @@ export async function POST(req: NextRequest) {
   if (action === "update") {
     const { id, event, newInstances } = body as {
       id: string;
-      event: Record<string, any>;
+      event: { title?: string; slug?: string; capacity?: number } & Record<string, unknown>;
       newInstances?: { date: string; start_time: string; capacity?: number }[];
     };
 
@@ -236,7 +239,7 @@ export async function POST(req: NextRequest) {
 
     const start = new Date(start_date + "T00:00:00");
     const end = new Date(end_date + "T00:00:00");
-    const rows: any[] = [];
+    const rows: { event_id: string; date: string; start_time: string; capacity: number | null }[] = [];
     const cursor = new Date(start);
     while (cursor <= end) {
       if (days_of_week.includes(cursor.getDay())) {

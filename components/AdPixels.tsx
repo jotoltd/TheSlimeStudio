@@ -26,10 +26,10 @@ let loadedSettings: AdSettings | null = null;
 // gtag is loaded by the layout with Consent Mode denied-by-default. Always safe
 // to call — if the gtag script itself was blocked (ad blocker), calls just
 // queue onto dataLayer harmlessly.
-function gtagSafe(...args: any[]) {
+function gtagSafe(...args: unknown[]) {
   if (typeof window === "undefined") return;
   window.dataLayer = window.dataLayer || [];
-  if (!window.gtag) window.gtag = (...a: any[]) => window.dataLayer!.push(a);
+  if (!window.gtag) window.gtag = (...a: unknown[]) => window.dataLayer!.push(a);
   window.gtag(...args);
 }
 
@@ -42,6 +42,43 @@ function grantConsent() {
     ad_personalization: "granted",
     analytics_storage: "granted",
   });
+}
+
+function loadPixels() {
+  if (pixelsLoaded) return;
+  pixelsLoaded = true;
+
+  supabase
+    .from("site_settings")
+    .select("fb_pixel_id, fb_pixel_enabled, ga_measurement_id, ga_enabled, tiktok_pixel_id, tiktok_pixel_enabled, google_ads_id, google_ads_enabled, snapchat_pixel_id, snapchat_pixel_enabled")
+    .eq("id", 1)
+    .single()
+    .then(({ data }) => {
+      if (!data) return;
+      const s = data as AdSettings;
+      loadedSettings = s;
+
+      // GA + Google Ads ride the shared layout gtag tag — no script
+      // injection needed, just config. Works in cookieless mode.
+      if (s.ga_enabled && s.ga_measurement_id) {
+        gtagSafe("config", s.ga_measurement_id);
+      }
+      if (s.google_ads_enabled && s.google_ads_id) {
+        gtagSafe("config", s.google_ads_id);
+      }
+
+      maybeLoadThirdPartyPixels();
+      trackEvent("PageView");
+    });
+}
+
+// Meta/TikTok/Snapchat don't support Google Consent Mode — still gated on accept.
+function maybeLoadThirdPartyPixels() {
+  const s = loadedSettings;
+  if (!s || localStorage.getItem(CONSENT_KEY) !== "accepted") return;
+  if (s.fb_pixel_enabled && s.fb_pixel_id) injectFacebookPixel(s.fb_pixel_id);
+  if (s.tiktok_pixel_enabled && s.tiktok_pixel_id) injectTikTokPixel(s.tiktok_pixel_id);
+  if (s.snapchat_pixel_enabled && s.snapchat_pixel_id) injectSnapchatPixel(s.snapchat_pixel_id);
 }
 
 export default function AdPixels() {
@@ -79,43 +116,6 @@ export default function AdPixels() {
       setShowBanner(true);
     }
   }, []);
-
-  function loadPixels() {
-    if (pixelsLoaded) return;
-    pixelsLoaded = true;
-
-    supabase
-      .from("site_settings")
-      .select("fb_pixel_id, fb_pixel_enabled, ga_measurement_id, ga_enabled, tiktok_pixel_id, tiktok_pixel_enabled, google_ads_id, google_ads_enabled, snapchat_pixel_id, snapchat_pixel_enabled")
-      .eq("id", 1)
-      .single()
-      .then(({ data }) => {
-        if (!data) return;
-        const s = data as AdSettings;
-        loadedSettings = s;
-
-        // GA + Google Ads ride the shared layout gtag tag — no script
-        // injection needed, just config. Works in cookieless mode.
-        if (s.ga_enabled && s.ga_measurement_id) {
-          gtagSafe("config", s.ga_measurement_id);
-        }
-        if (s.google_ads_enabled && s.google_ads_id) {
-          gtagSafe("config", s.google_ads_id);
-        }
-
-        maybeLoadThirdPartyPixels();
-        trackEvent("PageView");
-      });
-  }
-
-  // Meta/TikTok/Snapchat don't support Google Consent Mode — still gated on accept.
-  function maybeLoadThirdPartyPixels() {
-    const s = loadedSettings;
-    if (!s || localStorage.getItem(CONSENT_KEY) !== "accepted") return;
-    if (s.fb_pixel_enabled && s.fb_pixel_id) injectFacebookPixel(s.fb_pixel_id);
-    if (s.tiktok_pixel_enabled && s.tiktok_pixel_id) injectTikTokPixel(s.tiktok_pixel_id);
-    if (s.snapchat_pixel_enabled && s.snapchat_pixel_id) injectSnapchatPixel(s.snapchat_pixel_id);
-  }
 
   function choose(consent: "accepted" | "rejected") {
     localStorage.setItem(CONSENT_KEY, consent);

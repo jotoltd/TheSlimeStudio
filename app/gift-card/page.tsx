@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { getAdSource, getGclid } from "@/lib/ad-tracking";
@@ -11,7 +11,6 @@ import Footer from "@/components/Footer";
 const PRESET_AMOUNTS = [10, 15, 25, 50, 75, 100];
 
 export default function GiftCardPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const cancelled = searchParams.get("cancelled");
 
@@ -107,7 +106,7 @@ export default function GiftCardPage() {
       } else if (data.url) {
         window.location.href = data.url;
       }
-    } catch (err) {
+    } catch {
       setError("Failed to create checkout. Please try again.");
       setLoading(false);
     }

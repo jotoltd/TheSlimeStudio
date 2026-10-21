@@ -19,7 +19,7 @@ const navSections = [
       { href: "/dashboard/notifications", label: "Notifications", Icon: BellIcon, badge: true },
       { href: "/dashboard/revenue", label: "Revenue", Icon: DollarIcon },
       { href: "/dashboard/analytics", label: "Analytics", Icon: BarChartIcon },
-      { href: "/dashboard/ads", label: "Ads", Icon: TrendingUpIcon },
+      { href: "/dashboard/ads", label: "Ad Management", Icon: TrendingUpIcon },
       { href: "/dashboard/marketing", label: "Marketing", Icon: PhotoIcon },
       { href: "/dashboard/campaigns", label: "Email Campaigns", Icon: MailIcon },
     ],
@@ -209,12 +209,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </div>
             </div>
             <div className="flex gap-2">
-              <a
+              <Link
                 href="/"
                 className="flex-1 px-3 py-2.5 rounded-xl bg-white/10 text-white text-[0.8rem] text-center hover:bg-white/20 transition-colors"
               >
                 View Site
-              </a>
+              </Link>
               <button
                 onClick={handleLogout}
                 className="flex-1 px-3 py-2.5 rounded-xl bg-white/10 text-white text-[0.8rem] hover:bg-white/20 transition-colors"

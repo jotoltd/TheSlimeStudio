@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getStripeAsync, getStripeModeAsync, getPublishableKeyAsync } from "@/lib/stripe";
+import { getStripeAsync, getStripeModeAsync } from "@/lib/stripe";
 import { supabase } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { bookingId, name, email, date, timeSlot, people, totalPrice, isParty } = body as {
+  const { bookingId, email, date, timeSlot, people, totalPrice, isParty } = body as {
     bookingId: string;
     name: string;
     email: string;

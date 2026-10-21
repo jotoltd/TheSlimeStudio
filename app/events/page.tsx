@@ -20,7 +20,19 @@ export default async function EventsPage() {
     .eq("is_active", true)
     .order("created_at", { ascending: false });
 
-  const eventIds = (events || []).map((e: any) => e.id);
+  type EventRow = {
+    id: string;
+    slug: string | null;
+    image_url: string | null;
+    category: string | null;
+    title: string;
+    description: string | null;
+    price: number | string | null;
+    pricing_model: string | null;
+  };
+  type InstanceRow = { id: string; event_id: string; date: string; start_time: string | null };
+
+  const eventIds = (events || []).map((e: EventRow) => e.id);
   const { data: instances } = eventIds.length
     ? await supabaseAdmin
         .from("special_event_instances")
@@ -29,14 +41,14 @@ export default async function EventsPage() {
         .eq("status", "open")
         .gte("date", today)
         .order("date", { ascending: true })
-    : { data: [] as any[] };
+    : { data: [] as InstanceRow[] };
 
-  const byEvent: Record<string, any[]> = {};
-  (instances || []).forEach((i: any) => {
+  const byEvent: Record<string, InstanceRow[]> = {};
+  ((instances || []) as InstanceRow[]).forEach((i) => {
     (byEvent[i.event_id] = byEvent[i.event_id] || []).push(i);
   });
 
-  const upcoming = (events || []).filter((e: any) => (byEvent[e.id] || []).length > 0);
+  const upcoming = (events || []).filter((e: EventRow) => (byEvent[e.id] || []).length > 0);
 
   return (
     <>
@@ -53,7 +65,7 @@ export default async function EventsPage() {
             </div>
           ) : (
             <div className="grid md:grid-cols-2 gap-6">
-              {upcoming.map((e: any) => {
+              {upcoming.map((e: EventRow) => {
                 const inst = byEvent[e.id];
                 const first = inst[0];
                 const when = new Date(first.date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });

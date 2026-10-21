@@ -72,7 +72,8 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
     .order("date", { ascending: true });
 
   // Fetch booking counts
-  const instanceIds = (instances || []).map((i: any) => i.id);
+  type InstanceRow = { id: string; date: string; start_time: string; status: string; capacity: number | null };
+  const instanceIds = (instances || []).map((i: InstanceRow) => i.id);
   const bookingCounts: Record<string, number> = {};
   if (instanceIds.length > 0) {
     const { data: bookings } = await supabaseAdmin
@@ -80,13 +81,17 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
       .select("instance_id, quantity")
       .in("instance_id", instanceIds)
       .eq("payment_status", "paid");
-    (bookings || []).forEach((b: any) => {
+    (bookings || []).forEach((b: { instance_id: string; quantity: number }) => {
       bookingCounts[b.instance_id] = (bookingCounts[b.instance_id] || 0) + b.quantity;
     });
   }
 
-  const instancesWithCounts = (instances || []).map((inst: any) => ({
-    ...inst,
+  const instancesWithCounts = ((instances || []) as InstanceRow[]).map((inst) => ({
+    id: inst.id,
+    date: inst.date,
+    start_time: inst.start_time,
+    status: inst.status,
+    capacity: inst.capacity || event.capacity,
     booked_count: bookingCounts[inst.id] || 0,
     spots_remaining: (inst.capacity || event.capacity) - (bookingCounts[inst.id] || 0),
   }));

@@ -67,7 +67,7 @@ export default function MaintenanceGate({ children }: { children: React.ReactNod
     return (
       <>
         <div className="bg-red-400 text-white text-center text-[0.8rem] py-2 px-4 sticky top-0 z-[2000]">
-          🔧 Maintenance mode is ON for visitors — you're viewing the live site as admin.{" "}
+          🔧 Maintenance mode is ON for visitors — you&apos;re viewing the live site as admin.{" "}
           <a href="/dashboard" className="underline font-medium">Go to dashboard</a>
         </div>
         {children}

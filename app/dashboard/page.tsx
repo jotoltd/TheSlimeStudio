@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase, type Product, type Enquiry, type Booking } from "@/lib/supabase";
+import { classifyBookingSource } from "@/lib/ad-tracking";
 
 export default function DashboardPage() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [enquiryCount, setEnquiryCount] = useState(0);
+
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [bookingCount, setBookingCount] = useState(0);
   const [latestEnquiry, setLatestEnquiry] = useState<Enquiry | null>(null);
@@ -30,8 +31,6 @@ export default function DashboardPage() {
     const { data: prods } = await supabase.from("products").select("*");
     if (prods) setProducts(prods as Product[]);
 
-    const { count } = await supabase.from("enquiries").select("*", { count: "exact", head: true });
-    setEnquiryCount(count || 0);
 
     const { data: eqs } = await supabase.from("enquiries").select("*").order("created_at", { ascending: false }).limit(1);
     if (eqs && eqs.length > 0) setLatestEnquiry(eqs[0] as Enquiry);
@@ -75,22 +74,27 @@ export default function DashboardPage() {
     const { data: orders } = await supabase.from("shop_orders").select("total, payment_status, created_at");
     const { data: cards } = await supabase.from("gift_cards").select("initial_value, purchased_at, ad_source");
 
-    const instMap = new Map((evi || []).map((i: any) => [i.id, i]));
-    const titleMap = new Map((evts || []).map((e: any) => [e.id, e.title]));
-    const paidEv = (evb || []).filter((b: any) => b.payment_status === "paid");
+    type EvBooking = { id: string; name: string; quantity: number; total_price: number | string; payment_status: string; instance_id: string; event_id: string; notes?: string | null };
+    type EvInstance = { id: string; date: string; start_time: string };
+    type ShopOrder = { total: number | string; payment_status: string; created_at: string };
+    type GiftCardRow = { initial_value: number | string; purchased_at: string; ad_source: string | null };
+
+    const instMap = new Map(((evi || []) as EvInstance[]).map((i) => [i.id, i]));
+    const titleMap = new Map(((evts || []) as { id: string; title: string }[]).map((e) => [e.id, e.title]));
+    const paidEv = ((evb || []) as EvBooking[]).filter((b) => b.payment_status === "paid");
     const dayStr = (iso: string) => (iso || "").split("T")[0];
 
     const evRev = (from: string, to?: string) =>
-      paidEv.filter((b: any) => {
+      paidEv.filter((b) => {
         const d = instMap.get(b.instance_id)?.date;
         return d && d >= from && (!to || d < to);
-      }).reduce((s: number, b: any) => s + Number(b.total_price || 0), 0);
+      }).reduce((s: number, b) => s + Number(b.total_price || 0), 0);
     const shopRev = (from: string) =>
-      (orders || []).filter((o: any) => o.payment_status === "paid" && dayStr(o.created_at) >= from)
-        .reduce((s: number, o: any) => s + Number(o.total || 0), 0);
+      ((orders || []) as ShopOrder[]).filter((o) => o.payment_status === "paid" && dayStr(o.created_at) >= from)
+        .reduce((s: number, o) => s + Number(o.total || 0), 0);
     const cardRev = (from: string) =>
-      (cards || []).filter((c: any) => dayStr(c.purchased_at) >= from)
-        .reduce((s: number, c: any) => s + Number(c.initial_value || 0), 0);
+      ((cards || []) as GiftCardRow[]).filter((c) => dayStr(c.purchased_at) >= from)
+        .reduce((s: number, c) => s + Number(c.initial_value || 0), 0);
 
     const bookingRev = (from: string) =>
       (bks || []).filter((b: Booking) => b.date >= from && b.payment_status === "paid")
@@ -107,28 +111,29 @@ export default function DashboardPage() {
       cards: cardRev(monthStartStr),
     });
 
-    // Ad-driven revenue this month (bookings + event bookings + gift cards tagged with an ad source)
-    const adTagged = (n: string | null | undefined) => !!n && n.startsWith("[Ad:");
-    const adBookings = (bks || []).filter((b: any) => b.payment_status === "paid" && b.date >= monthStartStr && adTagged(b.notes));
-    const adEvents = paidEv.filter((b: any) => adTagged(b.notes) && (instMap.get(b.instance_id)?.date || "") >= monthStartStr);
-    const adCards = (cards || []).filter((c: any) => adTagged(c.ad_source) && dayStr(c.purchased_at) >= monthStartStr);
+    // Ad-driven revenue this month — only real ad clicks (Meta/Google); email
+    // campaigns and other tracked links are classified separately.
+    const adTagged = (n: string | null | undefined) => ["meta", "google"].includes(classifyBookingSource(n));
+    const adBookings = (bks || []).filter((b: Booking) => b.payment_status === "paid" && b.date >= monthStartStr && adTagged(b.notes));
+    const adEvents = paidEv.filter((b) => adTagged(b.notes) && (instMap.get(b.instance_id)?.date || "") >= monthStartStr);
+    const adCards = ((cards || []) as GiftCardRow[]).filter((c) => adTagged(c.ad_source) && dayStr(c.purchased_at) >= monthStartStr);
     setAdMonth({
       count: adBookings.length + adEvents.length + adCards.length,
       revenue:
-        adBookings.reduce((s: number, b: any) => s + Number(b.total_price || 0), 0) +
-        adEvents.reduce((s: number, b: any) => s + Number(b.total_price || 0), 0) +
-        adCards.reduce((s: number, c: any) => s + Number(c.initial_value || 0), 0),
+        adBookings.reduce((s: number, b) => s + Number(b.total_price || 0), 0) +
+        adEvents.reduce((s: number, b) => s + Number(b.total_price || 0), 0) +
+        adCards.reduce((s: number, c) => s + Number(c.initial_value || 0), 0),
     });
 
     // Today's special event bookings
     setTodayEvents(
       paidEv
-        .filter((b: any) => instMap.get(b.instance_id)?.date === todayStr)
-        .map((b: any) => ({
+        .filter((b) => instMap.get(b.instance_id)?.date === todayStr)
+        .map((b) => ({
           id: b.id,
           name: b.name,
           quantity: b.quantity,
-          total_price: b.total_price,
+          total_price: Number(b.total_price),
           title: titleMap.get(b.event_id) || "Special Event",
           start_time: instMap.get(b.instance_id)?.start_time || "",
         }))
@@ -201,7 +206,7 @@ export default function DashboardPage() {
       {/* Revenue Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-5 mb-8">
         <div className="bg-white rounded-[16px] md:rounded-[20px] p-4 md:p-6 shadow-sm border-l-4 border-green-400">
-          <div className="text-[0.65rem] md:text-[0.75rem] text-ink-soft uppercase tracking-wider mb-1 md:mb-2">Today's Revenue</div>
+          <div className="text-[0.65rem] md:text-[0.75rem] text-ink-soft uppercase tracking-wider mb-1 md:mb-2">Today&apos;s Revenue</div>
           <div className="font-display text-[1.2rem] md:text-[1.8rem]">{loadingData ? "--" : `£${revenueToday.toFixed(2)}`}</div>
         </div>
         <div className="bg-white rounded-[16px] md:rounded-[20px] p-4 md:p-6 shadow-sm border-l-4 border-sky-blue-light">
@@ -329,7 +334,7 @@ export default function DashboardPage() {
         {/* Today's bookings */}
         <div className="bg-white rounded-[20px] p-7 shadow-sm">
           <div className="flex justify-between items-center mb-5">
-            <h2 className="font-display text-[1.1rem]">Today's Sessions</h2>
+            <h2 className="font-display text-[1.1rem]">Today&apos;s Sessions</h2>
             <span className="text-[0.8rem] text-ink-soft">{todayBookings.length + todayEvents.length} booked</span>
           </div>
           {loadingData ? (

@@ -240,7 +240,7 @@ export default function CampaignsPage() {
 
         {/* Live preview */}
         <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm">
-          <h2 className="font-display text-[1.1rem] mb-4">Preview <span className="text-[0.7rem] text-ink-soft font-sans font-normal">(as "Sam")</span></h2>
+          <h2 className="font-display text-[1.1rem] mb-4">Preview <span className="text-[0.7rem] text-ink-soft font-sans font-normal">(as &quot;Sam&quot;)</span></h2>
           <div className="rounded-xl border border-ink/10 overflow-hidden bg-[#fdf6fb]">
             <iframe title="preview" srcDoc={preview} className="w-full h-[560px] bg-white" />
           </div>

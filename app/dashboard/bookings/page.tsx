@@ -1,11 +1,43 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase, type Booking, type BookingSettings, paymentMethodFor, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, MAX_DAILY_BOOKINGS as DEFAULT_MAX } from "@/lib/supabase";
 import PageHeader from "@/components/PageHeader";
 import PaymentMethodBadge from "@/components/PaymentMethodBadge";
 
 type ViewMode = "calendar" | "table";
+
+type EventInfo = {
+  id: string;
+  title: string;
+  slug?: string;
+  category?: string;
+  price: number;
+  pricing_model: string;
+  duration_minutes: number;
+};
+
+type EventInstance = {
+  id: string;
+  date: string;
+  start_time: string;
+  capacity: number;
+  status: string;
+  event: EventInfo | null;
+};
+
+type EventBooking = {
+  id: string;
+  instance_id: string;
+  name: string;
+  email: string;
+  quantity: number;
+  total_price: number;
+  payment_status: string;
+  payment_reference?: string;
+  notes?: string;
+  created_at: string;
+};
 
 function todayISO() {
   const d = new Date();
@@ -92,8 +124,8 @@ export default function BookingsAdminPage() {
   const [addDailyUsed, setAddDailyUsed] = useState(0);
   const [calMonth, setCalMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [eventBookingsByDate, setEventBookingsByDate] = useState<Record<string, any[]>>({});
-  const [eventInstancesByDate, setEventInstancesByDate] = useState<Record<string, any[]>>({});
+  const [eventBookingsByDate, setEventBookingsByDate] = useState<Record<string, EventBooking[]>>({});
+  const [eventInstancesByDate, setEventInstancesByDate] = useState<Record<string, EventInstance[]>>({});
   const [timeSlots, setTimeSlots] = useState<string[]>(DEFAULT_SLOTS);
   const [slotCapacity, setSlotCapacity] = useState(DEFAULT_CAP);
   const [maxDaily, setMaxDaily] = useState(DEFAULT_MAX);
@@ -110,36 +142,18 @@ export default function BookingsAdminPage() {
   const [sortField, setSortField] = useState<"date" | "time_slot" | "people" | "total_price" | "name" | "payment_status" | "created_at">("date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
-  function toggleSort(field: typeof sortField) {
-    if (sortField === field) {
-      setSortDir(sortDir === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortDir("asc");
-    }
-  }
+  const loadBookings = useCallback(async () => {
+    setLoading(true);
+    const todayStr = new Date().toISOString().split("T")[0];
+    let query = supabase.from("bookings").select("*");
+    if (filter === "upcoming") query = query.gte("date", todayStr);
+    if (filter === "past") query = query.lt("date", todayStr);
+    const { data } = await query.order("date", { ascending: filter !== "past" }).order("time_slot", { ascending: true });
+    if (data) setBookings(data as Booking[]);
+    setLoading(false);
+  }, [filter]);
 
-  useEffect(() => { loadBookings(); }, [filter]);
-
-  // Deep links from notifications: ?filter=all&q=name
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const f = params.get("filter");
-    if (f === "all" || f === "past" || f === "upcoming") setFilter(f);
-    const q = params.get("q");
-    if (q) setSearchQuery(q);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Load event instances and bookings for the visible calendar month
-  useEffect(() => {
-    const start = `${calYear}-${String(calMonthIdx + 1).padStart(2, "0")}-01`;
-    const endDay = new Date(calYear, calMonthIdx + 1, 0).getDate();
-    const end = `${calYear}-${String(calMonthIdx + 1).padStart(2, "0")}-${String(endDay).padStart(2, "0")}`;
-    loadEventData(start, end);
-  }, [calMonth]);
-
-  async function loadEventData(start: string, end: string) {
+  const loadEventData = useCallback(async (start: string, end: string) => {
     // Fetch event instances for this month
     const { data: instances } = await supabase
       .from("special_event_instances")
@@ -148,8 +162,8 @@ export default function BookingsAdminPage() {
       .lte("date", end)
       .order("date", { ascending: true });
 
-    const instMap: Record<string, any[]> = {};
-    (instances || []).forEach((inst: any) => {
+    const instMap: Record<string, EventInstance[]> = {};
+    ((instances || []) as EventInstance[]).forEach((inst) => {
       if (!instMap[inst.date]) instMap[inst.date] = [];
       instMap[inst.date].push(inst);
     });
@@ -163,8 +177,8 @@ export default function BookingsAdminPage() {
       // often created months before the event takes place.
       .order("created_at", { ascending: false });
 
-    const ebMap: Record<string, any[]> = {};
-    (evtBookings || []).forEach((eb: any) => {
+    const ebMap: Record<string, EventBooking[]> = {};
+    ((evtBookings || []) as (EventBooking & { instance?: { date?: string } | null })[]).forEach((eb) => {
       const date = eb.instance?.date || eb.created_at?.split("T")[0];
       if (date) {
         if (!ebMap[date]) ebMap[date] = [];
@@ -172,7 +186,38 @@ export default function BookingsAdminPage() {
       }
     });
     setEventBookingsByDate(ebMap);
+  }, []);
+
+  function toggleSort(field: typeof sortField) {
+    if (sortField === field) {
+      setSortDir(sortDir === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDir("asc");
+    }
   }
+
+  useEffect(() => { loadBookings(); }, [loadBookings]);
+
+  // Deep links from notifications: ?filter=all&q=name
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const f = params.get("filter");
+    if (f === "all" || f === "past" || f === "upcoming") setFilter(f);
+    const q = params.get("q");
+    if (q) setSearchQuery(q);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Load event instances and bookings for the visible calendar month
+  useEffect(() => {
+    const y = calMonth.getFullYear();
+    const m = calMonth.getMonth();
+    const start = `${y}-${String(m + 1).padStart(2, "0")}-01`;
+    const endDay = new Date(y, m + 1, 0).getDate();
+    const end = `${y}-${String(m + 1).padStart(2, "0")}-${String(endDay).padStart(2, "0")}`;
+    loadEventData(start, end);
+  }, [calMonth, loadEventData]);
 
   useEffect(() => {
     if (showAddBooking) loadAddAvailability(addForm.date);
@@ -199,17 +244,6 @@ export default function BookingsAdminPage() {
       }
     });
   }, []);
-
-  async function loadBookings() {
-    setLoading(true);
-    const todayStr = new Date().toISOString().split("T")[0];
-    let query = supabase.from("bookings").select("*");
-    if (filter === "upcoming") query = query.gte("date", todayStr);
-    if (filter === "past") query = query.lt("date", todayStr);
-    const { data } = await query.order("date", { ascending: filter !== "past" }).order("time_slot", { ascending: true });
-    if (data) setBookings(data as Booking[]);
-    setLoading(false);
-  }
 
   async function cancelBooking(id: string, name: string, paymentStatus?: string, paymentRef?: string) {
     const isPaid = paymentStatus === "paid";
@@ -518,7 +552,7 @@ export default function BookingsAdminPage() {
       {todaysBookings.length > 0 && (
         <div className="bg-white rounded-[20px] p-5 md:p-6 shadow-sm mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-display text-[1.1rem]">Today's Bookings ({todaysBookings.length})</h2>
+            <h2 className="font-display text-[1.1rem]">Today&apos;s Bookings ({todaysBookings.length})</h2>
             <span className="text-[0.85rem] text-ink-soft">{todaysBookings.reduce((s, b) => s + b.people, 0)} people total</span>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
@@ -613,7 +647,7 @@ export default function BookingsAdminPage() {
                     } ${isToday && !isSelected ? "ring-2 ring-bright-lavender" : ""}`}>
                     <span className={`text-[0.7rem] md:text-[0.85rem] font-medium ${hasBookings || hasEvents ? "text-ink" : "text-ink-soft"}`}>{day}</span>
                     <div className="flex-1 mt-0.5 space-y-0.5 overflow-hidden">
-                      {dayEvents.slice(0, 2).map((evt: any) => (
+                      {dayEvents.slice(0, 2).map((evt) => (
                         <div key={evt.id} className="text-[0.55rem] md:text-[0.65rem] leading-tight truncate px-1 py-0.5 rounded bg-purple-200 text-purple-800">
                           {evt.start_time} {evt.event?.title}
                         </div>
@@ -663,11 +697,11 @@ export default function BookingsAdminPage() {
                   <div className="mb-6">
                     <h3 className="text-[0.8rem] font-semibold text-ink-soft uppercase tracking-wider mb-3">Bookings</h3>
                     <div className="space-y-2">
-                      {(eventInstancesByDate[selectedDate] || []).map((inst: any) => {
-                        const instBookings = (eventBookingsByDate[selectedDate] || []).filter((eb: any) => eb.instance_id === inst.id);
-                        const isStalePending = (eb: any) => eb.payment_status === "pending" && new Date(eb.created_at).getTime() < Date.now() - 86400000;
-                        const activeBookings = instBookings.filter((eb: any) => !["cancelled", "refunded", "expired"].includes(eb.payment_status) && !isStalePending(eb));
-                        const totalBooked = activeBookings.reduce((sum: number, eb: any) => sum + eb.quantity, 0);
+                      {(eventInstancesByDate[selectedDate] || []).map((inst) => {
+                        const instBookings = (eventBookingsByDate[selectedDate] || []).filter((eb) => eb.instance_id === inst.id);
+                        const isStalePending = (eb: EventBooking) => eb.payment_status === "pending" && new Date(eb.created_at).getTime() < Date.now() - 86400000;
+                        const activeBookings = instBookings.filter((eb) => !["cancelled", "refunded", "expired"].includes(eb.payment_status) && !isStalePending(eb));
+                        const totalBooked = activeBookings.reduce((sum, eb) => sum + eb.quantity, 0);
                         return (
                           <div key={inst.id} className="bg-purple-50 border-2 border-purple-200 rounded-xl p-4">
                             <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
@@ -687,7 +721,7 @@ export default function BookingsAdminPage() {
                             <div className="text-[0.8rem] text-ink-soft mb-2">{totalBooked} booked / {inst.capacity} capacity</div>
                             {instBookings.length > 0 ? (
                               <div className="space-y-2 mt-3 pt-3 border-t border-purple-200">
-                                {instBookings.map((eb: any) => (
+                                {instBookings.map((eb) => (
                                   <div key={eb.id} className="flex items-center justify-between gap-3 text-[0.8rem] py-1 flex-wrap">
                                     <div className="min-w-0">
                                       <div className="flex items-center gap-2 flex-wrap">

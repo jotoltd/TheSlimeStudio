@@ -123,7 +123,7 @@ function SuccessContent() {
               </div>
 
               <p className="text-[0.85rem] text-ink-soft mt-4 text-center">
-                We've sent a confirmation email to {order.customer_email}.
+                We&apos;ve sent a confirmation email to {order.customer_email}.
               </p>
             </div>
 
@@ -137,7 +137,7 @@ function SuccessContent() {
       {!order && (
         <section className="section">
           <div className="container max-w-2xl text-center">
-            <p className="text-ink-soft mb-6">Your payment was successful. We've sent a confirmation email.</p>
+            <p className="text-ink-soft mb-6">Your payment was successful. We&apos;ve sent a confirmation email.</p>
             <Link href="/shop" className="btn-primary inline-block">Continue Shopping</Link>
           </div>
         </section>

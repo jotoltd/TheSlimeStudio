@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -79,9 +80,9 @@ export default function AdminPage() {
           </button>
         </form>
 
-        <a href="/" className="inline-block mt-6 text-sm text-ink-soft hover:text-ink">
+        <Link href="/" className="inline-block mt-6 text-sm text-ink-soft hover:text-ink">
           &larr; Back to website
-        </a>
+        </Link>
       </div>
     </div>
   );

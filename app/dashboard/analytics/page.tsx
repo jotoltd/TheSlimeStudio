@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type Analytics = {
   connected: boolean;
@@ -25,7 +25,7 @@ export default function AnalyticsPage() {
   const [data, setData] = useState<{ range: { since: string; until: string }; analytics: Analytics } | null>(null);
   const [loading, setLoading] = useState(true);
 
-  async function load(r = range) {
+  const load = useCallback(async (r = range) => {
     setLoading(true);
     try {
       const res = await fetch(`/api/admin/analytics?range=${r}`);
@@ -33,9 +33,9 @@ export default function AnalyticsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [range]);
 
-  useEffect(() => { load(); }, [range]);
+  useEffect(() => { load(); }, [load]);
 
   const a = data?.analytics;
   const rangeLabel = range === "today" ? "today" : range === "7d" ? "last 7 days" : range === "90d" ? "last 90 days" : "last 30 days";

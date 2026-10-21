@@ -31,8 +31,8 @@ export async function ga4PropertyId(token: string): Promise<string | null> {
     });
     const json = await res.json();
     const properties: { property: string }[] = (json.accountSummaries || [])
-      .flatMap((a: any) => a.propertySummaries || [])
-      .map((p: any) => ({ property: p.property }));
+      .flatMap((a: { propertySummaries?: { property: string }[] }) => a.propertySummaries || [])
+      .map((p: { property: string }) => ({ property: p.property }));
 
     for (const p of properties) {
       const streams = await fetch(`${ADMIN_API}/${p.property}/dataStreams`, {
@@ -40,7 +40,7 @@ export async function ga4PropertyId(token: string): Promise<string | null> {
       });
       const sj = await streams.json();
       const hit = (sj.dataStreams || []).find(
-        (s: any) => s.webStreamData?.measurementId === GA_MEASUREMENT_ID
+        (s: { webStreamData?: { measurementId?: string } }) => s.webStreamData?.measurementId === GA_MEASUREMENT_ID
       );
       if (hit) {
         const id = p.property.replace("properties/", "");

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { trackPurchase } from "@/lib/ad-tracking";
 
 export default function GiftCardSuccessPage() {
@@ -33,7 +34,7 @@ export default function GiftCardSuccessPage() {
             trackPurchase(Number(data.giftCard.amount) || 0, "GBP", data.giftCard.code, data.giftCard.purchaserEmail);
           }
         }
-      } catch (err) {
+      } catch {
         setError("Failed to load gift card details");
       }
       setLoading(false);
@@ -109,12 +110,12 @@ export default function GiftCardSuccessPage() {
           >
             Copy Gift Card Code
           </button>
-          <a href="/gift-card/balance" className="block text-center text-sky-blue-light text-sm hover:underline">
+          <Link href="/gift-card/balance" className="block text-center text-sky-blue-light text-sm hover:underline">
             Check Balance
-          </a>
-          <a href="/" className="block text-center text-ink-soft text-sm hover:underline">
+          </Link>
+          <Link href="/" className="block text-center text-ink-soft text-sm hover:underline">
             Return to Home
-          </a>
+          </Link>
         </div>
       </div>
     </div>

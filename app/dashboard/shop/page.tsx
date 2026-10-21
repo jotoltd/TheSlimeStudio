@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { supabase, type Product, type ShopSettings } from "@/lib/supabase";
 import PageHeader from "@/components/PageHeader";
 
@@ -335,8 +336,8 @@ export default function ShopAdminPage() {
               <div>
                 <label className="block text-sm font-medium mb-2">Product Image</label>
                 {formData.image_url ? (
-                  <div className="relative mb-2">
-                    <img src={formData.image_url} alt="Preview" className="w-full h-40 rounded-xl object-cover" />
+                  <div className="relative h-40 mb-2 rounded-xl overflow-hidden">
+                    <Image src={formData.image_url} alt="Preview" fill sizes="(max-width: 768px) 100vw, 480px" className="object-cover" />
                     <button
                       type="button"
                       onClick={() => setFormData({ ...formData, image_url: "" })}

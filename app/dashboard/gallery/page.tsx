@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import Image from "next/image";
 import { supabase, type GalleryImage } from "@/lib/supabase";
 import { useToast } from "@/components/Toast";
 import PageHeader from "@/components/PageHeader";
@@ -183,7 +184,7 @@ export default function GalleryAdminPage() {
               className={`bg-white rounded-[16px] shadow-sm overflow-hidden group cursor-move ${!img.is_visible ? "opacity-50" : ""}`}
             >
               <div className="relative aspect-square">
-                <img src={img.image_url} alt={img.caption} className="w-full h-full object-cover" />
+                <Image src={img.image_url} alt={img.caption} fill sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw" className="object-cover" />
                 <div className="absolute inset-0 bg-ink/0 group-hover:bg-ink/40 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
                   <button
                     onClick={() => toggleVisible(img)}

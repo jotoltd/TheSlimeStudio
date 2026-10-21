@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import PageHeader from "@/components/PageHeader";
 
 type GiftCard = {
@@ -81,7 +81,7 @@ export default function GiftCardsPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
+
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<GiftCard | null>(null);
   const [saving, setSaving] = useState(false);
@@ -109,7 +109,7 @@ export default function GiftCardsPage() {
     customer_id: "",
   });
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -119,12 +119,11 @@ export default function GiftCardsPage() {
       const data = await res.json();
       if (data.giftCards) {
         setGiftCards(data.giftCards);
-        setTotal(data.total || 0);
         setTotalPages(data.totalPages || 1);
       }
     } catch {}
     setLoading(false);
-  };
+  }, [page, search]);
 
   // Deep link from notifications: ?search=<code>
   useEffect(() => {
@@ -133,7 +132,7 @@ export default function GiftCardsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => { load(); }, [page, search]);
+  useEffect(() => { load(); }, [load]);
 
   function resetForm() {
     setForm({
@@ -379,7 +378,7 @@ export default function GiftCardsPage() {
               <label className="block text-sm font-medium mb-1.5">Status</label>
               <select
                 value={form.status}
-                onChange={(e) => setForm({ ...form, status: e.target.value as any })}
+                onChange={(e) => setForm({ ...form, status: e.target.value as typeof form.status })}
                 className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
               >
                 <option value="pending">Pending</option>

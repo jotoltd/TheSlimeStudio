@@ -91,11 +91,13 @@ export default function AccountDashboardPage() {
 
   async function loadRescheduleSlots(forDate: string, excludeId?: string) {
     setRescheduleLoading(true);
-    const { data } = await supabase
+    let query = supabase
       .from("bookings")
       .select("time_slot, people")
       .eq("date", forDate)
       .eq("payment_status", "paid");
+    if (excludeId) query = query.neq("id", excludeId);
+    const { data } = await query;
     const used: Record<string, number> = {};
     (data || []).forEach((b: { time_slot: string; people: number }) => {
       used[b.time_slot] = (used[b.time_slot] || 0) + b.people;

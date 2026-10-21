@@ -135,7 +135,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true, message: "Migration completed successfully" });
-  } catch (e) {
+  } catch {
     return NextResponse.json({
       error: "Failed to run migration. Run this SQL manually in Supabase SQL Editor:",
       sql: MIGRATION_SQL.trim(),
