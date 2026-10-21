@@ -443,9 +443,9 @@ export default function AdsPage() {
             <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 mb-8 flex items-start justify-between gap-4 flex-wrap">
               <div className="text-[0.85rem] text-amber-900">
                 <div className="font-semibold mb-0.5">Campaign tracking {untrackedAds.length > 0 ? `is off for ${untrackedAds.length} ad${untrackedAds.length === 1 ? "" : "s"}` : "update"}</div>
-                {untrackedAds.length > 0
-                  ? `Clicks from ${untrackedAds.map((a) => `"${a.name}"`).join(", ")} only record "Meta Ad" — no campaign or ad name. Turn it on and future bookings will show exactly which ad brought each customer.`
-                  : trackingMsg}
+                {untrackedAds.length > 0 &&
+                  `Clicks from ${untrackedAds.map((a) => `"${a.name}"`).join(", ")} only record "Meta Ad" — no campaign or ad name. Turn it on and future bookings will show exactly which ad brought each customer.`}
+                {trackingMsg && <div className="mt-1 font-medium">{trackingMsg}</div>}
               </div>
               {untrackedAds.length > 0 && (
                 <button
