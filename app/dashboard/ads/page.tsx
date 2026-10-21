@@ -230,8 +230,8 @@ export default function AdsPage() {
           <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm mb-8">
             <h2 className="font-display text-[1.1rem] mb-1">What your ads brought in</h2>
             <p className="text-[0.75rem] text-ink-soft mb-6">Paid sales {rangeLabel} traced back to an ad or tracked link — how much each channel earned.</p>
-            <div className="space-y-4">
-              {SOURCES.filter((s) => s.key !== "organic").map((s) => {
+            {(() => {
+              const sourceRow = (s: (typeof SOURCES)[number]) => {
                 const v = data.sources[s.key];
                 return (
                   <div key={s.key}>
@@ -249,11 +249,16 @@ export default function AdsPage() {
                     </div>
                   </div>
                 );
-              })}
-            </div>
-            <p className="text-[0.72rem] text-ink-soft mt-6 pt-4 border-t border-ink/[0.06]">
-              Everything else — {data.sources.organic.bookings} sale{data.sources.organic.bookings === 1 ? "" : "s"} · {fmt(data.sources.organic.revenue)} — was organic (walk-ins, repeat customers). Not from ads.
-            </p>
+              };
+              return (
+                <div className="space-y-4">
+                  <div className="text-[0.7rem] uppercase tracking-wider text-ink-soft">Paid ads</div>
+                  {SOURCES.filter((s) => s.isAd).map(sourceRow)}
+                  <div className="text-[0.7rem] uppercase tracking-wider text-ink-soft pt-2">Tracked links — free</div>
+                  {SOURCES.filter((s) => !s.isAd && s.key !== "organic").map(sourceRow)}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Manage ads */}
