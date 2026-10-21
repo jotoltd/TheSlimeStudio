@@ -138,7 +138,7 @@ export default function AdsPage() {
   const anyLive =
     [...(data?.manage?.campaigns || []), ...(data?.manage?.adsets || [])].some((e) => e.effectiveStatus === "ACTIVE") ||
     (data?.google?.campaigns || []).some((c) => c.status === "ENABLED");
-  const maxSourceBookings = Math.max(...SOURCES.map((s) => data?.sources[s.key].bookings || 0), 1);
+  const maxSourceBookings = Math.max(...SOURCES.filter((s) => s.key !== "organic").map((s) => data?.sources[s.key].bookings || 0), 1);
 
   return (
     <div className="py-8 md:py-10 px-5 md:px-10">
@@ -226,12 +226,12 @@ export default function AdsPage() {
             <div className="text-white/60 text-[0.7rem] mt-4">Bookings only count here when the customer clicked a real Meta or Google ad — email links and shares don&apos;t.</div>
           </div>
 
-          {/* Where sales came from */}
+          {/* What the ads brought in — paid channels only */}
           <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm mb-8">
-            <h2 className="font-display text-[1.1rem] mb-1">Where your sales came from</h2>
-            <p className="text-[0.75rem] text-ink-soft mb-6">All paid bookings &amp; sales {rangeLabel} — {data.totalPaid.bookings} totalling {fmt(data.totalPaid.revenue)}</p>
+            <h2 className="font-display text-[1.1rem] mb-1">What your ads brought in</h2>
+            <p className="text-[0.75rem] text-ink-soft mb-6">Paid sales {rangeLabel} traced back to an ad or tracked link — how much each channel earned.</p>
             <div className="space-y-4">
-              {SOURCES.map((s) => {
+              {SOURCES.filter((s) => s.key !== "organic").map((s) => {
                 const v = data.sources[s.key];
                 return (
                   <div key={s.key}>
@@ -251,6 +251,9 @@ export default function AdsPage() {
                 );
               })}
             </div>
+            <p className="text-[0.72rem] text-ink-soft mt-6 pt-4 border-t border-ink/[0.06]">
+              Everything else — {data.sources.organic.bookings} sale{data.sources.organic.bookings === 1 ? "" : "s"} · {fmt(data.sources.organic.revenue)} — was organic (walk-ins, repeat customers). Not from ads.
+            </p>
           </div>
 
           {/* Manage ads */}
@@ -349,15 +352,15 @@ export default function AdsPage() {
             </div>
           )}
 
-          {/* Sales list */}
+          {/* Sales list — ad/tracked sources only */}
           <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm mb-8">
-            <h2 className="font-display text-[1.1rem] mb-2">Sales — {rangeLabel}</h2>
+            <h2 className="font-display text-[1.1rem] mb-2">Sales from ads &amp; tracked links — {rangeLabel}</h2>
             <p className="text-[0.75rem] text-ink-soft mb-6">
-              Every booking, event ticket and gift card in this window with the source it came from.
+              Bookings, event tickets and gift cards that came from an ad or tracked link.
               {data.items.length >= 100 ? " Showing the 100 most recent." : ""}
             </p>
             {data.items.length === 0 ? (
-              <div className="text-center py-8 text-ink-soft text-[0.9rem]">No sales in this period.</div>
+              <div className="text-center py-8 text-ink-soft text-[0.9rem]">No ad-attributed sales in this period.</div>
             ) : (
               <div className="space-y-1">
                 {data.items.map((b) => {

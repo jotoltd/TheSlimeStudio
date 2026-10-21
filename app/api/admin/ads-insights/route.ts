@@ -270,7 +270,9 @@ export async function GET(req: NextRequest) {
       })),
     },
     sources,
-    items: items.slice(0, 100),
+    // Ad Management only reports paid-channel sales — organic items still
+    // count in `sources` above (for the organic footnote) but aren't listed.
+    items: items.filter((i) => i.source !== "organic").slice(0, 100),
     totalPaid: {
       bookings: Object.values(sources).reduce((s, x) => s + x.bookings, 0),
       revenue: Object.values(sources).reduce((s, x) => s + x.revenue, 0),
