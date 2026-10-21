@@ -180,9 +180,12 @@ export type BookingSource = "meta" | "google" | "email" | "other" | "organic";
 
 export function classifyBookingSource(notes: string | null | undefined): BookingSource {
   const n = (notes || "").toLowerCase();
-  if (!n.startsWith("[ad:")) return "organic";
+  // A gclid tag is the strongest Google Ads signal — check it before the
+  // [Ad: gate so "[gclid:x]"-only notes still count as ad bookings.
+  if (n.includes("[gclid:")) return "google";
+  if (!n.includes("[ad:")) return "organic";
   if (n.includes("utm:email")) return "email";
-  if (n.includes("google ad") || n.includes("utm:google") || n.includes("[gclid:")) return "google";
+  if (n.includes("google ad") || n.includes("utm:google")) return "google";
   if (n.includes("facebook") || n.includes("instagram") || n.includes("meta ad") || /utm:(ig|fb|meta)\b/.test(n)) return "meta";
   return "other";
 }

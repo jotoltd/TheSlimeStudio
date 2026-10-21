@@ -1031,6 +1031,8 @@ function BookingPageInner() {
                             event_id: selectedEvent.event_id,
                             name: evtName.trim(), email: evtEmail.trim(), phone: evtPhone.trim() || undefined,
                             quantity: evtQty,
+                            adSource: getAdSource(),
+                            gclid: getGclid(),
                           }),
                         });
                         const data = await res.json();
