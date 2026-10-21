@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { verifyToken } from "@/lib/auth";
 import { googleAdsQuery, googleAdsConfig, googleAdsReady } from "@/lib/google-ads";
+import { META_AD_URL_TAGS, metaPost, metaRead } from "@/lib/meta-ads";
 
 export const runtime = "nodejs";
 
@@ -117,7 +118,7 @@ export async function GET(req: NextRequest) {
     safe(metaGet(metaToken, `${accountId}/insights`, { fields: `actions,action_values`, time_range: tr, action_attribution_windows: '["1d_view","7d_click"]' }) as Promise<InsightRow[]>),
     safe(metaGet(metaToken, `${accountId}/campaigns`, { fields: "name,status,effective_status,daily_budget,objective" })),
     safe(metaGet(metaToken, `${accountId}/adsets`, { fields: "name,status,effective_status,daily_budget,campaign{name},targeting,optimization_goal,promoted_object" })),
-    safe(metaGet(metaToken, `${accountId}/ads`, { fields: "name,status,effective_status,issues_info,creative{thumbnail_url,object_story_spec,effective_object_story_id,effective_instagram_media_id,instagram_permalink_url}" })),
+    safe(metaGet(metaToken, `${accountId}/ads`, { fields: "name,status,effective_status,issues_info,creative{thumbnail_url,object_story_spec,effective_object_story_id,effective_instagram_media_id,instagram_permalink_url,url_tags}" })),
   ]);
 
   // Comments left on the ads — FB post comments need a Page token; IG media
@@ -231,6 +232,12 @@ export async function GET(req: NextRequest) {
   }
   for (const c of manageCampaigns as any[]) {
     if (c.status === "PAUSED") alerts.push({ level: "info", message: `Campaign "${c.name}" is paused — your ads aren't running.` });
+  }
+  const untrackedAds = (adCreatives as any[]).filter(
+    (a) => !["ARCHIVED", "DELETED"].includes(a.effective_status) && !(a.creative?.url_tags || "").includes("utm_campaign")
+  ).length;
+  if (untrackedAds > 0) {
+    alerts.push({ level: "warning", message: `${untrackedAds} ad${untrackedAds === 1 ? "" : "s"} won't say which campaign they came from — bookings will just show "Meta Ad". Fix it from the Facebook & Instagram tab.` });
   }
   if (weekSummary.frequency > 3.5) {
     alerts.push({ level: "warning", message: `Ad fatigue: people are seeing your ads ${weekSummary.frequency.toFixed(1)}× on average this week — time for fresh creative.` });
@@ -506,6 +513,7 @@ export async function GET(req: NextRequest) {
       ads: (adCreatives as any[]).map((a) => ({
         id: a.id, name: a.name, status: a.status, effectiveStatus: a.effective_status,
         thumbnail: a.creative?.thumbnail_url || null,
+        tracked: !!(a.creative?.url_tags || "").includes("utm_campaign"),
       })),
     },
     adBookings: allAdBookings,
@@ -525,7 +533,52 @@ export async function POST(req: NextRequest) {
   if (!metaToken) return NextResponse.json({ error: "Ads API not configured" }, { status: 500 });
 
   const body = await req.json();
-  const { id, status, dailyBudget } = body as { id?: string; status?: string; dailyBudget?: number };
+  const { id, status, dailyBudget, fixTracking } = body as { id?: string; status?: string; dailyBudget?: number; fixTracking?: boolean };
+
+  // Backfill url_tags on ads that lack them, so bookings from their clicks
+  // show the campaign + ad name instead of a bare "Meta Ad". url_tags lives
+  // on the ad creative, which Meta treats as immutable — the fix is to clone
+  // the creative with the tags added and repoint the ad at the clone.
+  if (fixTracking) {
+    const accountId = process.env.META_AD_ACCOUNT_ID || "act_1408400061198101";
+    let liveAds: any[];
+    try {
+      liveAds = (await metaGet(metaToken, `${accountId}/ads`, {
+        fields: "name,effective_status,creative{url_tags}",
+        limit: "200",
+      })) as any[];
+    } catch (e: any) {
+      return NextResponse.json({ error: e.message }, { status: 400 });
+    }
+    const results: { ad: string; ok: boolean; detail?: string }[] = [];
+    for (const ad of liveAds) {
+      if (["ARCHIVED", "DELETED"].includes(ad.effective_status) || !ad.creative?.id) continue;
+      const existing = (ad.creative?.url_tags || "") as string;
+      if (existing.includes("utm_campaign")) { results.push({ ad: ad.name, ok: true, detail: "already tracked" }); continue; }
+      try {
+        const cr = await metaRead(metaToken, ad.creative.id, "name,object_story_id,object_story_spec,asset_feed_spec");
+        const params: Record<string, string> = {
+          name: cr.name || `${ad.name} — creative`,
+          url_tags: existing ? `${existing}&${META_AD_URL_TAGS}` : META_AD_URL_TAGS,
+        };
+        if (cr.object_story_id) params.object_story_id = cr.object_story_id;
+        else if (cr.object_story_spec) params.object_story_spec = JSON.stringify(cr.object_story_spec);
+        else if (cr.asset_feed_spec) params.asset_feed_spec = JSON.stringify(cr.asset_feed_spec);
+        else throw new Error("unsupported creative — set URL parameters manually in Ads Manager");
+        const newCr = await metaPost(metaToken, `${accountId}/adcreatives`, params);
+        if (!newCr.id) throw new Error(newCr.error?.error_user_msg || newCr.error?.message || "creative rebuild failed");
+        const upd = await metaPost(metaToken, ad.id, { creative: JSON.stringify({ creative_id: newCr.id }) });
+        if (upd.error) throw new Error(upd.error.error_user_msg || upd.error.message || "couldn't point the ad at the new creative");
+        results.push({ ad: ad.name, ok: true });
+      } catch (e: any) {
+        results.push({ ad: ad.name, ok: false, detail: e.message });
+      }
+    }
+    const fixed = results.filter((r) => r.ok).length;
+    const failed = results.filter((r) => !r.ok);
+    return NextResponse.json({ success: true, fixed, failed, results });
+  }
+
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
   const params: Record<string, string> = { access_token: metaToken };

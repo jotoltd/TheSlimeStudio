@@ -7,7 +7,7 @@ type AdPreview = { name: string; status: string; thumbnail: string | null; kind:
 type Alert = { level: "warning" | "info"; message: string };
 type NamedRow = Summary & { name?: string; thumbnail?: string | null; quality?: string | null; qualityGood?: boolean | null; video?: { plays: number; completionRate: number; avgWatch: number } | null };
 type DailyPoint = { date: string; spend: number; clicks: number; purchases: number };
-type ManagedEntity = { id: string; name: string; status: string; effectiveStatus: string; dailyBudget: number | null; campaignName?: string; thumbnail?: string | null; targeting?: string; optimisesFor?: string | null };
+type ManagedEntity = { id: string; name: string; status: string; effectiveStatus: string; dailyBudget: number | null; campaignName?: string; thumbnail?: string | null; targeting?: string; optimisesFor?: string | null; tracked?: boolean };
 type AdBooking = { id: string; name: string; email: string; date: string; total_price: number; payment_status: string; notes: string; created_at: string; kind?: "session" | "event"; platform?: "meta" | "google" | "tiktok" | "other" };
 
 type Data = {
@@ -113,6 +113,8 @@ export default function AdsPage() {
   const [loading, setLoading] = useState(true);
   const [actionMsg, setActionMsg] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [fixingTracking, setFixingTracking] = useState(false);
+  const [trackingMsg, setTrackingMsg] = useState("");
   const [budgetEdits, setBudgetEdits] = useState<Record<string, string>>({});
   const [tab, setTab] = useState<"overview" | "meta" | "google" | "other">("overview");
   const [range, setRange] = useState("30d");
@@ -147,7 +149,33 @@ export default function AdsPage() {
     setBusyId(null);
   }
 
+  async function fixTracking() {
+    setFixingTracking(true); setTrackingMsg("");
+    try {
+      const r = await fetch("/api/admin/ads-insights", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fixTracking: true }),
+      });
+      const json = await r.json();
+      if (!r.ok) setTrackingMsg(json.error || "Couldn't turn on tracking");
+      else {
+        const names = (json.failed || []).map((f: { ad: string }) => f.ad);
+        setTrackingMsg(
+          names.length
+            ? `Done for ${json.fixed} ad${json.fixed === 1 ? "" : "s"} — couldn't update: ${names.join(", ")} (set URL parameters on those in Ads Manager).`
+            : `Done — campaign tracking is on for ${json.fixed} ad${json.fixed === 1 ? "" : "s"}. New clicks will show the campaign and ad name.`
+        );
+        await load();
+      }
+    } catch {
+      setTrackingMsg("Network error");
+    }
+    setFixingTracking(false);
+  }
+
   const maxSpend = Math.max(...(data?.daily || []).map((d) => d.spend), 0.01);
+  const untrackedAds = (data?.manage?.ads || []).filter((a) => a.tracked === false && !["ARCHIVED", "DELETED"].includes(a.effectiveStatus));
 
   // Bookings/revenue filtered to the selected reporting window
   const rangeSince = data?.range?.since;
@@ -409,6 +437,27 @@ export default function AdsPage() {
           </div>
             );
           })()}
+
+          {/* Campaign tracking — without url_tags clicks only record "Meta Ad" */}
+          {(untrackedAds.length > 0 || trackingMsg) && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 mb-8 flex items-start justify-between gap-4 flex-wrap">
+              <div className="text-[0.85rem] text-amber-900">
+                <div className="font-semibold mb-0.5">Campaign tracking {untrackedAds.length > 0 ? `is off for ${untrackedAds.length} ad${untrackedAds.length === 1 ? "" : "s"}` : "update"}</div>
+                {untrackedAds.length > 0
+                  ? `Clicks from ${untrackedAds.map((a) => `"${a.name}"`).join(", ")} only record "Meta Ad" — no campaign or ad name. Turn it on and future bookings will show exactly which ad brought each customer.`
+                  : trackingMsg}
+              </div>
+              {untrackedAds.length > 0 && (
+                <button
+                  onClick={fixTracking}
+                  disabled={fixingTracking}
+                  className="px-4 py-2 rounded-xl bg-amber-600 text-white text-[0.8rem] font-semibold hover:bg-amber-700 disabled:opacity-50 flex-shrink-0"
+                >
+                  {fixingTracking ? "Turning on..." : "Turn on campaign tracking"}
+                </button>
+              )}
+            </div>
+          )}
 
           {/* What your ads look like — visual first */}
           {data.adPreviews?.length > 0 && (

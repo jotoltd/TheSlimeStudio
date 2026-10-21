@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/lib/auth";
+import { META_AD_URL_TAGS } from "@/lib/meta-ads";
 
 export const runtime = "nodejs";
 
@@ -102,6 +103,10 @@ export async function POST(req: NextRequest) {
   // 5. Creative + ad (paused)
   const creative = await metaPost(metaToken, `${ACT}/adcreatives`, {
     name: `${name} — creative`,
+    // url_tags is baked in at creative creation — it can't be added later
+    // without rebuilding the creative. This is what lets bookings show the
+    // campaign/ad name instead of just "Meta Ad".
+    url_tags: META_AD_URL_TAGS,
     object_story_spec: JSON.stringify({
       page_id: pageId,
       link_data: {
