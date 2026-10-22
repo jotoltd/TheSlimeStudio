@@ -74,7 +74,8 @@ export default function AdsPage() {
     setLoading(true);
     try {
       const res = await fetch(`/api/admin/ads-insights?range=${r}`);
-      setData(await res.json());
+      const json = await res.json().catch(() => null);
+      setData(res.ok && json?.sources ? json : null);
     } catch {
       setData(null);
     }
