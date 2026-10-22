@@ -117,18 +117,26 @@ function BookingPageInner() {
         setShowDiscountField(true);
         localStorage.removeItem("refCode");
       }
-      // Capture ad attribution from URL (fbclid = Facebook/Instagram ad, gclid = Google ad, utm_source)
+      // Capture ad attribution from URL (fbclid = Meta click, gclid = Google ad, utm_source)
       const params = new URLSearchParams(window.location.search);
       const fbclid = params.get("fbclid");
       const gclid = params.get("gclid");
       const utmSource = params.get("utm_source");
+      const utmMedium = (params.get("utm_medium") || "").toLowerCase();
       const utmCampaign = params.get("utm_campaign");
       const utmContent = params.get("utm_content");
       if (fbclid || gclid || utmSource) {
         const adParts: string[] = [];
-        if (fbclid) adParts.push("Facebook/Instagram Ad");
+        // fbclid fires on EVERY click out of FB/IG — organic posts and bio
+        // links included — so it only counts as a paid ad when the click also
+        // carries a paid signal (utm_medium=paid/cpc, or a campaign stamped by
+        // the ad's URL tags). Otherwise it's organic social, not ad spend.
+        const metaPaid =
+          /^(paid|cpc|ppc|paid[-_]?social)$/.test(utmMedium) ||
+          (!!utmCampaign && !/link_?in_?bio/i.test(utmContent || ""));
+        if (fbclid) adParts.push(metaPaid ? "Facebook/Instagram Ad" : "Facebook/Instagram");
         if (gclid) adParts.push("Google Ad");
-        if (utmSource) adParts.push(`utm:${utmSource}${utmCampaign ? `/${utmCampaign}` : ""}${utmContent ? ` > ${utmContent}` : ""}`);
+        if (utmSource) adParts.push(`utm:${utmSource}${utmMedium ? `:${utmMedium}` : ""}${utmCampaign ? `/${utmCampaign}` : ""}${utmContent ? ` > ${utmContent}` : ""}`);
         setAdSource(`[Ad: ${adParts.join(", ")}]`, gclid);
         // Clean up URL so the ad params don't persist across navigation
         const url = new URL(window.location.href);

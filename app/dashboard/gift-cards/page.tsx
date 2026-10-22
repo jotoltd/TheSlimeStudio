@@ -57,7 +57,7 @@ function parseAdSource(notes: string | null | undefined): { label: string; platf
   const inner = notes.replace(/\s*\[gclid:[^\]]*\]/gi, "").slice(4).replace(/\]\s*$/, "").trim();
   const parts = inner.split(",").map((p) => p.trim());
   const utm = parts.find((p) => p.startsWith("utm:"));
-  const utmSource = utm ? utm.slice(4).split("/")[0].toLowerCase() : null;
+  const utmSource = utm ? utm.slice(4).split("/")[0].split(":")[0].toLowerCase() : null;
   const platform = utmSource
     ? (AD_PLATFORMS[utmSource] || utmSource)
     : parts.some((p) => p === "Google Ad") ? "Google"

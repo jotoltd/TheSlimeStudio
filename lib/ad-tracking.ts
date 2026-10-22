@@ -185,8 +185,19 @@ export function classifyBookingSource(notes: string | null | undefined): Booking
   if (n.includes("[gclid:")) return "google";
   if (!n.includes("[ad:")) return "organic";
   if (n.includes("utm:email")) return "email";
-  if (n.includes("google ad") || n.includes("utm:google")) return "google";
-  if (n.includes("facebook") || n.includes("instagram") || n.includes("meta ad") || /utm:(ig|fb|meta)\b/.test(n)) return "meta";
+  // "Google Ad" is only written for gclid clicks; a utm:google tag needs a
+  // medium or campaign too, otherwise it's an organic Google/Profile link.
+  if (n.includes("google ad") || /utm:google[:/]/.test(n)) return "google";
+  // fbclid fires on every click out of FB/IG — organic posts and bio links
+  // included — so "Facebook/Instagram Ad" is only written for clicks with a
+  // paid signal (see the capture code). A bare "Facebook/Instagram" tag or a
+  // utm:ig with no campaign/medium is organic social, never ad spend.
+  // link_in_bio tags are self-labelled organic even with other params.
+  if (!/link_?in_?bio/.test(n) && (
+    n.includes("facebook/instagram ad") ||
+    n.includes("meta ad") ||
+    /utm:(ig|fb|meta|facebook|instagram)(?:\/|:(?!organic|social|free)\w)/.test(n)
+  )) return "meta";
   return "other";
 }
 
@@ -203,15 +214,17 @@ export function bookingSourceLabel(notes: string | null | undefined): string {
   const src = classifyBookingSource(notes);
   if (src === "organic") return "Organic";
   const inner = (notes || "").replace(/\s*\[gclid:[^\]]*\]/gi, "").replace(/^\[ad:\s*/i, "").replace(/\]\s*$/, "");
-  const utm = inner.match(/utm:([a-z0-9]+)(?:\/([^>,]+?))?(?:\s*>\s*([^,\]]+))?(?=[,\]]|$)/i);
+  const utm = inner.match(/utm:([a-z0-9]+)(?::[a-z0-9_-]+)?(?:\/([^>,]+?))?(?:\s*>\s*([^,\]]+))?(?=[,\]]|$)/i);
   const detail = utm
     ? [utm[2], utm[3]].filter((p): p is string => !!p).map((p) => safeDecode(p.trim()).replace(/\+/g, " ")).join(" · ")
     : "";
+  const linkNames: Record<string, string> = { ig: "Instagram", instagram: "Instagram", fb: "Facebook", facebook: "Facebook", meta: "Meta" };
   const base =
     src === "meta" ? "Meta Ad" :
     src === "google" ? "Google Ad" :
     src === "email" ? "Email" :
-    utm?.[1] ? `${utm[1].charAt(0).toUpperCase() + utm[1].slice(1)} link` : "Tracked link";
+    inner.toLowerCase().includes("facebook/instagram") ? "Facebook/Instagram" :
+    utm?.[1] ? `${linkNames[utm[1].toLowerCase()] || utm[1].charAt(0).toUpperCase() + utm[1].slice(1)} link` : "Tracked link";
   return detail ? `${base} · ${detail}` : base;
 }
 

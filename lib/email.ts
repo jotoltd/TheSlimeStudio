@@ -77,7 +77,7 @@ const escapeHtml = (s: string) =>
 // 'Meta Ad — campaign "My Campaign", ad "My Ad"'
 export function adSourceLabel(adSource: string): string {
   const inner = adSource.replace(/\s*\[gclid:[^\]]*\]/gi, "").replace(/^\[Ad:\s*/i, "").replace(/\]\s*$/, "").trim();
-  const m = inner.match(/utm:([a-z]+)(?:\/([^\],>]+))?(?:\s*>\s*([^\],]+))?/i);
+  const m = inner.match(/utm:([a-z]+)(?::[a-z0-9_-]+)?(?:\/([^\],>]+))?(?:\s*>\s*([^\],]+))?/i);
   if (m) {
     const map: Record<string, string> = { ig: "Meta", instagram: "Meta", fb: "Meta", facebook: "Meta", meta: "Meta", google: "Google", tiktok: "TikTok", snapchat: "Snapchat" };
     const platform = escapeHtml(map[m[1].toLowerCase()] || m[1]);

@@ -69,7 +69,7 @@ function parseAdSource(notes: string | null | undefined): { label: string; platf
   const parts = inner.split(",").map((p) => p.trim());
   const utm = parts.find((p) => p.startsWith("utm:"));
   const utmValue = utm ? utm.slice(4) : null;
-  const utmSource = utmValue ? utmValue.split("/")[0].toLowerCase() : null;
+  const utmSource = utmValue ? utmValue.split("/")[0].split(":")[0].toLowerCase() : null;
   const campaignRaw = utmValue && utmValue.includes("/") ? utmValue.split("/").slice(1).join("/") : null;
   // The stored tag carries "campaign > ad name" — split them for display.
   const campaignParts = campaignRaw ? campaignRaw.split(/\s*>\s*/) : [];
