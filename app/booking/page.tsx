@@ -1215,9 +1215,12 @@ function BookingPageInner() {
                     <button type="button" onClick={removeGiftCard} className="text-[0.8rem] text-ink-soft hover:text-[#ff2d78]">Remove</button>
                   </div>
                 ) : !showGiftCardField ? (
-                  // On /go the gift card field is revealed together with the
-                  // discount field by the combined link above.
-                  !isAdLanding && (
+                  // On /go the gift card field is normally revealed together
+                  // with the discount field by the combined link above — but
+                  // when that link is already gone (e.g. a referral code
+                  // pre-opened the discount field) keep a link here so the
+                  // gift card field stays reachable.
+                  (!isAdLanding || showDiscountField || appliedDiscount) && (
                     <button
                       type="button"
                       onClick={() => setShowGiftCardField(true)}
