@@ -401,7 +401,15 @@ html[data-theme="halloween"] .bg-ink\/40 { background-color: rgb(0 0 0 / 0.45); 
 /* Remaining arbitrary-value accents that aren't theme tokens */
 html[data-theme="halloween"] .bg-\[\#2ba7c4\] { background-color: #7c3aed; }
 html[data-theme="halloween"] .text-\[\#2ba7c4\] { color: #c084fc; }
+html[data-theme="halloween"] .text-\[\#8b5fbf\] { color: #c084fc; }
 html[data-theme="halloween"] .hover\:bg-\[\#4cc5db\]:hover { background-color: #ff8a1f; }
+
+/* sky-blue-light becomes pumpkin — ink flips to bone which is unreadable on
+   it, so accent surfaces need the dark on-accent colour instead. */
+html[data-theme="halloween"] .bg-sky-blue-light .text-ink,
+html[data-theme="halloween"] .bg-sky-blue-light.text-ink {
+  color: rgb(var(--c-on-accent));
+}
 
 /* Themed surfaces (used instead of inline styles so themes can recolour) */
 .hero-gradient { background: var(--hero-grad); }
