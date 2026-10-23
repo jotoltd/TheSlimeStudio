@@ -2,6 +2,9 @@
 
 import { useEffect, useState, useCallback } from "react";
 import PageHeader from "@/components/PageHeader";
+import Pagination from "@/components/Pagination";
+
+const PAGE_SIZE = 25;
 
 type DiscountCode = {
   id: string;
@@ -55,6 +58,7 @@ export default function DiscountCodesPage() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [searching, setSearching] = useState(false);
   const [copiedLink, setCopiedLink] = useState("");
+  const [page, setPage] = useState(1);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -213,6 +217,10 @@ export default function DiscountCodesPage() {
     });
     load();
   }
+
+  const totalPages = Math.max(1, Math.ceil(codes.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pagedCodes = codes.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   return (
     <div className="p-6 md:p-8 max-w-5xl mx-auto">
@@ -471,7 +479,7 @@ export default function DiscountCodesPage() {
                 </tr>
               </thead>
               <tbody>
-                {codes.map((c) => {
+                {pagedCodes.map((c) => {
                   const expired = c.expires_at && new Date(c.expires_at) < new Date();
                   const exhausted = c.max_uses !== null && c.used_count >= c.max_uses;
                   return (
@@ -565,6 +573,9 @@ export default function DiscountCodesPage() {
                 })}
               </tbody>
             </table>
+          </div>
+          <div className="px-4 pb-4">
+            <Pagination page={safePage} total={codes.length} pageSize={PAGE_SIZE} onPage={setPage} />
           </div>
         </div>
       )}

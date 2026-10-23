@@ -3,8 +3,40 @@ import { getStripeAsync } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase";
 import { verifySumUpPayment } from "@/lib/payment";
 import { gclidFromNotes, uploadClickConversion } from "@/lib/google-ads";
+import { sendGiftCardEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
+
+type GiftCardRow = {
+  code: string;
+  balance: number;
+  initial_value: number | null;
+  expiry_date: string | null;
+  purchaser_name: string | null;
+  purchaser_email: string;
+  recipient_name: string | null;
+  recipient_email: string | null;
+  message: string | null;
+};
+
+// Sends the purchase email. Callers only invoke this when their update won
+// the pending → active race, so it can't double-send.
+async function notifyGiftCardPurchase(card: GiftCardRow) {
+  try {
+    await sendGiftCardEmail({
+      code: card.code,
+      amount: Number(card.initial_value ?? card.balance) || 0,
+      expiryDate: card.expiry_date,
+      purchaserName: card.purchaser_name || "there",
+      purchaserEmail: card.purchaser_email,
+      recipientName: card.recipient_name,
+      recipientEmail: card.recipient_email,
+      message: card.message,
+    });
+  } catch (e) {
+    console.error("Failed to send gift card email:", e);
+  }
+}
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -20,18 +52,22 @@ export async function GET(req: NextRequest) {
       }
       const { data: card } = await supabaseAdmin
         .from("gift_cards")
-        .select("id, code, balance, expiry_date, purchaser_email, ad_source")
+        .select("id, code, balance, initial_value, expiry_date, purchaser_name, purchaser_email, recipient_name, recipient_email, message, ad_source")
         .eq("payment_reference", sumupRef)
         .single();
       if (!card) {
         return NextResponse.json({ error: "Gift card not found" }, { status: 404 });
       }
       // Payment verified — activate the card
-      await supabaseAdmin
+      const { data: activated } = await supabaseAdmin
         .from("gift_cards")
         .update({ status: "active" })
         .eq("id", card.id)
-        .eq("status", "pending");
+        .eq("status", "pending")
+        .select("id");
+      if (activated && activated.length > 0) {
+        await notifyGiftCardPurchase(card);
+      }
       // Google Ads offline conversion — orderId matches the browser tag's
       // transaction_id (the card code shown on the success page).
       const gclid = gclidFromNotes(card.ad_source);
@@ -77,7 +113,7 @@ export async function GET(req: NextRequest) {
 
     const { data: giftCard } = await supabaseAdmin
       .from("gift_cards")
-      .select("id, code, balance, expiry_date, purchaser_email, ad_source")
+      .select("id, code, balance, initial_value, expiry_date, purchaser_name, purchaser_email, recipient_name, recipient_email, message, ad_source")
       .eq("code", giftCardCode)
       .single();
 
@@ -86,11 +122,15 @@ export async function GET(req: NextRequest) {
     }
 
     // Payment verified — activate the card
-    await supabaseAdmin
+    const { data: activated } = await supabaseAdmin
       .from("gift_cards")
       .update({ status: "active" })
       .eq("id", giftCard.id)
-      .eq("status", "pending");
+      .eq("status", "pending")
+      .select("id");
+    if (activated && activated.length > 0) {
+      await notifyGiftCardPurchase(giftCard);
+    }
 
     const gclid = gclidFromNotes(giftCard.ad_source);
     if (gclid) {

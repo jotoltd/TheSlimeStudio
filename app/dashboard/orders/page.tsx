@@ -4,12 +4,16 @@ import { useEffect, useState } from "react";
 import { supabase, type ShopOrder } from "@/lib/supabase";
 import PageHeader from "@/components/PageHeader";
 import PaymentMethodBadge from "@/components/PaymentMethodBadge";
+import Pagination from "@/components/Pagination";
+
+const PAGE_SIZE = 25;
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<ShopOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<ShopOrder | null>(null);
+  const [page, setPage] = useState(1);
 
   useEffect(() => { loadOrders(); }, []);
 
@@ -37,6 +41,9 @@ export default function OrdersPage() {
   }
 
   const filtered = filter === "all" ? orders : orders.filter((o) => o.payment_status === filter);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pagedOrders = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   const statusColors: Record<string, string> = {
     paid: "bg-green-100 text-green-700",
@@ -106,7 +113,7 @@ export default function OrdersPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((o) => (
+                {pagedOrders.map((o) => (
                   <tr key={o.id} className="border-t border-ink/[0.08]">
                     <td className="py-3 pr-4 text-[0.85rem] font-medium">{o.order_number}</td>
                     <td className="py-3 pr-4 text-[0.85rem]">
@@ -141,6 +148,7 @@ export default function OrdersPage() {
             </table>
           </div>
         )}
+        <Pagination page={safePage} total={filtered.length} pageSize={PAGE_SIZE} onPage={setPage} />
       </div>
 
       {/* Order detail modal */}

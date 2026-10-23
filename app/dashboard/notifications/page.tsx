@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Pagination from "@/components/Pagination";
+
+const PAGE_SIZE = 25;
 
 type Notification = {
   id: string;
@@ -36,6 +39,7 @@ export default function NotificationsPage() {
   const [items, setItems] = useState<Notification[]>([]);
   const [lastSeen, setLastSeen] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     fetch("/api/admin/notifications")
@@ -70,6 +74,9 @@ export default function NotificationsPage() {
 
   const lastSeenMs = lastSeen ? new Date(lastSeen).getTime() : 0;
   const unreadCount = items.filter((i) => new Date(i.at).getTime() > lastSeenMs).length;
+  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pagedItems = items.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   return (
     <div className="p-5 md:p-8 max-w-3xl mx-auto">
@@ -98,7 +105,7 @@ export default function NotificationsPage() {
         </div>
       ) : (
         <div className="bg-white rounded-[20px] shadow-sm overflow-hidden divide-y divide-ink/[0.06]">
-          {items.map((n) => {
+          {pagedItems.map((n) => {
             const s = TYPE_STYLE[n.type];
             const unread = new Date(n.at).getTime() > lastSeenMs;
             return (
@@ -134,6 +141,7 @@ export default function NotificationsPage() {
           })}
         </div>
       )}
+      <Pagination page={safePage} total={items.length} pageSize={PAGE_SIZE} onPage={setPage} />
     </div>
   );
 }

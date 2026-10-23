@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { supabase, type Product, type ShopSettings } from "@/lib/supabase";
 import PageHeader from "@/components/PageHeader";
+import Pagination from "@/components/Pagination";
+
+const PAGE_SIZE = 25;
 
 export default function ShopAdminPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -19,6 +22,7 @@ export default function ShopAdminPage() {
   const [uploading, setUploading] = useState(false);
   const [stockEdits, setStockEdits] = useState<Record<string, number>>({});
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     loadData();
@@ -125,6 +129,9 @@ export default function ShopAdminPage() {
   }
 
   const filtered = categoryFilter === "all" ? products : products.filter((p) => p.category === categoryFilter);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pagedProducts = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   const lowStock = products.filter((p) => (p.stock || 0) <= 5 && (p.stock || 0) > 0);
   const outOfStock = products.filter((p) => (p.stock || 0) === 0);
 
@@ -237,7 +244,7 @@ export default function ShopAdminPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((p) => {
+                {pagedProducts.map((p) => {
                   const stock = p.stock || 0;
                   const hasEdit = stockEdits[p.id] !== undefined;
                   return (
@@ -293,6 +300,7 @@ export default function ShopAdminPage() {
             </table>
           </div>
         )}
+        <Pagination page={safePage} total={filtered.length} pageSize={PAGE_SIZE} onPage={setPage} />
       </div>
 
       {/* Add/Edit Product Modal */}

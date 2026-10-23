@@ -326,6 +326,101 @@ export function orderConfirmationHtml(opts: {
   `);
 }
 
+export function giftCardHtml(opts: {
+  code: string;
+  amount: number;
+  expiryDate: string | null;
+  purchaserName: string;
+  recipientName?: string | null;
+  message?: string | null;
+  forRecipient?: boolean;
+}, ov: Record<string, string> = {}): string {
+  const expiryStr = opts.expiryDate
+    ? new Date(opts.expiryDate).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
+    : null;
+  return emailWrapper(`
+    <h1 style="color: #ff2d78; font-size: 1.5rem; margin-bottom: 16px;">${ov.email_tpl_giftcard_heading || "Your Gift Card is Here!"}</h1>
+    <p style="color: #333; font-size: 1rem; line-height: 1.6;">
+      Hi ${opts.forRecipient ? (opts.recipientName || "there") : opts.purchaserName},
+    </p>
+    <p style="color: #333; font-size: 1rem; line-height: 1.6;">
+      ${opts.forRecipient
+        ? `${opts.purchaserName} has sent you a Slime Studio gift card!`
+        : (ov.email_tpl_giftcard_body || "Thank you for purchasing a Slime Studio gift card!")}
+    </p>
+    ${opts.forRecipient && opts.message ? `
+    <div style="background: #fff8f0; border-left: 3px solid #ff2d78; border-radius: 8px; padding: 12px 16px; margin: 16px 0;">
+      <p style="margin: 0; color: #555; font-size: 0.9rem; font-style: italic;">&ldquo;${opts.message}&rdquo;</p>
+    </div>` : ""}
+    <div style="background: linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%); border-radius: 12px; padding: 20px; margin: 16px 0; text-align: center;">
+      <p style="margin: 0 0 4px; color: #2b2350; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em;">Gift Card Code</p>
+      <p style="margin: 0 0 8px; color: #2b2350; font-size: 1.6rem; font-weight: 700; letter-spacing: 0.08em;">${opts.code}</p>
+      <p style="margin: 0; color: #2b2350; font-size: 1.1rem;"><strong>&pound;${opts.amount.toFixed(2)}</strong></p>
+    </div>
+    <div style="background: #fdeef7; border-radius: 12px; padding: 16px; margin: 16px 0;">
+      <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Value:</strong> &pound;${opts.amount.toFixed(2)}</p>
+      ${expiryStr ? `<p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Valid until:</strong> ${expiryStr}</p>` : ""}
+      <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>How to use:</strong> Enter the code at checkout when booking or shopping online.</p>
+    </div>
+    <p style="color: #333; font-size: 1rem; line-height: 1.6;">
+      Questions? Contact us at <a href="mailto:${CONTACT_EMAIL}" style="color: #ff2d78;">${CONTACT_EMAIL}</a>.
+    </p>
+  `);
+}
+
+export async function sendGiftCardEmail(opts: {
+  code: string;
+  amount: number;
+  expiryDate: string | null;
+  purchaserName: string;
+  purchaserEmail: string;
+  recipientName?: string | null;
+  recipientEmail?: string | null;
+  message?: string | null;
+}) {
+  const resend = getResend();
+  if (!resend) {
+    console.log("Resend not configured, skipping gift card email for", opts.purchaserEmail);
+    return;
+  }
+  if (!(await emailEnabled("gift_card"))) return;
+
+  const ov = await emailTemplates();
+  const subject = ov.email_tpl_giftcard_subject || `Your Slime Studio Gift Card — ${opts.code}`;
+
+  try {
+    await resend.emails.send({
+      from: EMAIL_FROM,
+      to: opts.purchaserEmail,
+      subject,
+      html: giftCardHtml(opts, ov),
+    });
+    await logEmail(opts.purchaserEmail, subject, "gift_card", "sent");
+  } catch (e) {
+    console.error("Failed to send gift card email:", e);
+    await logEmail(opts.purchaserEmail, subject, "gift_card", "failed");
+  }
+
+  // Deliver to the recipient too when the buyer gave one (and it isn't just
+  // the purchaser's own address).
+  const to = opts.recipientEmail?.trim().toLowerCase();
+  if (to && to !== opts.purchaserEmail.trim().toLowerCase()) {
+    const rSubject = `${opts.purchaserName} sent you a Slime Studio gift card!`;
+    try {
+      await resend.emails.send({
+        from: EMAIL_FROM,
+        to: opts.recipientEmail!.trim(),
+        subject: rSubject,
+        html: giftCardHtml({ ...opts, forRecipient: true }, ov),
+      });
+      await logEmail(opts.recipientEmail!.trim(), rSubject, "gift_card", "sent");
+    } catch (e) {
+      console.error("Failed to send gift card recipient email:", e);
+      await logEmail(opts.recipientEmail!.trim(), rSubject, "gift_card", "failed");
+    }
+  }
+}
+
 export async function sendOrderConfirmationEmail(opts: {
   orderNumber: string;
   name: string;

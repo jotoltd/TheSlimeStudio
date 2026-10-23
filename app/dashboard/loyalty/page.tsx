@@ -4,11 +4,15 @@ import { useEffect, useState } from "react";
 import { supabase, type LoyaltyCard, STAMPS_PER_REWARD as DEFAULT_STAMPS } from "@/lib/supabase";
 import { useToast } from "@/components/Toast";
 import PageHeader from "@/components/PageHeader";
+import Pagination from "@/components/Pagination";
+
+const PAGE_SIZE = 25;
 
 export default function LoyaltyAdminPage() {
   const [cards, setCards] = useState<LoyaltyCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [stampsPerReward, setStampsPerReward] = useState(DEFAULT_STAMPS);
   const { toast } = useToast();
 
@@ -35,6 +39,9 @@ export default function LoyaltyAdminPage() {
   const totalRewardsEarned = cards.reduce((s, c) => s + c.rewards_earned, 0);
   const totalRewardsRedeemed = cards.reduce((s, c) => s + c.rewards_redeemed, 0);
   const availableRewards = totalRewardsEarned - totalRewardsRedeemed;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pagedCards = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   async function redeemReward(card: LoyaltyCard) {
     if (card.rewards_earned - card.rewards_redeemed <= 0) return;
@@ -122,7 +129,7 @@ export default function LoyaltyAdminPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {filtered.map((card) => {
+            {pagedCards.map((card) => {
               const availableRewards = card.rewards_earned - card.rewards_redeemed;
               return (
                 <div key={card.id} className="rounded-xl border-2 border-ink/[0.08] p-4 hover:border-ink/15 transition-colors">
@@ -191,6 +198,7 @@ export default function LoyaltyAdminPage() {
             })}
           </div>
         )}
+        <Pagination page={safePage} total={filtered.length} pageSize={PAGE_SIZE} onPage={setPage} />
       </div>
     </div>
   );

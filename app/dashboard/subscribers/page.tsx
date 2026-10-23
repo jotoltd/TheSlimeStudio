@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { supabase, type Subscriber, type SubscriptionSettings } from "@/lib/supabase";
+import Pagination from "@/components/Pagination";
+
+const PAGE_SIZE = 25;
 
 export default function SubscribersPage() {
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
@@ -10,6 +13,7 @@ export default function SubscribersPage() {
   const [editingSub, setEditingSub] = useState<Subscriber | null>(null);
   const [editForm, setEditForm] = useState({ name: "", email: "", phone: "", address: "", postcode: "", status: "pending" });
   const [savingEdit, setSavingEdit] = useState(false);
+  const [page, setPage] = useState(1);
 
   useEffect(() => { loadData(); }, []);
 
@@ -54,6 +58,9 @@ export default function SubscribersPage() {
 
   const activeCount = subscribers.filter((s) => s.status === "active").length;
   const monthlyRevenue = settings ? activeCount * Number(settings.price) : 0;
+  const totalPages = Math.max(1, Math.ceil(subscribers.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pagedSubscribers = subscribers.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   return (
     <div className="py-8 md:py-10 px-5 md:px-10">
@@ -112,7 +119,7 @@ export default function SubscribersPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {subscribers.map((s) => (
+                    {pagedSubscribers.map((s) => (
                       <tr key={s.id} className="border-t border-ink/[0.08]">
                         <td className="py-3 pr-4 text-[0.9rem]">{s.name}</td>
                         <td className="py-3 pr-4 text-[0.9rem]">
@@ -139,6 +146,7 @@ export default function SubscribersPage() {
                 </table>
               </div>
             )}
+            <Pagination page={safePage} total={subscribers.length} pageSize={PAGE_SIZE} onPage={setPage} />
           </div>
         </>
       )}

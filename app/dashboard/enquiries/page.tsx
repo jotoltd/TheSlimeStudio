@@ -2,11 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { supabase, type Enquiry } from "@/lib/supabase";
+import Pagination from "@/components/Pagination";
+
+const PAGE_SIZE = 24;
 
 export default function EnquiriesAdminPage() {
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<"all" | "new" | "read" | "responded">("all");
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     loadEnquiries();
@@ -48,6 +52,9 @@ export default function EnquiriesAdminPage() {
   });
 
   const newCount = enquiries.filter((e) => (e.status || "new") === "new").length;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pagedEnquiries = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   return (
     <div className="py-8 md:py-10 px-5 md:px-10">
@@ -83,7 +90,7 @@ export default function EnquiriesAdminPage() {
           </div>
         ) : (
           <div className="grid md:grid-cols-2 gap-4">
-            {filtered.map((e) => {
+            {pagedEnquiries.map((e) => {
               const status = e.status || "new";
               return (
                 <div key={e.id} className={`rounded-xl p-5 border transition-colors ${status === "new" ? "border-bright-lavender/30 bg-bright-lavender/[0.03]" : "border-ink/[0.08] hover:border-ink/15"}`}>
@@ -128,6 +135,7 @@ export default function EnquiriesAdminPage() {
             })}
           </div>
         )}
+        <Pagination page={safePage} total={filtered.length} pageSize={PAGE_SIZE} onPage={setPage} />
       </div>
     </div>
   );

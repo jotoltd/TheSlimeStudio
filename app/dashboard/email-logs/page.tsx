@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import Pagination from "@/components/Pagination";
+
+const PAGE_SIZE = 25;
 
 type EmailLog = {
   id: string;
@@ -92,6 +95,7 @@ export default function EmailsPage() {
   const [tplMsg, setTplMsg] = useState("");
   const [preview, setPreview] = useState<{ subject: string; html: string } | null>(null);
   const [previewTick, setPreviewTick] = useState(0);
+  const [page, setPage] = useState(1);
 
   const tplIdRef = useRef(tplId);
   tplIdRef.current = tplId;
@@ -171,6 +175,9 @@ export default function EmailsPage() {
   }
 
   const types = Array.from(new Set([...Object.keys(data?.byType || {}), ...logs.map((l) => l.type)]));
+  const totalPages = Math.max(1, Math.ceil(logs.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pagedLogs = logs.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   if (loading && !data) return <div className="py-16 text-center text-ink-soft">Loading…</div>;
   if (!data) return <div className="py-16 text-center text-ink-soft">Failed to load</div>;
@@ -363,7 +370,7 @@ export default function EmailsPage() {
                 </tr>
               </thead>
               <tbody>
-                {logs.map((log) => (
+                {pagedLogs.map((log) => (
                   <tr key={log.id} className="border-t border-ink/[0.08]">
                     <td className="py-3 pr-4 text-[0.9rem] whitespace-nowrap">{new Date(log.created_at).toLocaleString("en-GB")}</td>
                     <td className="py-3 pr-4 text-[0.9rem]">{log.recipient}</td>
@@ -378,6 +385,7 @@ export default function EmailsPage() {
             </table>
           </div>
         )}
+        <Pagination page={safePage} total={logs.length} pageSize={PAGE_SIZE} onPage={setPage} />
       </div>
     </div>
   );

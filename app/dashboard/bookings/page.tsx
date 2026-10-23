@@ -4,6 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase, type Booking, type BookingSettings, paymentMethodFor, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, MAX_DAILY_BOOKINGS as DEFAULT_MAX } from "@/lib/supabase";
 import PageHeader from "@/components/PageHeader";
 import PaymentMethodBadge from "@/components/PaymentMethodBadge";
+import Pagination from "@/components/Pagination";
+
+const PAGE_SIZE = 50;
 
 type ViewMode = "calendar" | "table";
 
@@ -135,6 +138,7 @@ export default function BookingsAdminPage() {
   const [partyFilter, setPartyFilter] = useState<"all" | "party" | "regular">("all");
   const [selectedBookings, setSelectedBookings] = useState<Set<string>>(new Set());
   const [bulkMode, setBulkMode] = useState(false);
+  const [tablePage, setTablePage] = useState(1);
   const [showCustomerLookup, setShowCustomerLookup] = useState(false);
   const [customerQuery, setCustomerQuery] = useState("");
   const [customerResults, setCustomerResults] = useState<Booking[]>([]);
@@ -459,6 +463,10 @@ export default function BookingsAdminPage() {
     }
     return sortDir === "asc" ? cmp : -cmp;
   });
+
+  const tableTotalPages = Math.max(1, Math.ceil(sortedBookings.length / PAGE_SIZE));
+  const safeTablePage = Math.min(tablePage, tableTotalPages);
+  const pagedBookings = sortedBookings.slice((safeTablePage - 1) * PAGE_SIZE, safeTablePage * PAGE_SIZE);
 
   return (
     <div className="py-8 md:py-10 px-5 md:px-10">
@@ -813,7 +821,7 @@ export default function BookingsAdminPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedBookings.map((b) => (
+                  {pagedBookings.map((b) => (
                     <tr key={b.id} className={`border-b border-ink/[0.05] hover:bg-ink/[0.02] transition-colors ${bulkMode && selectedBookings.has(b.id) ? "bg-sky-blue-light/20" : ""}`}>
                       {bulkMode && (
                         <td className="py-3 pr-2">
@@ -877,6 +885,7 @@ export default function BookingsAdminPage() {
               </table>
             </div>
           )}
+          <Pagination page={safeTablePage} total={sortedBookings.length} pageSize={PAGE_SIZE} onPage={setTablePage} />
         </div>
       )}
 

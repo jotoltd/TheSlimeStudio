@@ -2,12 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { supabase, type SubscriptionSettings, type Subscriber } from "@/lib/supabase";
+import Pagination from "@/components/Pagination";
+
+const PAGE_SIZE = 25;
 
 export default function SubscriptionsAdminPage() {
   const [settings, setSettings] = useState<SubscriptionSettings | null>(null);
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [page, setPage] = useState(1);
   const [form, setForm] = useState({
     box_name: "",
     price: "",
@@ -38,6 +42,10 @@ export default function SubscriptionsAdminPage() {
     if (subsData) setSubscribers(subsData as Subscriber[]);
     setLoading(false);
   }
+
+  const totalPages = Math.max(1, Math.ceil(subscribers.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pagedSubscribers = subscribers.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   async function toggleEnabled() {
     if (!settings) return;
@@ -198,7 +206,7 @@ export default function SubscriptionsAdminPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {subscribers.map((s) => (
+                    {pagedSubscribers.map((s) => (
                       <tr key={s.id} className="border-t border-ink/[0.08]">
                         <td className="py-3 pr-4 text-[0.9rem]">{s.name}</td>
                         <td className="py-3 pr-4 text-[0.9rem]">
@@ -228,6 +236,7 @@ export default function SubscriptionsAdminPage() {
                 </table>
               </div>
             )}
+            <Pagination page={safePage} total={subscribers.length} pageSize={PAGE_SIZE} onPage={setPage} />
           </div>
         </>
       )}
