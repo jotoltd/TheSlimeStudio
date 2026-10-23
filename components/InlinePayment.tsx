@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { loadStripe, type Stripe } from "@stripe/stripe-js";
-import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { Elements, PaymentElement, ExpressCheckoutElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { stashPurchaseEmail } from "@/lib/ad-tracking";
 
 let stripePromise: Promise<Stripe | null> | null = null;
@@ -32,12 +32,10 @@ function PaymentForm({
   const elements = useElements();
   const [processing, setProcessing] = useState(false);
   const [errMsg, setErrMsg] = useState("");
+  const [expressReady, setExpressReady] = useState(false);
 
-  async function handlePay(e: React.FormEvent) {
-    e.preventDefault();
-    if (!stripe || !elements) return;
-    setProcessing(true);
-    setErrMsg("");
+  async function confirmPayment() {
+    if (!stripe || !elements) return false;
 
     // Keep the email for the post-3DS-redirect conversion event
     if (email) stashPurchaseEmail(email);
@@ -52,15 +50,41 @@ function PaymentForm({
 
     if (error) {
       setErrMsg(error.message || "Payment failed. Please try again.");
-      setProcessing(false);
-    } else {
+      return false;
+    }
+    return true;
+  }
+
+  async function handlePay(e: React.FormEvent) {
+    e.preventDefault();
+    setProcessing(true);
+    setErrMsg("");
+    if (await confirmPayment()) {
       onSuccess();
+    } else {
+      setProcessing(false);
     }
   }
 
   return (
     <form onSubmit={handlePay} className="space-y-4">
-      <PaymentElement options={{ layout: "tabs" }} />
+      {/* Dedicated Apple Pay / Google Pay button — easier to spot than the
+          wallet tabs inside PaymentElement. Renders nothing when the device
+          isn't eligible (no Wallet card, unsupported browser). */}
+      <ExpressCheckoutElement
+        onConfirm={async () => {
+          if (await confirmPayment()) onSuccess();
+        }}
+        onReady={(e) => setExpressReady(!!e.availablePaymentMethods)}
+      />
+      {expressReady && (
+        <div className="flex items-center gap-3 text-[0.75rem] text-ink-soft">
+          <span className="flex-1 border-t border-ink/10" />
+          or pay with card
+          <span className="flex-1 border-t border-ink/10" />
+        </div>
+      )}
+      <PaymentElement options={{ layout: "tabs", wallets: { applePay: "never", googlePay: "never" } }} />
       {errMsg && (
         <div className="bg-red-100 text-red-700 text-sm rounded-xl p-3">{errMsg}</div>
       )}
