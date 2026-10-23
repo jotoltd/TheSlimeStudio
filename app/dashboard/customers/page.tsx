@@ -42,7 +42,7 @@ export default function CustomersPage() {
   const [deleteMsg, setDeleteMsg] = useState("");
 
   async function deleteCustomer(c: Customer) {
-    if (!confirm(`Permanently delete ${c.name} (${c.email})?\n\nTheir account, loyalty card and subscriptions will be removed. Bookings, orders and gift cards are kept for accounting but all personal details on them are erased.\n\nThis cannot be undone.`)) return;
+    if (!confirm(`Permanently delete ${c.name} (${c.email})?\n\nTheir account, loyalty card, subscriptions and waitlist entries will be removed. Bookings, orders, gift cards, enquiries and event bookings are kept for accounting but all personal details on them are erased.\n\nThis cannot be undone.`)) return;
     if (!confirm("Really delete? This is the final confirmation.")) return;
     setDeleting(true); setDeleteMsg("");
     try {

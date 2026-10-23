@@ -112,7 +112,7 @@ function BookingPageInner() {
   const [wlSlot, setWlSlot] = useState("");
   const [wlPeople, setWlPeople] = useState(1);
   const [wlSending, setWlSending] = useState(false);
-  const [wlMsg, setWlMsg] = useState("");
+  const [wlMsg, setWlMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
   // Mount-time snapshot: the payment-redirect handler below runs once on load
   // and uses these values as fallbacks when the API doesn't echo them back.
@@ -558,7 +558,7 @@ function BookingPageInner() {
   );
 
   async function joinWaitlist() {
-    setWlSending(true); setWlMsg("");
+    setWlSending(true); setWlMsg(null);
     try {
       const res = await fetch("/api/waitlist", {
         method: "POST",
@@ -567,14 +567,17 @@ function BookingPageInner() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setWlMsg(data.error || "Couldn't join the waitlist — please try again");
+        setWlMsg({ type: "err", text: data.error || "Couldn't join the waitlist — please try again" });
       } else {
-        setWlMsg(data.already
-          ? "You're already on the waitlist for that slot — we'll be in touch!"
-          : "You're on the waitlist! We'll email you if a space opens up.");
+        setWlMsg({
+          type: "ok",
+          text: data.already
+            ? "You're already on the waitlist for that slot — we'll be in touch!"
+            : "You're on the waitlist! We'll email you if a space opens up.",
+        });
       }
     } catch {
-      setWlMsg("Network error — please try again");
+      setWlMsg({ type: "err", text: "Network error — please try again" });
     }
     setWlSending(false);
   }
@@ -1153,7 +1156,7 @@ function BookingPageInner() {
                           >
                             {wlSending ? "Joining…" : "Join Waitlist"}
                           </button>
-                          {wlMsg && <p className={`text-[0.8rem] mt-2 text-center ${wlMsg.includes("list") ? "text-green-600" : "text-red-600"}`}>{wlMsg}</p>}
+                          {wlMsg && <p className={`text-[0.8rem] mt-2 text-center ${wlMsg.type === "ok" ? "text-green-600" : "text-red-600"}`}>{wlMsg.text}</p>}
                           <p className="text-[0.7rem] text-ink-soft mt-2 text-center">Uses the name &amp; email fields below.</p>
                         </div>
                       )}

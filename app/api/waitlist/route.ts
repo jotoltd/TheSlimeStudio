@@ -16,6 +16,7 @@ export async function POST(req: NextRequest) {
   const { name, email, date, time_slot, people } = await req.json();
   const cleanEmail = String(email || "").trim().toLowerCase();
   const cleanName = String(name || "").trim() || null;
+  const cleanSlot = String(time_slot || "").trim();
   const party = Math.max(1, Math.min(20, Math.floor(Number(people)) || 1));
 
   if (!EMAIL_RE.test(cleanEmail)) {
@@ -24,24 +25,37 @@ export async function POST(req: NextRequest) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date || ""))) {
     return NextResponse.json({ error: "Invalid date" }, { status: 400 });
   }
-  if (!time_slot || typeof time_slot !== "string") {
+  if (!cleanSlot || cleanSlot.length > 30) {
     return NextResponse.json({ error: "Missing time slot" }, { status: 400 });
   }
   if (date < new Date().toISOString().slice(0, 10)) {
     return NextResponse.json({ error: "That date has already passed" }, { status: 400 });
   }
 
+  // Only take waitlist signups for slots that are actually sold out —
+  // otherwise anyone could park entries on slots they could just book.
+  const { data: settings } = await supabaseAdmin
+    .from("booking_settings").select("slot_capacity").eq("id", 1).single();
+  const slotCap = settings?.slot_capacity || 10;
+  const { data: slotBookings } = await supabaseAdmin
+    .from("bookings").select("people")
+    .eq("date", date).eq("time_slot", cleanSlot).eq("payment_status", "paid");
+  const slotUsed = (slotBookings || []).reduce((sum: number, b: { people: number }) => sum + b.people, 0);
+  if (slotCap - slotUsed > 0) {
+    return NextResponse.json({ error: "That slot still has space — please book it directly" }, { status: 400 });
+  }
+
   // Don't double-add the same email to the same slot
   const { data: existing } = await supabaseAdmin
     .from("waitlist").select("id")
-    .eq("email", cleanEmail).eq("date", date).eq("time_slot", time_slot)
+    .eq("email", cleanEmail).eq("date", date).eq("time_slot", cleanSlot)
     .maybeSingle();
   if (existing) {
     return NextResponse.json({ ok: true, already: true });
   }
 
   const { error } = await supabaseAdmin.from("waitlist").insert({
-    name: cleanName, email: cleanEmail, date, time_slot, people: party,
+    name: cleanName, email: cleanEmail, date, time_slot: cleanSlot, people: party,
   });
   if (error) {
     return NextResponse.json({ error: "Couldn't join the waitlist — please try again" }, { status: 500 });

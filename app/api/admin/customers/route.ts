@@ -102,9 +102,10 @@ export async function GET(req: NextRequest) {
 }
 
 // DELETE /api/admin/customers?id=...&email=... — GDPR erasure. Deletes the
-// customer account and loyalty/subscriber rows, and anonymises personal
-// details on their bookings, orders and gift cards (financial records are
-// kept for accounting, minus the identifying fields).
+// customer account and loyalty/subscriber/waitlist rows, and anonymises
+// personal details everywhere else they can appear: bookings, orders, gift
+// cards, enquiries, special event bookings and the email log (financial
+// records are kept for accounting, minus the identifying fields).
 export async function DELETE(req: NextRequest) {
   const token = req.cookies.get("admin_token")?.value;
   if (!token || !verifyToken(token)) {
@@ -120,11 +121,16 @@ export async function DELETE(req: NextRequest) {
 
   const anonEmail = `deleted-${id.slice(0, 8)}@removed.invalid`;
 
+  // Emails are stored with whatever casing the customer typed, so match
+  // case-insensitively. Escape LIKE wildcards — _ and % are legal in email
+  // local parts and would otherwise match other people's rows.
+  const emailLike = email.replace(/[\\%_]/g, (c) => `\\${c}`);
+
   // Anonymise PII on records we retain for accounting/analytics
   const { error: bkErr } = await supabaseAdmin
     .from("bookings")
     .update({ name: "[deleted]", email: anonEmail, phone: null, notes: null })
-    .eq("email", email);
+    .ilike("email", emailLike);
   if (bkErr) console.error("GDPR: bookings anonymise failed:", bkErr);
 
   const { error: ordErr } = await supabaseAdmin
@@ -138,24 +144,44 @@ export async function DELETE(req: NextRequest) {
       shipping_postcode: null,
       notes: null,
     })
-    .eq("customer_email", email);
+    .ilike("customer_email", emailLike);
   if (ordErr) console.error("GDPR: orders anonymise failed:", ordErr);
 
   const { error: gcPurchErr } = await supabaseAdmin
     .from("gift_cards")
     .update({ purchaser_email: anonEmail, purchaser_name: "[deleted]", message: null })
-    .eq("purchaser_email", email);
+    .ilike("purchaser_email", emailLike);
   if (gcPurchErr) console.error("GDPR: gift cards (purchaser) anonymise failed:", gcPurchErr);
   const { error: gcRecipErr } = await supabaseAdmin
     .from("gift_cards")
     .update({ recipient_email: anonEmail, recipient_name: "[deleted]" })
-    .eq("recipient_email", email);
+    .ilike("recipient_email", emailLike);
   if (gcRecipErr) console.error("GDPR: gift cards (recipient) anonymise failed:", gcRecipErr);
 
+  const { error: enqErr } = await supabaseAdmin
+    .from("enquiries")
+    .update({ name: "[deleted]", email: anonEmail, phone: null, message: null })
+    .ilike("email", emailLike);
+  if (enqErr) console.error("GDPR: enquiries anonymise failed:", enqErr);
+
+  const { error: evtErr } = await supabaseAdmin
+    .from("special_event_bookings")
+    .update({ name: "[deleted]", email: anonEmail, phone: null, customer_id: null })
+    .ilike("email", emailLike);
+  if (evtErr) console.error("GDPR: event bookings anonymise failed:", evtErr);
+
+  // Sent-mail log rows key off the recipient; subjects can also embed the
+  // person's name (e.g. "X sent you a gift card"), so clear both.
+  const { error: logErr } = await supabaseAdmin
+    .from("email_logs")
+    .update({ recipient: anonEmail, subject: "[personal data removed]" })
+    .ilike("recipient", emailLike);
+  if (logErr) console.error("GDPR: email log anonymise failed:", logErr);
+
   // Delete rows that exist purely to serve this person
-  await supabaseAdmin.from("loyalty_cards").delete().eq("email", email);
-  await supabaseAdmin.from("subscribers").delete().eq("email", email);
-  await supabaseAdmin.from("waitlist").delete().eq("email", email);
+  await supabaseAdmin.from("loyalty_cards").delete().ilike("email", emailLike);
+  await supabaseAdmin.from("subscribers").delete().ilike("email", emailLike);
+  await supabaseAdmin.from("waitlist").delete().ilike("email", emailLike);
 
   const { error: custErr } = await supabaseAdmin.from("customers").delete().eq("id", id);
   if (custErr) {
