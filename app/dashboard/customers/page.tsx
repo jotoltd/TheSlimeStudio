@@ -38,10 +38,33 @@ export default function CustomersPage() {
   const [selected, setSelected] = useState<Customer | null>(null);
   const [customerBookings, setCustomerBookings] = useState<CustomerBooking[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteMsg, setDeleteMsg] = useState("");
+
+  async function deleteCustomer(c: Customer) {
+    if (!confirm(`Permanently delete ${c.name} (${c.email})?\n\nTheir account, loyalty card and subscriptions will be removed. Bookings, orders and gift cards are kept for accounting but all personal details on them are erased.\n\nThis cannot be undone.`)) return;
+    if (!confirm("Really delete? This is the final confirmation.")) return;
+    setDeleting(true); setDeleteMsg("");
+    try {
+      const res = await fetch(`/api/admin/customers?id=${encodeURIComponent(c.id)}&email=${encodeURIComponent(c.email)}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) {
+        setDeleteMsg(data.error || "Delete failed");
+      } else {
+        setDeleteMsg("Customer data removed");
+        setCustomers((prev) => prev.filter((x) => x.id !== c.id));
+        setTimeout(() => { setSelected(null); setCustomerBookings([]); setDeleteMsg(""); }, 1200);
+      }
+    } catch {
+      setDeleteMsg("Network error — please try again");
+    }
+    setDeleting(false);
+  }
 
   async function openCustomer(c: Customer) {
     setSelected(c);
     setCustomerBookings([]);
+    setDeleteMsg("");
     setLoadingBookings(true);
     try {
       const res = await fetch(`/api/admin/customers?email=${encodeURIComponent(c.email)}`);
@@ -309,6 +332,19 @@ export default function CustomersPage() {
               >
                 Close
               </button>
+            </div>
+            <div className="mt-3 border-t border-ink/10 pt-3">
+              {deleteMsg ? (
+                <p className={`text-[0.8rem] ${deleteMsg.includes("removed") ? "text-green-600" : "text-red-600"}`}>{deleteMsg}</p>
+              ) : (
+                <button
+                  onClick={() => deleteCustomer(selected)}
+                  disabled={deleting}
+                  className="text-[0.8rem] text-red-500 hover:text-red-700 disabled:opacity-50"
+                >
+                  {deleting ? "Deleting…" : "Delete customer data (GDPR)"}
+                </button>
+              )}
             </div>
           </div>
         </div>

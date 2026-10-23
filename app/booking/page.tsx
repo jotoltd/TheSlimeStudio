@@ -108,6 +108,11 @@ function BookingPageInner() {
   const [evtBooking, setEvtBooking] = useState(false);
   const [evtMsg, setEvtMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [giftCardError, setGiftCardError] = useState("");
+  const [showWaitlist, setShowWaitlist] = useState(false);
+  const [wlSlot, setWlSlot] = useState("");
+  const [wlPeople, setWlPeople] = useState(1);
+  const [wlSending, setWlSending] = useState(false);
+  const [wlMsg, setWlMsg] = useState("");
 
   // Mount-time snapshot: the payment-redirect handler below runs once on load
   // and uses these values as fallbacks when the API doesn't echo them back.
@@ -546,6 +551,32 @@ function BookingPageInner() {
     setTimeSlot(slot);
     const rem = remaining[slot] ?? slotCapacity;
     if (people > rem) setPeople(Math.max(1, rem));
+  }
+
+  const fullSlots = timeSlots.filter(
+    (s) => (remaining[s] ?? slotCapacity) === 0 && !isSlotInPast(s, date)
+  );
+
+  async function joinWaitlist() {
+    setWlSending(true); setWlMsg("");
+    try {
+      const res = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, date, time_slot: wlSlot || fullSlots[0], people: wlPeople }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setWlMsg(data.error || "Couldn't join the waitlist — please try again");
+      } else {
+        setWlMsg(data.already
+          ? "You're already on the waitlist for that slot — we'll be in touch!"
+          : "You're on the waitlist! We'll email you if a space opens up.");
+      }
+    } catch {
+      setWlMsg("Network error — please try again");
+    }
+    setWlSending(false);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -1078,6 +1109,54 @@ function BookingPageInner() {
                           </button>
                         );
                       })}
+                    </div>
+                  )}
+                  {!loadingSlots && fullSlots.length > 0 && (
+                    <div className="mt-3">
+                      <button
+                        type="button"
+                        onClick={() => setShowWaitlist(!showWaitlist)}
+                        className="text-[0.85rem] text-bright-lavender font-medium hover:underline"
+                      >
+                        {showWaitlist ? "Hide waitlist" : "Sold out? Join the waitlist →"}
+                      </button>
+                      {showWaitlist && (
+                        <div className="mt-3 bg-ink/[0.03] rounded-xl p-4">
+                          <p className="text-[0.85rem] text-ink-soft mb-3">
+                            Leave your details and we&apos;ll email you if a space opens up on this date.
+                          </p>
+                          <div className="grid grid-cols-2 gap-3 mb-3">
+                            <div>
+                              <label className="block text-[0.8rem] font-medium mb-1">Full slot</label>
+                              <select
+                                value={wlSlot || fullSlots[0]}
+                                onChange={(e) => setWlSlot(e.target.value)}
+                                className="w-full px-3 py-2 border-2 border-ink/15 rounded-xl text-sm bg-white focus:outline-none focus:border-sky-blue-light"
+                              >
+                                {fullSlots.map((s) => <option key={s} value={s}>{s}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-[0.8rem] font-medium mb-1">People</label>
+                              <div className="flex items-center gap-2">
+                                <button type="button" onClick={() => setWlPeople(Math.max(1, wlPeople - 1))} className="w-8 h-8 rounded-full bg-ink/5 grid place-items-center hover:bg-ink/10">−</button>
+                                <span className="font-display w-6 text-center">{wlPeople}</span>
+                                <button type="button" onClick={() => setWlPeople(Math.min(20, wlPeople + 1))} className="w-8 h-8 rounded-full bg-ink/5 grid place-items-center hover:bg-ink/10">+</button>
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={joinWaitlist}
+                            disabled={wlSending}
+                            className="w-full px-4 py-2.5 rounded-full bg-bright-lavender text-white text-[0.9rem] font-medium disabled:opacity-60"
+                          >
+                            {wlSending ? "Joining…" : "Join Waitlist"}
+                          </button>
+                          {wlMsg && <p className={`text-[0.8rem] mt-2 text-center ${wlMsg.includes("list") ? "text-green-600" : "text-red-600"}`}>{wlMsg}</p>}
+                          <p className="text-[0.7rem] text-ink-soft mt-2 text-center">Uses the name &amp; email fields below.</p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

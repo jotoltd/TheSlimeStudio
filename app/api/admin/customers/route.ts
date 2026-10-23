@@ -100,3 +100,67 @@ export async function GET(req: NextRequest) {
     totalPages: Math.ceil((count || 0) / perPage),
   });
 }
+
+// DELETE /api/admin/customers?id=...&email=... — GDPR erasure. Deletes the
+// customer account and loyalty/subscriber rows, and anonymises personal
+// details on their bookings, orders and gift cards (financial records are
+// kept for accounting, minus the identifying fields).
+export async function DELETE(req: NextRequest) {
+  const token = req.cookies.get("admin_token")?.value;
+  if (!token || !verifyToken(token)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get("id");
+  const email = (searchParams.get("email") || "").trim().toLowerCase();
+  if (!id || !email) {
+    return NextResponse.json({ error: "Missing id or email" }, { status: 400 });
+  }
+
+  const anonEmail = `deleted-${id.slice(0, 8)}@removed.invalid`;
+
+  // Anonymise PII on records we retain for accounting/analytics
+  const { error: bkErr } = await supabaseAdmin
+    .from("bookings")
+    .update({ name: "[deleted]", email: anonEmail, phone: null, notes: null })
+    .eq("email", email);
+  if (bkErr) console.error("GDPR: bookings anonymise failed:", bkErr);
+
+  const { error: ordErr } = await supabaseAdmin
+    .from("shop_orders")
+    .update({
+      customer_name: "[deleted]",
+      customer_email: anonEmail,
+      customer_phone: null,
+      shipping_address: null,
+      shipping_city: null,
+      shipping_postcode: null,
+      notes: null,
+    })
+    .eq("customer_email", email);
+  if (ordErr) console.error("GDPR: orders anonymise failed:", ordErr);
+
+  const { error: gcPurchErr } = await supabaseAdmin
+    .from("gift_cards")
+    .update({ purchaser_email: anonEmail, purchaser_name: "[deleted]", message: null })
+    .eq("purchaser_email", email);
+  if (gcPurchErr) console.error("GDPR: gift cards (purchaser) anonymise failed:", gcPurchErr);
+  const { error: gcRecipErr } = await supabaseAdmin
+    .from("gift_cards")
+    .update({ recipient_email: anonEmail, recipient_name: "[deleted]" })
+    .eq("recipient_email", email);
+  if (gcRecipErr) console.error("GDPR: gift cards (recipient) anonymise failed:", gcRecipErr);
+
+  // Delete rows that exist purely to serve this person
+  await supabaseAdmin.from("loyalty_cards").delete().eq("email", email);
+  await supabaseAdmin.from("subscribers").delete().eq("email", email);
+  await supabaseAdmin.from("waitlist").delete().eq("email", email);
+
+  const { error: custErr } = await supabaseAdmin.from("customers").delete().eq("id", id);
+  if (custErr) {
+    return NextResponse.json({ error: "Failed to delete customer record" }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true });
+}

@@ -20,6 +20,7 @@ export default function DashboardPage() {
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [monthBreakdown, setMonthBreakdown] = useState({ bookings: 0, events: 0, shop: 0, cards: 0 });
   const [adMonth, setAdMonth] = useState({ count: 0, revenue: 0 });
+  const [ordersToFulfil, setOrdersToFulfil] = useState<number | null>(null);
   const [todayEvents, setTodayEvents] = useState<{ id: string; name: string; quantity: number; total_price: number; title: string; start_time: string }[]>([]);
 
   useEffect(() => {
@@ -140,6 +141,16 @@ export default function DashboardPage() {
         .sort((a, b) => a.start_time.localeCompare(b.start_time))
     );
 
+    // Orders still needing fulfilment — the column is new, so if the
+    // migration hasn't run yet the card simply stays hidden.
+    const { data: fulfilRows, error: fulfilErr } = await supabase
+      .from("shop_orders").select("payment_status, fulfillment_status").eq("payment_status", "paid");
+    if (!fulfilErr) {
+      setOrdersToFulfil(
+        (fulfilRows || []).filter((o) => (o.fulfillment_status || "new") !== "completed").length
+      );
+    }
+
     const { count: custCount } = await supabase.from("customers").select("*", { count: "exact", head: true });
     setCustomerCount(custCount || 0);
 
@@ -202,6 +213,19 @@ export default function DashboardPage() {
           shop stock and enquiries all in one place.
         </p>
       </div>
+
+      {/* Needs attention */}
+      {ordersToFulfil !== null && ordersToFulfil > 0 && (
+        <Link
+          href="/dashboard/orders?filter=to_fulfil"
+          className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-[16px] px-5 py-3.5 mb-8 hover:bg-amber-100/70 transition-colors"
+        >
+          <span className="text-[0.9rem] text-amber-800 font-medium">
+            📦 {ordersToFulfil} paid shop order{ordersToFulfil === 1 ? "" : "s"} waiting to be fulfilled
+          </span>
+          <span className="text-[0.8rem] text-amber-700">View →</span>
+        </Link>
+      )}
 
       {/* Revenue Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-5 mb-8">

@@ -146,6 +146,8 @@ export default function BookingsAdminPage() {
   const [customerQuery, setCustomerQuery] = useState("");
   const [customerResults, setCustomerResults] = useState<Booking[]>([]);
   const [duplicates, setDuplicates] = useState<{ key: string; bookings: Booking[] }[]>([]);
+  const [cleaningUp, setCleaningUp] = useState(false);
+  const [cleanupMsg, setCleanupMsg] = useState("");
   const [sortField, setSortField] = useState<"date" | "time_slot" | "people" | "total_price" | "name" | "payment_status" | "created_at">("date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
@@ -426,6 +428,20 @@ export default function BookingsAdminPage() {
     setSelectedBookings(new Set(filteredBookings.map((b) => b.id)));
   }
 
+  async function cleanupDuplicates() {
+    if (!confirm("Delete duplicate bookings that share the same payment reference? The oldest booking in each group is kept.")) return;
+    setCleaningUp(true); setCleanupMsg("");
+    try {
+      const res = await fetch("/api/cleanup-duplicates", { method: "POST" });
+      const data = await res.json();
+      setCleanupMsg(data.message || data.error || "Done");
+      loadBookings();
+    } catch {
+      setCleanupMsg("Network error — please try again");
+    }
+    setCleaningUp(false);
+  }
+
   async function searchCustomers() {
     const q = customerQuery.toLowerCase().trim();
     if (!q) { setCustomerResults([]); return; }
@@ -590,7 +606,16 @@ export default function BookingsAdminPage() {
 
       {duplicates.length > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
-          <h3 className="font-display text-[0.95rem] text-amber-800 mb-2">Duplicate Bookings Detected ({duplicates.length})</h3>
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <h3 className="font-display text-[0.95rem] text-amber-800">Duplicate Bookings Detected ({duplicates.length})</h3>
+            <button
+              onClick={cleanupDuplicates}
+              disabled={cleaningUp}
+              className="px-3 py-1.5 rounded-lg bg-amber-200 text-amber-900 text-[0.8rem] font-medium hover:bg-amber-300 transition-colors disabled:opacity-60 whitespace-nowrap"
+            >
+              {cleaningUp ? "Cleaning…" : "Auto-clean payment dupes"}
+            </button>
+          </div>
           <div className="space-y-1">
             {duplicates.slice(0, 5).map(({ key, bookings: bs }) => {
               const [name, date, time] = key.split("|");
@@ -602,6 +627,7 @@ export default function BookingsAdminPage() {
               );
             })}
           </div>
+          {cleanupMsg && <p className="text-[0.8rem] text-amber-800 mt-2">{cleanupMsg}</p>}
         </div>
       )}
 

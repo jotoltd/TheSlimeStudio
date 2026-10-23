@@ -30,6 +30,7 @@ const navSections = [
       { href: "/dashboard/bookings", label: "Bookings", Icon: CalendarIcon },
       { href: "/dashboard/events", label: "Special Events", Icon: CalendarIcon },
       { href: "/dashboard/opening-hours", label: "Opening Hours", Icon: ClockIcon },
+      { href: "/dashboard/waitlist", label: "Waitlist", Icon: UsersIcon },
     ],
   },
   {
@@ -38,6 +39,7 @@ const navSections = [
       { href: "/dashboard/shop", label: "Shop", Icon: ShoppingBagIcon },
       { href: "/dashboard/orders", label: "Orders", Icon: PackageIcon },
       { href: "/dashboard/subscribers", label: "Subscribers", Icon: UsersIcon },
+      { href: "/dashboard/subscriptions", label: "Subscription Box", Icon: PackageIcon },
       { href: "/dashboard/customers", label: "Customers", Icon: UsersIcon },
       { href: "/dashboard/loyalty", label: "Loyalty", Icon: GiftIcon },
       { href: "/dashboard/gift-cards", label: "Gift Cards", Icon: GiftIcon },

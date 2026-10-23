@@ -212,6 +212,7 @@ export type ShopOrder = {
   shipping_cost: number;
   total: number;
   payment_status: string;
+  fulfillment_status?: string | null;
   stripe_session_id: string | null;
   notes: string | null;
   created_at: string;
