@@ -67,7 +67,7 @@ function BookingPageInner() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [status, setStatus] = useState<"idle" | "sending" | "error" | "paid" | "cancelled" | "payment">("idle");
+  const [status, setStatus] = useState<"idle" | "sending" | "error" | "paid" | "cancelled" | "payment" | "confirming">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [clientSecret, setClientSecret] = useState("");
   const [publishableKey, setPublishableKey] = useState("");
@@ -112,6 +112,16 @@ function BookingPageInner() {
   // Mount-time snapshot: the payment-redirect handler below runs once on load
   // and uses these values as fallbacks when the API doesn't echo them back.
   const mount = useRef({ date, email, people, timeSlot, finalPrice: people * pricePerPerson }).current;
+
+  // The booking card switches between full-height views (form → payment →
+  // confirmation); scroll it into view whenever the view changes so mobile
+  // users aren't left staring at a blank area.
+  const cardSectionRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (status === "payment" || status === "confirming" || status === "paid" || status === "cancelled") {
+      cardSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [status]);
 
   useEffect(() => {
     // Auto-apply referral code from tracking link
@@ -283,14 +293,19 @@ function BookingPageInner() {
           body: JSON.stringify({ paymentIntentId: piId, fromRedirect: true }),
         }).then((res) => res.json()).then((data) => {
           if (data.bookingId) setBookingId(data.bookingId);
+          if (data.totalPrice != null && !isNaN(Number(data.totalPrice))) {
+            trackPurchase(Number(data.totalPrice), "GBP", piId, data.email || mount.email || undefined);
+          } else {
+            trackPurchase(mount.finalPrice, "GBP", piId, mount.email || undefined);
+          }
           if (data.overCapacity) {
             setErrorMsg("Your payment went through and your booking is saved, but this slot is now over capacity. We'll be in touch shortly to confirm or arrange an alternative.");
           }
         }).catch(() => {
           // The Stripe webhook creates the booking if this request never lands.
+          trackPurchase(mount.finalPrice, "GBP", piId, mount.email || undefined);
         }).finally(() => {
           setStatus("paid");
-          trackPurchase(mount.finalPrice, "GBP", piId, mount.email || undefined);
           // Clean up URL
           const url = new URL(window.location.href);
           url.searchParams.delete("payment_intent");
@@ -440,6 +455,11 @@ function BookingPageInner() {
   const giftCardCover = giftCardBalance !== null ? Math.min(giftCardBalance, afterDiscount) : 0;
   const finalPrice = Math.max(0, afterDiscount - giftCardCover);
 
+  // The total the applied discount was last validated against — lets the
+  // effect below re-check the code when the party size changes the total,
+  // so percentage/min-spend discounts can't go stale.
+  const discountValidatedFor = useRef<number | null>(null);
+
   async function applyDiscount() {
     if (!discountCode.trim()) return;
     setDiscountChecking(true);
@@ -453,6 +473,7 @@ function BookingPageInner() {
       const data = await res.json();
       if (data.valid) {
         setAppliedDiscount({ code: data.code, discountAmount: data.discountAmount, finalAmount: data.finalAmount });
+        discountValidatedFor.current = totalPrice;
       } else {
         setAppliedDiscount(null);
         setDiscountError(data.error || "Invalid code.");
@@ -467,7 +488,34 @@ function BookingPageInner() {
     setAppliedDiscount(null);
     setDiscountCode("");
     setDiscountError("");
+    discountValidatedFor.current = null;
   }
+
+  // Re-validate the applied code whenever the order total changes (e.g. the
+  // user adds another slime maker) — otherwise a stale discount amount would
+  // be charged through to the PaymentIntent.
+  useEffect(() => {
+    if (!appliedDiscount || discountValidatedFor.current === totalPrice) return;
+    discountValidatedFor.current = totalPrice;
+    let cancelled = false;
+    fetch("/api/discount/validate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: appliedDiscount.code, scope: "booking", amount: totalPrice }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        if (data.valid) {
+          setAppliedDiscount({ code: data.code, discountAmount: data.discountAmount, finalAmount: data.finalAmount });
+        } else {
+          setAppliedDiscount(null);
+          setDiscountError(data.error || "That code no longer applies to this total.");
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [totalPrice, appliedDiscount]);
 
   async function validateGiftCard() {
     if (!giftCardCode.trim()) return;
@@ -692,7 +740,7 @@ function BookingPageInner() {
         </div>
       </section>
 
-      <section className="section px-4" id={isAdLanding ? "book" : undefined}>
+      <section ref={cardSectionRef} className="section px-4" id={isAdLanding ? "book" : undefined}>
         <div className="container max-w-2xl">
           {status === "paid" ? (
             <div className="bg-white rounded-3xl p-6 md:p-10 shadow-sm">
@@ -705,6 +753,15 @@ function BookingPageInner() {
                   We&apos;ve sent a confirmation to <strong className="text-ink">{email}</strong>. See you soon!
                 </p>
               </div>
+
+              {/* Capacity warnings set during confirm (e.g. slot went over
+                  capacity while paying) — without this they were set but
+                  never shown. */}
+              {errorMsg && (
+                <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl p-3 mb-4">
+                  {errorMsg}
+                </div>
+              )}
 
               {/* Booking summary */}
               <div className="border-2 border-ink/[0.08] rounded-2xl overflow-hidden">
@@ -793,11 +850,20 @@ function BookingPageInner() {
                 Try Again
               </button>
             </div>
+          ) : status === "confirming" ? (
+            <div className="bg-white rounded-3xl p-8 md:p-10 shadow-sm text-center">
+              <span className="inline-block w-8 h-8 border-4 border-ink/10 border-t-magenta rounded-full animate-spin mb-4"></span>
+              <h2 className="font-display text-xl md:text-2xl mb-2">Payment received</h2>
+              <p className="text-ink-soft text-sm">Confirming your booking…</p>
+            </div>
           ) : status === "payment" ? (
             <div className="bg-white rounded-3xl p-5 md:p-8 shadow-sm">
               <h2 className="font-display text-lg md:text-xl mb-2 text-center">Complete Your Payment</h2>
-              <p className="text-sm text-ink-soft text-center mb-5">
+              <p className="text-sm text-ink-soft text-center mb-1">
                 <strong className="text-ink">{people} {people === 1 ? "person" : "people"}</strong> · {new Date(date + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} at <strong className="text-ink">{timeSlot}</strong> · <strong className="text-ink">£{finalPrice.toFixed(2)}</strong>
+              </p>
+              <p className="text-[0.8rem] text-ink-soft text-center mb-5">
+                Confirmation will be emailed to <strong className="text-ink">{email}</strong>
               </p>
               <Suspense fallback={<div className="py-8 text-center text-ink-soft text-sm">Loading payment form...</div>}>
                 <InlinePayment
@@ -806,8 +872,11 @@ function BookingPageInner() {
                   amount={finalPrice}
                   email={email}
                   onSuccess={() => {
-                    // Payment succeeded — NOW create the booking in the database
-                    // Retry up to 3 times in case of network issues
+                    // Payment succeeded — NOW create the booking in the database.
+                    // Show the "confirming" view so the user isn't left looking
+                    // at the completed payment form while this (and any retry)
+                    // runs.
+                    setStatus("confirming");
                     async function confirmBooking(attempt = 0) {
                       try {
                         const res = await fetch("/api/confirm-booking", {
@@ -861,8 +930,14 @@ function BookingPageInner() {
                     confirmBooking();
                   }}
                   onCancel={() => {
-                    setStatus("cancelled");
+                    // "← Back" means "fix my details", not "abandon the
+                    // booking" — return to the form rather than the
+                    // Payment Cancelled screen, and refresh availability in
+                    // case the slot filled while they were paying.
+                    setStatus("idle");
                     setClientSecret("");
+                    setErrorMsg("");
+                    loadAvailability(date);
                   }}
                 />
               </Suspense>
@@ -880,7 +955,6 @@ function BookingPageInner() {
                   if (eventDates.includes(bd)) return false;
                   return true;
                 }), ...getClosedDates().filter((d) => !eventDates.includes(d))]} />
-                {eventDates.length > 0 && null}
               </div>
 
               {/* Choose a session card — /go skips this unless the day has events,
@@ -929,7 +1003,7 @@ function BookingPageInner() {
                           type="button"
                           key={evt.instance_id}
                           disabled={isFull}
-                          onClick={() => { setSelectedSession(evt.instance_id); setSelectedEvent(evt); setEvtQty(1); setEvtName(""); setEvtEmail(""); setEvtPhone(""); setEvtMsg(null); setTimeSlot(""); }}
+                          onClick={() => { setSelectedSession(evt.instance_id); setSelectedEvent(evt); setEvtQty(1); setEvtName(name); setEvtEmail(email); setEvtPhone(phone); setEvtMsg(null); setTimeSlot(""); }}
                           className={`w-full flex items-center justify-between rounded-xl border-2 px-4 py-3 transition-all text-left ${
                             isFull
                               ? "border-ink/10 bg-ink/[0.02] opacity-60 cursor-not-allowed"
@@ -1096,7 +1170,8 @@ function BookingPageInner() {
                   <button
                     type="button"
                     onClick={() => setPeople((p) => Math.max(1, p - 1))}
-                    className="w-10 h-10 rounded-full bg-ink/10 text-ink text-lg hover:bg-ink/15 transition-colors"
+                    disabled={people <= 1}
+                    className="w-10 h-10 rounded-full bg-ink/10 text-ink text-lg hover:bg-ink/15 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     −
                   </button>
@@ -1104,7 +1179,8 @@ function BookingPageInner() {
                   <button
                     type="button"
                     onClick={() => setPeople((p) => Math.min(slotCapacity, maxPeopleForSlot, p + 1))}
-                    className="w-10 h-10 rounded-full bg-ink/10 text-ink text-lg hover:bg-ink/15 transition-colors"
+                    disabled={people >= Math.min(slotCapacity, maxPeopleForSlot)}
+                    className="w-10 h-10 rounded-full bg-ink/10 text-ink text-lg hover:bg-ink/15 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     +
                   </button>
@@ -1256,7 +1332,7 @@ function BookingPageInner() {
 
               <div className="flex items-center justify-between bg-sky-blue-light/20 rounded-xl p-4 md:p-5 mb-6">
                 <div className="text-xs md:text-sm text-ink-soft">
-                  {isAdLanding && timeSlot && (
+                  {timeSlot && (
                     <div className="font-medium text-ink mb-0.5">
                       {new Date(date + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })} · {timeSlot}
                     </div>
@@ -1329,7 +1405,7 @@ function BookingPageInner() {
                   {status === "sending" && (
                     <span className="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
                   )}
-                  {status === "sending" ? "Processing..." : `Continue to Payment — £${finalPrice.toFixed(2)}`}
+                  {status === "sending" ? "Processing..." : finalPrice === 0 ? "Confirm Booking" : `Continue to Payment — £${finalPrice.toFixed(2)}`}
                 </button>
                 {isAdLanding && (
                   <p className="text-[0.72rem] text-ink-soft mt-3 flex items-center justify-center gap-1.5">
