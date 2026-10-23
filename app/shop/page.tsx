@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ProductCard from "@/components/ProductCard";
@@ -149,11 +150,13 @@ export default function ShopPage() {
 
             <div className="border-2 border-dashed rounded-2xl p-4 md:p-8 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 bg-white/40 border-magenta">
               <div className="flex items-center gap-4 text-left">
-                <span className="text-3xl">💬</span>
+                <span className="text-3xl">🎁</span>
                 <div>
                   <p className="font-display text-[1.05rem] text-magenta">Can&apos;t Wait?</p>
                   <p className="font-display text-[0.95rem] text-ink">Our gift cards are available!</p>
-                  <p className="text-[0.85rem] md:text-[0.9rem] text-ink-soft mt-6 md:mt-8">Please send us a message.</p>
+                  <Link href="/gift-card" className="btn-primary mt-6 md:mt-8">
+                    Buy a Gift Card
+                  </Link>
                 </div>
               </div>
 
