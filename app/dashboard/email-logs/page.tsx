@@ -22,8 +22,8 @@ type EmailData = {
   failed30: number;
   monthCount: number;
   todayCount: number;
-  monthQuota: number;
-  dayQuota: number;
+  monthQuota: number | null;
+  dayQuota: number | null;
   byType: Record<string, { sent: number; failed: number }>;
   settings: Record<string, boolean>;
   templates: Record<string, string>;
@@ -111,7 +111,15 @@ export default function EmailsPage() {
       tpl.fields.forEach((f) => { draft[f.key] = json.templates?.[f.key] || ""; });
       setTplDraft(draft);
     }
-    let query = supabase.from("email_logs").select("*");
+    // Engagement rows (campaign opens/clicks/bounces/complaints) come from the
+    // Resend webhook, not real sends — keep them out of the "recent emails"
+    // list and the type filter chips. Per-recipient engagement lives on the
+    // Campaigns page.
+    let query = supabase.from("email_logs").select("*")
+      .not("type", "like", "campaign_open%")
+      .not("type", "like", "campaign_click%")
+      .not("type", "like", "campaign_bounce%")
+      .not("type", "like", "campaign_complaint%");
     if (filter !== "all") query = query.eq("type", filter);
     const { data: logRows } = await query.order("created_at", { ascending: false }).limit(100);
     if (logRows) setLogs(logRows as EmailLog[]);
@@ -199,11 +207,11 @@ export default function EmailsPage() {
         </div>
         <div className="bg-white rounded-[16px] p-5 shadow-sm">
           <div className="text-[0.7rem] uppercase tracking-wider text-ink-soft font-semibold mb-1">Sent today</div>
-          <div className="font-display text-[1.6rem]">{data.todayCount}<span className="text-[0.85rem] text-ink-soft font-normal"> / {data.dayQuota} max</span></div>
+          <div className="font-display text-[1.6rem]">{data.todayCount}<span className="text-[0.85rem] text-ink-soft font-normal">{data.dayQuota != null ? ` / ${data.dayQuota} max` : " · no cap"}</span></div>
         </div>
         <div className="bg-white rounded-[16px] p-5 shadow-sm">
           <div className="text-[0.7rem] uppercase tracking-wider text-ink-soft font-semibold mb-1">This month</div>
-          <div className="font-display text-[1.6rem]">{data.monthCount}<span className="text-[0.85rem] text-ink-soft font-normal"> / {data.monthQuota}</span></div>
+          <div className="font-display text-[1.6rem]">{data.monthCount}<span className="text-[0.85rem] text-ink-soft font-normal">{data.monthQuota != null ? ` / ${data.monthQuota}` : ""}</span></div>
         </div>
         <div className="bg-white rounded-[16px] p-5 shadow-sm">
           <div className="text-[0.7rem] uppercase tracking-wider text-ink-soft font-semibold mb-1">Last 30 days</div>

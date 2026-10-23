@@ -34,26 +34,48 @@ export async function GET(req: NextRequest) {
   const templates: Record<string, string> = {};
   (tplRows || []).forEach((r: { key: string; value: string }) => { templates[r.key] = r.value; });
 
-  const rows = logs || [];
+  // Rows written by the Resend webhook are engagement events (opens, clicks,
+  // bounces, complaints), not sends — exclude them so the counters and the
+  // by-type breakdown reflect real emails counted against the Resend quota.
+  const isEngagement = (type: string) => /^campaign_(open|click|bounce|complaint)/.test(type);
+  const rows = (logs || []).filter((l) => !isEngagement(l.type));
   const byType: Record<string, { sent: number; failed: number }> = {};
   let sent30 = 0, failed30 = 0, monthCount = 0, todayCount = 0;
   const today = new Date().toDateString();
   for (const l of rows) {
     const t = (byType[l.type] ||= { sent: 0, failed: 0 });
     if (l.status === "sent") { t.sent++; sent30++; } else { t.failed++; failed30++; }
+    // Quota cards count successful sends only — failed attempts didn't
+    // consume Resend quota.
+    if (l.status !== "sent") continue;
     if (l.created_at >= monthStart.toISOString()) monthCount++;
     if (new Date(l.created_at).toDateString() === today) todayCount++;
   }
 
-  // Resend domain status
+  // Resend domain status + real account quotas. Free is capped at 100/day,
+  // 3,000/month; Pro+ has no daily cap (limit comes back null). Falling back
+  // to null when /usage is unreachable shows the count with no cap claim.
   let domainStatus = "unknown";
+  let dayQuota: number | null = null;
+  let monthQuota: number | null = null;
   if (process.env.RESEND_API_KEY) {
     try {
-      const res = await fetch("https://api.resend.com/domains", {
-        headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}` },
-      });
-      const json = await res.json();
-      domainStatus = json?.data?.[0]?.status || "not found";
+      const [domRes, usageRes] = await Promise.all([
+        fetch("https://api.resend.com/domains", {
+          headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}` },
+        }),
+        fetch("https://api.resend.com/usage", {
+          headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}` },
+          cache: "no-store",
+        }),
+      ]);
+      const domJson = await domRes.json();
+      domainStatus = domJson?.data?.[0]?.status || "not found";
+      if (usageRes.ok) {
+        const usage = await usageRes.json();
+        dayQuota = usage?.emails?.daily?.limit ?? null;
+        monthQuota = usage?.emails?.monthly?.limit ?? null;
+      }
     } catch {}
   }
 
@@ -64,9 +86,8 @@ export async function GET(req: NextRequest) {
     failed30,
     monthCount,
     todayCount,
-    // Resend free plan limits
-    monthQuota: 3000,
-    dayQuota: 100,
+    monthQuota,
+    dayQuota,
     byType,
     settings: settings || {},
     templates,
