@@ -195,6 +195,51 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ received: true, recovered: true, bookingId: booking.id });
     }
 
+    // Not a booking — check for a pending gift card purchase. Without this the
+    // card only activates via the success-page redirect, so a closed browser
+    // would leave a paid card pending forever.
+    const { data: giftCard } = await supabaseAdmin
+      .from("gift_cards")
+      .select("id, code, balance, initial_value, expiry_date, purchaser_name, purchaser_email, recipient_name, recipient_email, message, ad_source, status")
+      .eq("payment_reference", checkoutRef)
+      .single();
+
+    if (giftCard) {
+      const { data: activated } = await supabaseAdmin
+        .from("gift_cards")
+        .update({ status: "active" })
+        .eq("id", giftCard.id)
+        .eq("status", "pending")
+        .select("id");
+
+      // Only the caller that flips pending → active emails, so this can't
+      // double-send when the success page also confirms the payment.
+      if (activated && activated.length > 0) {
+        try {
+          const { sendGiftCardEmail } = await import("@/lib/email");
+          await sendGiftCardEmail({
+            code: giftCard.code,
+            amount: Number(giftCard.initial_value ?? giftCard.balance) || 0,
+            expiryDate: giftCard.expiry_date,
+            purchaserName: giftCard.purchaser_name || "there",
+            purchaserEmail: giftCard.purchaser_email,
+            recipientName: giftCard.recipient_name,
+            recipientEmail: giftCard.recipient_email,
+            message: giftCard.message,
+          });
+        } catch (e) {
+          console.error("[sumup-webhook] Failed to send gift card email:", e);
+        }
+      }
+
+      const gcGclid = gclidFromNotes(giftCard.ad_source);
+      if (gcGclid) {
+        await uploadClickConversion({ gclid: gcGclid, value: giftCard.balance, orderId: giftCard.code }).catch(() => {});
+      }
+
+      return NextResponse.json({ received: true, recovered: true, giftCardId: giftCard.id });
+    }
+
     // Booking not found — can't create without customer details
     // (SumUp webhooks don't include customer booking details, only checkout info)
     console.error(`[sumup-webhook] Booking ${checkoutRef} not found in DB and no customer details available in webhook`);

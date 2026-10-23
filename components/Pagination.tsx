@@ -48,6 +48,7 @@ export default function Pagination({
             key={n}
             type="button"
             onClick={() => onPage(n)}
+            aria-current={n === page ? "page" : undefined}
             className={`${btn} ${
               n === page
                 ? "bg-sky-blue-light text-ink shadow-sm"

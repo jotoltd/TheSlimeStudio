@@ -341,20 +341,20 @@ export function giftCardHtml(opts: {
   return emailWrapper(`
     <h1 style="color: #ff2d78; font-size: 1.5rem; margin-bottom: 16px;">${ov.email_tpl_giftcard_heading || "Your Gift Card is Here!"}</h1>
     <p style="color: #333; font-size: 1rem; line-height: 1.6;">
-      Hi ${opts.forRecipient ? (opts.recipientName || "there") : opts.purchaserName},
+      Hi ${escapeHtml(opts.forRecipient ? (opts.recipientName || "there") : opts.purchaserName)},
     </p>
     <p style="color: #333; font-size: 1rem; line-height: 1.6;">
       ${opts.forRecipient
-        ? `${opts.purchaserName} has sent you a Slime Studio gift card!`
+        ? `${escapeHtml(opts.purchaserName)} has sent you a Slime Studio gift card!`
         : (ov.email_tpl_giftcard_body || "Thank you for purchasing a Slime Studio gift card!")}
     </p>
     ${opts.forRecipient && opts.message ? `
     <div style="background: #fff8f0; border-left: 3px solid #ff2d78; border-radius: 8px; padding: 12px 16px; margin: 16px 0;">
-      <p style="margin: 0; color: #555; font-size: 0.9rem; font-style: italic;">&ldquo;${opts.message}&rdquo;</p>
+      <p style="margin: 0; color: #555; font-size: 0.9rem; font-style: italic;">&ldquo;${escapeHtml(opts.message)}&rdquo;</p>
     </div>` : ""}
     <div style="background: linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%); border-radius: 12px; padding: 20px; margin: 16px 0; text-align: center;">
       <p style="margin: 0 0 4px; color: #2b2350; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em;">Gift Card Code</p>
-      <p style="margin: 0 0 8px; color: #2b2350; font-size: 1.6rem; font-weight: 700; letter-spacing: 0.08em;">${opts.code}</p>
+      <p style="margin: 0 0 8px; color: #2b2350; font-size: 1.6rem; font-weight: 700; letter-spacing: 0.08em;">${escapeHtml(opts.code)}</p>
       <p style="margin: 0; color: #2b2350; font-size: 1.1rem;"><strong>&pound;${opts.amount.toFixed(2)}</strong></p>
     </div>
     <div style="background: #fdeef7; border-radius: 12px; padding: 16px; margin: 16px 0;">
