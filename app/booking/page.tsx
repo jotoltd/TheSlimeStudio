@@ -683,10 +683,15 @@ function BookingPageInner() {
             <span>🚶</span>
             <span className="font-medium">{c.booking_walkins}</span>
           </div>
+          {isAdLanding && (
+            <div className="mt-6">
+              <a href="#book" className="btn-primary btn-book-now inline-block">Book Your Slot</a>
+            </div>
+          )}
         </div>
       </section>
 
-      <section className="section px-4">
+      <section className="section px-4" id={isAdLanding ? "book" : undefined}>
         <div className="container max-w-2xl">
           {status === "paid" ? (
             <div className="bg-white rounded-3xl p-6 md:p-10 shadow-sm">
@@ -1284,8 +1289,60 @@ function BookingPageInner() {
         </div>
       </section>
 
-      {/* What to Expect */}
-      {!isAdLanding && <section className="py-8 md:py-10 px-4" style={{ backgroundColor: "#f9f5f0" }}>
+      {isAdLanding && (
+        <>
+          {/* How it works — same steps as the homepage, content-managed */}
+          <section className="section px-4">
+            <div className="container">
+              <div className="text-center mb-8 md:mb-12">
+                <h2 className="font-display text-[1.8rem] md:text-[2.6rem] mt-4 mb-3 text-ink">{c.how_it_works_title}</h2>
+                <p className="text-[1.05rem] text-ink-soft max-w-[620px] mx-auto">{c.how_it_works_text}</p>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
+                {[
+                  { img: "/images/slime_studio_slime_toppings.jpg.jpeg", title: c.how_it_works_step1_title, desc: c.how_it_works_step1_desc },
+                  { img: "/images/slime_mixing.jpg.jpeg", title: c.how_it_works_step2_title, desc: c.how_it_works_step2_desc },
+                  { img: "/images/pink_slime_action.jpg.jpeg", title: c.how_it_works_step3_title, desc: c.how_it_works_step3_desc },
+                  { img: "/images/purple_finished_slime.jpg.jpeg", title: c.how_it_works_step4_title, desc: c.how_it_works_step4_desc },
+                ].map((step) => (
+                  <div key={step.title} className="bg-white rounded-[16px] md:rounded-[20px] p-4 md:p-9 text-center shadow-sm">
+                    <div className="relative w-[56px] h-[56px] md:w-[72px] md:h-[72px] rounded-full overflow-hidden mx-auto mb-3 md:mb-4">
+                      <Image src={step.img} alt={step.title} fill sizes="72px" className="object-cover" />
+                    </div>
+                    <h3 className="font-display text-[0.9rem] md:text-[1.15rem] mb-1 md:mb-1.5">{step.title}</h3>
+                    <p className="text-[0.75rem] md:text-[0.9rem] text-ink-soft">{step.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* Why choose us */}
+          <section className="section px-4">
+            <div className="container">
+              <div className="text-center mb-8 md:mb-12">
+                <h2 className="font-display text-[1.8rem] md:text-[2.6rem] mt-4 max-w-3xl mx-auto text-ink">{c.why_choose_title}</h2>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-6 max-w-3xl mx-auto">
+                {[
+                  { icon: "👨‍👩‍👧", title: c.why_choose_item1_title, desc: c.why_choose_item1_desc },
+                  { icon: "🎓", title: c.why_choose_item2_title, desc: c.why_choose_item2_desc },
+                  { icon: "✨", title: c.why_choose_item3_title, desc: c.why_choose_item3_desc },
+                ].map((item) => (
+                  <div key={item.title} className="bg-white rounded-[16px] md:rounded-[20px] p-5 md:p-8 shadow-sm text-center">
+                    <div className="text-[1.8rem] md:text-[2.5rem] mb-2 md:mb-3">{item.icon}</div>
+                    <h3 className="font-display text-[0.85rem] md:text-[1.05rem] mb-1.5 md:mb-2">{item.title}</h3>
+                    <p className="text-[0.75rem] md:text-[0.9rem] text-ink-soft">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        </>
+      )}
+
+      {/* What to Expect — always expanded on the /go landing page */}
+      <section className="py-8 md:py-10 px-4" style={{ backgroundColor: "#f9f5f0" }}>
         <div className="container max-w-2xl">
           <div className="bg-white rounded-2xl p-5 md:p-7 shadow-sm">
             <button
@@ -1296,7 +1353,7 @@ function BookingPageInner() {
               <h2 className="font-display text-[1.1rem] md:text-[1.3rem] text-ink">What to Expect</h2>
               <span className="text-ink-soft text-[1.2rem] transition-transform" style={{ transform: showWhatToExpect ? "rotate(180deg)" : "" }}>⌄</span>
             </button>
-            {showWhatToExpect && (
+            {(showWhatToExpect || isAdLanding) && (
               <div className="mt-4 space-y-3 text-[0.85rem] md:text-[0.9rem] text-ink-soft leading-relaxed">
                 <div className="flex gap-3">
                   <span className="text-[1.1rem] flex-shrink-0">🕐</span>
@@ -1322,9 +1379,22 @@ function BookingPageInner() {
             )}
           </div>
         </div>
-      </section>}
+      </section>
 
-      {!isAdLanding && <Footer />}
+      {isAdLanding ? (
+        <section className="px-4 pb-14 pt-4">
+          <div className="container max-w-2xl">
+            <div className="rounded-3xl p-8 md:p-12 text-center text-white shadow-lg" style={{ background: "linear-gradient(135deg, #ff2d78, #a855f7)" }}>
+              <h2 className="font-display text-[1.4rem] md:text-[2.2rem] mb-3">{c.cta_title}</h2>
+              <p className="text-[0.95rem] md:text-[1.05rem] mb-6 opacity-90 max-w-md mx-auto">{c.cta_text}</p>
+              <a href="#book" className="inline-block bg-white text-ink font-semibold rounded-full px-8 py-3.5 hover:scale-[1.03] transition-transform">Book Your Slot</a>
+              <p className="mt-6 text-[0.8rem] opacity-80">📍 Unit A, Feathers Yard, Holt, NR25 6BF</p>
+            </div>
+          </div>
+        </section>
+      ) : (
+        <Footer />
+      )}
     </>
   );
 }
