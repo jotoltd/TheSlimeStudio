@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense, lazy } from "react";
+import { usePathname } from "next/navigation";
 import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -55,6 +56,9 @@ type DayEvent = {
 
 function BookingPageInner() {
   const { content: c } = useContent();
+  // /go is the hidden ad-landing route — same booking flow minus nav/footer,
+  // and any booking through it is provably ad-channel.
+  const isAdLanding = usePathname() === "/go";
   const [date, setDate] = useState(todayISO());
   const [timeSlot, setTimeSlot] = useState<string>("");
   const [people, setPeople] = useState(1);
@@ -150,8 +154,12 @@ function BookingPageInner() {
         url.searchParams.delete("gad_source");
         window.history.replaceState({}, "", url.toString());
       }
+      // On the /go ad-landing page a bare visit is still provably ad-channel
+      // (ad click or shared link — the page is otherwise undiscoverable), so
+      // stamp a tracked-link source when no click id/utm came through.
+      if (isAdLanding && !getAdSource()) setAdSource("[Ad: utm:ad-landing]");
     }
-  }, []);
+  }, [isAdLanding]);
 
   useEffect(() => {
     // Prefill form if customer is signed in
@@ -658,7 +666,7 @@ function BookingPageInner() {
 
   return (
     <>
-      <Navbar />
+      {!isAdLanding && <Navbar />}
 
       <section className="py-[50px] md:py-[70px] text-center px-4" style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}>
         <div className="container">
@@ -1277,7 +1285,7 @@ function BookingPageInner() {
       </section>
 
       {/* What to Expect */}
-      <section className="py-8 md:py-10 px-4" style={{ backgroundColor: "#f9f5f0" }}>
+      {!isAdLanding && <section className="py-8 md:py-10 px-4" style={{ backgroundColor: "#f9f5f0" }}>
         <div className="container max-w-2xl">
           <div className="bg-white rounded-2xl p-5 md:p-7 shadow-sm">
             <button
@@ -1314,9 +1322,9 @@ function BookingPageInner() {
             )}
           </div>
         </div>
-      </section>
+      </section>}
 
-      <Footer />
+      {!isAdLanding && <Footer />}
     </>
   );
 }

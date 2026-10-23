@@ -218,7 +218,7 @@ export function bookingSourceLabel(notes: string | null | undefined): string {
   const detail = utm
     ? [utm[2], utm[3]].filter((p): p is string => !!p).map((p) => safeDecode(p.trim()).replace(/\+/g, " ")).join(" · ")
     : "";
-  const linkNames: Record<string, string> = { ig: "Instagram", instagram: "Instagram", fb: "Facebook", facebook: "Facebook", meta: "Meta" };
+  const linkNames: Record<string, string> = { ig: "Instagram", instagram: "Instagram", fb: "Facebook", facebook: "Facebook", meta: "Meta", "ad-landing": "Ad page" };
   const base =
     src === "meta" ? "Meta Ad" :
     src === "google" ? "Google Ad" :
