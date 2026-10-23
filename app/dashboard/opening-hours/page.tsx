@@ -8,6 +8,8 @@ import PageHeader from "@/components/PageHeader";
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+interface LegacyBlockedDate { date: string; reason: string | null }
+
 function todayISO() {
   const d = new Date();
   d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
@@ -17,6 +19,7 @@ function todayISO() {
 export default function OpeningHoursPage() {
   const [weekly, setWeekly] = useState<OpeningHour[]>([]);
   const [overrides, setOverrides] = useState<DateOverride[]>([]);
+  const [blockedDates, setBlockedDates] = useState<LegacyBlockedDate[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
@@ -48,7 +51,24 @@ export default function OpeningHoursPage() {
       if (data.weekly) setWeekly(data.weekly);
       if (data.overrides) setOverrides(data.overrides);
     } catch {}
+    try {
+      const res = await fetch("/api/blocked-dates", { cache: "no-store" });
+      const data = await res.json();
+      if (data.blockedDates) setBlockedDates(data.blockedDates);
+    } catch {}
     setLoading(false);
+  }
+
+  async function removeBlockedDate(date: string) {
+    if (!confirm(`Unblock ${new Date(date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}?`)) return;
+    const res = await fetch("/api/blocked-dates", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "remove", date }),
+    });
+    const data = await res.json();
+    if (!res.ok) toast(data.error || "Failed to remove", "error");
+    else { toast("Date unblocked"); load(); }
   }
 
   // Build a map: day_of_week -> OpeningHour
@@ -553,6 +573,40 @@ export default function OpeningHoursPage() {
             )}
           </div>
 
+          {/* Legacy blocked dates */}
+          {blockedDates.length > 0 && (
+            <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm">
+              <h2 className="font-display text-[1.1rem] mb-1">Blocked Dates (legacy)</h2>
+              <p className="text-[0.85rem] text-ink-soft mb-5">
+                These dates are also closed on the booking calendar. This is the older way of closing dates — use a <strong>Closed</strong> date override above for new closures, and remove these as they pass.
+              </p>
+              <div className="space-y-2">
+                {blockedDates.map((b) => (
+                  <div key={b.date} className="flex items-center justify-between rounded-lg border border-ink/[0.08] px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="text-center min-w-[50px]">
+                        <div className="text-[0.7rem] text-ink-soft uppercase">{DAY_SHORT[new Date(b.date + "T00:00:00").getDay()]}</div>
+                        <div className="font-display text-[1.1rem]">{new Date(b.date + "T00:00:00").getDate()}</div>
+                      </div>
+                      <div>
+                        <div className="text-[0.9rem] font-medium">
+                          {new Date(b.date + "T00:00:00").toLocaleDateString("en-GB", { month: "long", year: "numeric" })}
+                        </div>
+                        {b.reason && <div className="text-[0.8rem] text-ink-soft">{b.reason}</div>}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => removeBlockedDate(b.date)}
+                      className="px-3 py-1.5 rounded-lg bg-red-100 text-red-700 text-[0.8rem] hover:bg-red-200 transition-colors"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Info box */}
           <div className="bg-sky-blue-light/10 rounded-xl p-4 text-[0.85rem] text-ink-soft">
             <p className="font-medium text-ink mb-1">How it works:</p>
@@ -560,6 +614,7 @@ export default function OpeningHoursPage() {
               <li><strong>Weekly schedule</strong> sets your default opening hours for each day of the week</li>
               <li><strong>Date overrides</strong> take priority over the weekly schedule for specific dates — use these for holidays, special events, or one-off openings/closures</li>
               <li>If no weekly schedule is set, the system falls back to the global time slots in Settings</li>
+              <li><strong>Blocked dates</strong> (legacy list above, if shown) also close a date on the calendar — date overrides are the replacement</li>
             </ul>
           </div>
         </div>

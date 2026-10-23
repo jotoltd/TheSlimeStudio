@@ -117,6 +117,9 @@ export default function BookingsAdminPage() {
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [editForm, setEditForm] = useState({ date: "", time_slot: "", people: "1", name: "", email: "", phone: "", notes: "" });
+  const [editSlotAvailability, setEditSlotAvailability] = useState<Record<string, number>>({});
+  const [editDailyUsed, setEditDailyUsed] = useState(0);
+  const [editNotify, setEditNotify] = useState(true);
   const [savingEdit, setSavingEdit] = useState(false);
   const [editMsg, setEditMsg] = useState("");
   const [showAddBooking, setShowAddBooking] = useState(false);
@@ -228,6 +231,11 @@ export default function BookingsAdminPage() {
   }, [showAddBooking, addForm.date]);
 
   useEffect(() => {
+    if (editingBooking && editForm.date) loadEditAvailability(editForm.date, editingBooking.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingBooking, editForm.date]);
+
+  useEffect(() => {
     // Detect duplicates: same name + date + time_slot
     const seen: Record<string, Booking[]> = {};
     bookings.forEach((b) => {
@@ -315,12 +323,52 @@ export default function BookingsAdminPage() {
   function startEdit(b: Booking) {
     setEditingBooking(b);
     setEditForm({ date: b.date, time_slot: b.time_slot, people: String(b.people), name: b.name, email: b.email, phone: b.phone || "", notes: b.notes || "" });
+    setEditNotify(true);
     setEditMsg("");
+  }
+
+  async function loadEditAvailability(forDate: string, excludeId: string) {
+    const { data } = await supabase.from("bookings").select("id, time_slot, people").eq("date", forDate).eq("payment_status", "paid");
+    const used: Record<string, number> = {};
+    let dailyTotal = 0;
+    (data || []).forEach((b: { id: string; time_slot: string; people: number }) => {
+      if (b.id === excludeId) return;
+      used[b.time_slot] = (used[b.time_slot] || 0) + b.people;
+      dailyTotal += b.people;
+    });
+    setEditSlotAvailability(used);
+    setEditDailyUsed(dailyTotal);
   }
 
   async function saveEdit() {
     if (!editingBooking) return;
     setSavingEdit(true); setEditMsg("");
+    const moved = editForm.date !== editingBooking.date || editForm.time_slot !== editingBooking.time_slot;
+    if (moved) {
+      try {
+        const res = await fetch("/api/reschedule-booking", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            bookingId: editingBooking.id,
+            newDate: editForm.date,
+            newTimeSlot: editForm.time_slot,
+            people: parseInt(editForm.people) || 1,
+            notify: editNotify,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setEditMsg(data.error || "Could not move booking to that slot");
+          setSavingEdit(false);
+          return;
+        }
+      } catch {
+        setEditMsg("Network error — please try again");
+        setSavingEdit(false);
+        return;
+      }
+    }
     const { error } = await supabase.from("bookings").update({
       date: editForm.date, time_slot: editForm.time_slot, people: parseInt(editForm.people) || 1,
       name: editForm.name, email: editForm.email, phone: editForm.phone || null,
@@ -901,12 +949,26 @@ export default function BookingsAdminPage() {
               <div>
                 <label className="block text-sm font-medium mb-1.5">Time Slot</label>
                 <select value={editForm.time_slot} onChange={(e) => setEditForm({ ...editForm, time_slot: e.target.value })} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light">
-                  {timeSlots.map((t) => <option key={t} value={t}>{t}</option>)}
+                  {timeSlots.map((t) => {
+                    const remaining = slotCapacity - (editSlotAvailability[t] || 0);
+                    return (
+                      <option key={t} value={t} disabled={remaining <= 0}>
+                        {t} — {remaining > 0 ? `${remaining} left` : "FULL"}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1.5">People</label>
                 <input type="text" inputMode="numeric" value={editForm.people} onChange={(e) => setEditForm({ ...editForm, people: e.target.value.replace(/[^0-9]/g, "") })} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
+                {editForm.time_slot && (() => {
+                  const remaining = slotCapacity - (editSlotAvailability[editForm.time_slot] || 0);
+                  if (parseInt(editForm.people) > remaining) {
+                    return <p className="text-[0.8rem] text-red-600 mt-1">Only {remaining} spot{remaining === 1 ? "" : "s"} left at this time</p>;
+                  }
+                  return <p className="text-[0.8rem] text-green-600 mt-1">{remaining} spot{remaining === 1 ? "" : "s"} left at this time</p>;
+                })()}
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1.5">Name</label>
@@ -925,6 +987,18 @@ export default function BookingsAdminPage() {
                 <textarea value={editForm.notes} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} rows={3} placeholder="Internal notes about this booking..." className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light resize-none" />
               </div>
             </div>
+            {editForm.date && (
+              <div className="mt-4 bg-ink/[0.03] rounded-xl p-3 text-[0.8rem] text-ink-soft">
+                <span className="font-medium">Daily usage:</span> {editDailyUsed} / {maxDaily} people booked for {new Date(editForm.date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "long", year: "numeric" })}
+                {editForm.time_slot && <> · <span className="font-medium">{editForm.time_slot}:</span> {editSlotAvailability[editForm.time_slot] || 0} / {slotCapacity} people</>}
+              </div>
+            )}
+            {(editForm.date !== editingBooking.date || editForm.time_slot !== editingBooking.time_slot) && (
+              <label className="flex items-center gap-2 mt-4 text-sm text-ink">
+                <input type="checkbox" checked={editNotify} onChange={(e) => setEditNotify(e.target.checked)} />
+                Email customer their new booking details
+              </label>
+            )}
             {editMsg && <p className={`text-[0.85rem] mt-3 ${editMsg.includes("success") ? "text-green-600" : "text-red-600"}`}>{editMsg}</p>}
             <div className="flex gap-3 mt-6">
               <button onClick={saveEdit} disabled={savingEdit} className="flex-1 px-5 py-2.5 rounded-full bg-sky-blue-light text-ink text-[0.9rem] font-medium disabled:opacity-60">{savingEdit ? "Saving..." : "Save Changes"}</button>

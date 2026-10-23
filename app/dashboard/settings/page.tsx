@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase, type BookingSettings, type SiteSettings, type SiteTheme, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, MAX_DAILY_BOOKINGS as DEFAULT_MAX, STAMPS_PER_REWARD as DEFAULT_STAMPS } from "@/lib/supabase";
 
 export default function SettingsPage() {
-  const [tab, setTab] = useState<"site" | "bookings" | "payments" | "loyalty" | "ads">("site");
+  const [tab, setTab] = useState<"site" | "bookings" | "payments" | "loyalty" | "ads" | "admins">("site");
 
   // Site settings
   const [siteSettings, setSiteSettings] = useState<SiteSettings | null>(null);
@@ -55,6 +55,16 @@ export default function SettingsPage() {
   const [adsMsg, setAdsMsg] = useState("");
   const [openGuide, setOpenGuide] = useState<string | null>(null);
 
+  // Admin accounts
+  const [adminList, setAdminList] = useState<{ id: string; username: string; display_name: string; created_at: string }[]>([]);
+  const [newAdminUser, setNewAdminUser] = useState("");
+  const [newAdminName, setNewAdminName] = useState("");
+  const [newAdminPass, setNewAdminPass] = useState("");
+  const [savingAdmin, setSavingAdmin] = useState(false);
+  const [adminMsg, setAdminMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [resetPwFor, setResetPwFor] = useState<string | null>(null);
+  const [resetPw, setResetPw] = useState("");
+
   useEffect(() => { loadAll(); }, []);
 
   async function loadAll() {
@@ -97,6 +107,60 @@ export default function SettingsPage() {
       if (s.time_slots && s.time_slots.length > 0) setSlotsText(s.time_slots.join("\n"));
       if (s.slot_capacity) setSlotCapacity(s.slot_capacity);
       if (s.max_daily_bookings) setMaxDaily(s.max_daily_bookings);
+    }
+
+    try {
+      const res = await fetch("/api/admin/admins");
+      const data = await res.json();
+      if (data.admins) setAdminList(data.admins);
+    } catch {}
+  }
+
+  async function addAdmin() {
+    setSavingAdmin(true); setAdminMsg(null);
+    try {
+      const res = await fetch("/api/admin/admins", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: newAdminUser, display_name: newAdminName, password: newAdminPass }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setAdminMsg({ type: "err", text: data.error || "Failed to add admin" });
+      } else {
+        setAdminMsg({ type: "ok", text: `Admin @${data.admin.username} created` });
+        setNewAdminUser(""); setNewAdminName(""); setNewAdminPass("");
+        setAdminList((prev) => [...prev, data.admin]);
+      }
+    } catch {
+      setAdminMsg({ type: "err", text: "Network error" });
+    }
+    setSavingAdmin(false);
+  }
+
+  async function removeAdmin(id: string, username: string) {
+    if (!confirm(`Remove admin @${username}? They will no longer be able to log in.`)) return;
+    const res = await fetch(`/api/admin/admins?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    const data = await res.json();
+    if (!res.ok) {
+      setAdminMsg({ type: "err", text: data.error || "Failed to remove admin" });
+    } else {
+      setAdminList((prev) => prev.filter((a) => a.id !== id));
+    }
+  }
+
+  async function saveResetPw(id: string) {
+    const res = await fetch("/api/admin/admins", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, password: resetPw }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setAdminMsg({ type: "err", text: data.error || "Failed to update password" });
+    } else {
+      setAdminMsg({ type: "ok", text: "Password updated" });
+      setResetPwFor(null); setResetPw("");
     }
   }
 
@@ -235,6 +299,7 @@ export default function SettingsPage() {
     { key: "loyalty" as const, icon: "⭐", label: "Loyalty" },
     { key: "payments" as const, icon: "💳", label: "Payments" },
     { key: "ads" as const, icon: "📊", label: "Marketing" },
+    { key: "admins" as const, icon: "👤", label: "Admins" },
   ];
 
   return (
@@ -816,6 +881,86 @@ export default function SettingsPage() {
             <p className="text-[0.8rem] text-ink-soft">
               <strong>How it works:</strong> When enabled, tracking pixels are injected into the page on every page load. Conversion events (Purchase, AddToCart, InitiateCheckout) are automatically fired when customers complete bookings or shop orders. PageView is tracked automatically on navigation.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Admins tab */}
+      {tab === "admins" && (
+        <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm">
+          <h2 className="font-display text-[1.1rem] mb-1">Admin Accounts</h2>
+          <p className="text-[0.85rem] text-ink-soft mb-6">Who can log in to this dashboard at /admin.</p>
+
+          <div className="space-y-3 mb-8">
+            {adminList.map((a) => (
+              <div key={a.id} className="flex items-center justify-between flex-wrap gap-3 rounded-xl border border-ink/[0.08] px-4 py-3">
+                <div>
+                  <div className="font-medium text-[0.95rem]">{a.display_name}</div>
+                  <div className="text-[0.8rem] text-ink-soft">@{a.username}</div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {resetPwFor === a.id ? (
+                    <>
+                      <input
+                        type="password" value={resetPw} onChange={(e) => setResetPw(e.target.value)}
+                        placeholder="New password (8+ chars)"
+                        className="px-3 py-2 border-2 border-ink/15 rounded-lg text-sm w-52 focus:outline-none focus:border-sky-blue-light"
+                      />
+                      <button onClick={() => saveResetPw(a.id)} className="px-3 py-2 rounded-lg bg-sky-blue-light text-ink text-[0.8rem] font-medium">Save</button>
+                      <button onClick={() => { setResetPwFor(null); setResetPw(""); }} className="px-3 py-2 rounded-lg bg-ink/5 text-ink-soft text-[0.8rem]">Cancel</button>
+                    </>
+                  ) : (
+                    <>
+                      <button onClick={() => { setResetPwFor(a.id); setResetPw(""); }} className="px-3 py-1.5 rounded-lg bg-sky-blue-light/30 text-ink text-[0.8rem] hover:bg-sky-blue-light/50 transition-colors">
+                        Reset password
+                      </button>
+                      <button onClick={() => removeAdmin(a.id, a.username)} className="px-3 py-1.5 rounded-lg bg-red-100 text-red-700 text-[0.8rem] hover:bg-red-200 transition-colors">
+                        Remove
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+            {adminList.length === 0 && (
+              <p className="text-[0.85rem] text-ink-soft py-4 text-center">No admin accounts found.</p>
+            )}
+          </div>
+
+          <div className="border-t border-ink/[0.08] pt-6">
+            <h3 className="font-display text-[0.95rem] mb-4">Add an admin</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Username</label>
+                <input
+                  type="text" value={newAdminUser} onChange={(e) => setNewAdminUser(e.target.value)}
+                  placeholder="e.g. sarah"
+                  className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Display name</label>
+                <input
+                  type="text" value={newAdminName} onChange={(e) => setNewAdminName(e.target.value)}
+                  placeholder="e.g. Sarah"
+                  className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Password</label>
+                <input
+                  type="password" value={newAdminPass} onChange={(e) => setNewAdminPass(e.target.value)}
+                  placeholder="8+ characters"
+                  className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
+                />
+              </div>
+            </div>
+            <div className="mt-5 flex items-center gap-4">
+              <button onClick={addAdmin} disabled={savingAdmin} className="px-6 py-2.5 rounded-full bg-sky-blue-light text-ink text-[0.9rem] font-medium disabled:opacity-60 hover:-translate-y-0.5 hover:shadow-sm transition-all">
+                {savingAdmin ? "Adding..." : "Add Admin"}
+              </button>
+              {adminMsg && <p className={`text-[0.85rem] ${adminMsg.type === "ok" ? "text-green-600" : "text-red-600"}`}>{adminMsg.text}</p>}
+            </div>
           </div>
         </div>
       )}
