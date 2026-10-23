@@ -977,7 +977,7 @@ function BookingPageInner() {
                   {loadingSlots ? (
                     <div className="text-sm text-ink-soft py-4 text-center">Checking availability...</div>
                   ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 md:gap-3">
+                    <div className={`grid ${isAdLanding ? "grid-cols-3" : "grid-cols-2"} sm:grid-cols-3 gap-2 md:gap-3`}>
                       {timeSlots.map((slot) => {
                         const rem = remaining[slot] ?? slotCapacity;
                         const full = rem === 0;
@@ -1017,17 +1017,20 @@ function BookingPageInner() {
                     <div>
                       <label className="block text-sm font-medium mb-1.5">Name *</label>
                       <input type="text" value={evtName} onChange={(e) => setEvtName(e.target.value)} placeholder="Your name"
-                        className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
+                        autoComplete="name"
+                        className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-base md:text-sm focus:outline-none focus:border-sky-blue-light" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-1.5">Email *</label>
                       <input type="email" value={evtEmail} onChange={(e) => setEvtEmail(e.target.value)} placeholder="you@example.com"
-                        className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
+                        autoComplete="email"
+                        className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-base md:text-sm focus:outline-none focus:border-sky-blue-light" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-1.5">Phone (optional)</label>
                       <input type="tel" value={evtPhone} onChange={(e) => setEvtPhone(e.target.value)} placeholder="07123 456789"
-                        className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
+                        autoComplete="tel"
+                        className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-base md:text-sm focus:outline-none focus:border-sky-blue-light" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-1.5">
@@ -1119,8 +1122,9 @@ function BookingPageInner() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
+                    autoComplete="name"
                     placeholder="Jane Smith"
-                    className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
+                    className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-base md:text-sm focus:outline-none focus:border-sky-blue-light"
                   />
                 </div>
                 <div>
@@ -1130,8 +1134,9 @@ function BookingPageInner() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    autoComplete="email"
                     placeholder="jane@example.com"
-                    className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
+                    className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-base md:text-sm focus:outline-none focus:border-sky-blue-light"
                   />
                 </div>
               </div>
@@ -1142,9 +1147,13 @@ function BookingPageInner() {
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
+                  autoComplete="tel"
                   placeholder="07900 123456"
-                  className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
+                  className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-base md:text-sm focus:outline-none focus:border-sky-blue-light"
                 />
+                {isAdLanding && (
+                  <p className="text-[0.72rem] text-ink-soft mt-1.5">Only used if we need to reach you about your booking.</p>
+                )}
               </div>
 
               {/* Discount code */}
@@ -1165,7 +1174,7 @@ function BookingPageInner() {
                       onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
                       onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), applyDiscount())}
                       placeholder="Discount code"
-                      className="flex-1 min-w-0 px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light uppercase"
+                      className="flex-1 min-w-0 px-4 py-2.5 border-2 border-ink/15 rounded-xl text-base md:text-sm focus:outline-none focus:border-sky-blue-light uppercase"
                     />
                     <button
                       type="button"
@@ -1179,10 +1188,15 @@ function BookingPageInner() {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => setShowDiscountField(true)}
+                    onClick={() => {
+                      setShowDiscountField(true);
+                      // On /go one link reveals both code fields — fewer lines
+                      // for ad traffic who almost never have a gift card.
+                      if (isAdLanding) setShowGiftCardField(true);
+                    }}
                     className="text-[0.8rem] text-sky-blue-light hover:underline"
                   >
-                    Have a discount code?
+                    {isAdLanding ? "Have a discount code or gift card?" : "Have a discount code?"}
                   </button>
                 )}
                 {discountError && (
@@ -1200,14 +1214,18 @@ function BookingPageInner() {
                     </div>
                     <button type="button" onClick={removeGiftCard} className="text-[0.8rem] text-ink-soft hover:text-[#ff2d78]">Remove</button>
                   </div>
-                ) : isAdLanding && !showGiftCardField ? (
-                  <button
-                    type="button"
-                    onClick={() => setShowGiftCardField(true)}
-                    className="text-[0.8rem] text-sky-blue-light hover:underline"
-                  >
-                    Have a gift card?
-                  </button>
+                ) : !showGiftCardField ? (
+                  // On /go the gift card field is revealed together with the
+                  // discount field by the combined link above.
+                  !isAdLanding && (
+                    <button
+                      type="button"
+                      onClick={() => setShowGiftCardField(true)}
+                      className="text-[0.8rem] text-sky-blue-light hover:underline"
+                    >
+                      Have a gift card?
+                    </button>
+                  )
                 ) : (
                   <div className="flex gap-2">
                     <input
@@ -1216,7 +1234,7 @@ function BookingPageInner() {
                       onChange={(e) => setGiftCardCode(e.target.value.toUpperCase())}
                       onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), validateGiftCard())}
                       placeholder="SS-XXXXX"
-                      className="flex-1 min-w-0 px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light uppercase"
+                      className="flex-1 min-w-0 px-4 py-2.5 border-2 border-ink/15 rounded-xl text-base md:text-sm focus:outline-none focus:border-sky-blue-light uppercase"
                     />
                     <button
                       type="button"
@@ -1235,6 +1253,11 @@ function BookingPageInner() {
 
               <div className="flex items-center justify-between bg-sky-blue-light/20 rounded-xl p-4 md:p-5 mb-6">
                 <div className="text-xs md:text-sm text-ink-soft">
+                  {isAdLanding && timeSlot && (
+                    <div className="font-medium text-ink mb-0.5">
+                      {new Date(date + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })} · {timeSlot}
+                    </div>
+                  )}
                   <div>Total ({people} × £{pricePerPerson.toFixed(2)})</div>
                   {appliedDiscount && (
                     <div className="text-green-600 text-[0.75rem]">Discount −£{appliedDiscount.discountAmount.toFixed(2)}</div>
@@ -1305,6 +1328,15 @@ function BookingPageInner() {
                   )}
                   {status === "sending" ? "Processing..." : `Continue to Payment — £${finalPrice.toFixed(2)}`}
                 </button>
+                {isAdLanding && (
+                  <p className="text-[0.72rem] text-ink-soft mt-3 flex items-center justify-center gap-1.5">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                      <rect x="4" y="10" width="16" height="11" rx="2" />
+                      <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+                    </svg>
+                    Secure payment · Instant email confirmation
+                  </p>
+                )}
               </div>
               )}
             </form>
