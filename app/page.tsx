@@ -27,7 +27,7 @@ export default function HomePage() {
             sizes="100vw"
             className="object-cover"
           />
-          <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(255,196,251,0.85) 0%, rgba(171,247,220,0.75) 100%)" }} />
+          <div className="hero-overlay absolute inset-0" />
         </div>
         <div className="container relative z-[2]">
           <div className="max-w-lg mx-auto">
@@ -38,8 +38,7 @@ export default function HomePage() {
               height={480}
               priority
               sizes="(max-width: 768px) 240px, 480px"
-              className="w-full max-w-[240px] md:max-w-[480px] mx-auto mb-6 md:mb-10 object-contain rounded-full shadow-lg"
-              style={{ backgroundColor: "#ffffff" }}
+              className="w-full max-w-[240px] md:max-w-[480px] mx-auto mb-6 md:mb-10 object-contain rounded-full shadow-lg bg-white"
             />
             <h1 className="font-display text-[1.5rem] md:text-[2.4rem] leading-[1.15] mb-4 md:mb-5 text-ink">
               {c.hero_title}
@@ -180,16 +179,16 @@ export default function HomePage() {
 
       {/* Secondary CTA */}
       <section className="container my-10 md:my-20 px-4">
-        <div className="reveal rounded-[24px] md:rounded-[32px] p-8 md:p-16 text-center shadow-lg" style={{ backgroundColor: "#64d8ec" }}>
-          <h2 className="font-display text-[1.5rem] md:text-[2.6rem] mb-3 md:mb-3.5 text-white">{c.cta_title}</h2>
-          <p className="text-[0.95rem] md:text-[1.1rem] text-white/70 mb-6 md:mb-8 max-w-xl mx-auto">
+        <div className="reveal bg-sky-blue-light rounded-[24px] md:rounded-[32px] p-8 md:p-16 text-center shadow-lg">
+          <h2 className="font-display text-[1.5rem] md:text-[2.6rem] mb-3 md:mb-3.5 text-on-accent">{c.cta_title}</h2>
+          <p className="text-[0.95rem] md:text-[1.1rem] text-on-accent/70 mb-6 md:mb-8 max-w-xl mx-auto">
             {c.cta_text}
           </p>
           <div className="flex gap-4 justify-center flex-wrap">
             <Link href="/booking" className="btn-primary btn-book-now">
               Book Now
             </Link>
-            <Link href="/parties" className="btn-ghost" style={{ color: "#fff", borderColor: "rgba(255,255,255,0.35)", background: "rgba(255,255,255,0.08)" }}>
+            <Link href="/parties" className="btn-ghost" style={{ color: "rgb(var(--c-on-accent))", borderColor: "rgb(var(--c-on-accent) / 0.35)", background: "rgb(var(--c-on-accent) / 0.08)" }}>
               Plan a Party or Trip
             </Link>
           </div>

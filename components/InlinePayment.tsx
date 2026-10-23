@@ -102,6 +102,12 @@ export default function InlinePayment({
 }) {
   const [stripe, setStripe] = useState<Stripe | null>(null);
 
+  // MaintenanceGate sets data-theme before children mount; match the Payment
+  // Element (an iframe we can't restyle) to the active site theme.
+  const spooky =
+    typeof document !== "undefined" &&
+    document.documentElement.dataset.theme === "halloween";
+
   useEffect(() => {
     if (publishableKey) {
       loadStripeInstance(publishableKey).then(setStripe);
@@ -120,9 +126,9 @@ export default function InlinePayment({
       options={{
         clientSecret,
         appearance: {
-          theme: "stripe",
+          theme: spooky ? "night" : "stripe",
           variables: {
-            colorPrimary: "#64d8ec",
+            colorPrimary: spooky ? "#ff7a1a" : "#64d8ec",
             borderRadius: "12px",
           },
         },

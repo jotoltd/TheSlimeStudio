@@ -20,19 +20,19 @@ export default function AboutPage() {
   const features = [
     {
       img: "/images/pink_slime_action.jpg.jpeg",
-      gradient: "from-[#64d8ec] to-[#abf7dc]",
+      gradient: "from-sky-blue-light to-aquamarine",
       title: c.about_feature1_title,
       desc: c.about_feature1_desc,
     },
     {
       img: "/images/slime_studio_teal_slime.jpg.jpeg",
-      gradient: "from-[#ffc4fb] to-[#E0B0FF]",
+      gradient: "from-pagebg to-blush-pop",
       title: c.about_feature2_title,
       desc: c.about_feature2_desc,
     },
     {
       img: "/images/purple_finished_slime.jpg.jpeg",
-      gradient: "from-[#CBC3E3] to-[#abf7dc]",
+      gradient: "from-bright-lavender to-aquamarine",
       title: c.about_feature3_title,
       desc: c.about_feature3_desc,
     },
@@ -69,14 +69,14 @@ export default function AboutPage() {
         <button
           onClick={prevSlide}
           aria-label="Previous slide"
-          className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 text-ink grid place-items-center hover:bg-white transition-colors shadow-sm"
+          className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-card/80 text-ink grid place-items-center hover:bg-card transition-colors shadow-sm"
         >
           &#8249;
         </button>
         <button
           onClick={nextSlide}
           aria-label="Next slide"
-          className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 text-ink grid place-items-center hover:bg-white transition-colors shadow-sm"
+          className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-card/80 text-ink grid place-items-center hover:bg-card transition-colors shadow-sm"
         >
           &#8250;
         </button>
@@ -94,19 +94,19 @@ export default function AboutPage() {
       </div>
 
       {/* About Section */}
-      <section className="relative py-16 md:py-20 overflow-hidden" style={{ backgroundColor: "#ffc4fb" }}>
+      <section className="bg-pagebg relative py-16 md:py-20 overflow-hidden">
         {/* Decorative blob top-right */}
         <div className="hidden md:block absolute top-0 right-0 w-64 h-64 pointer-events-none opacity-90">
           <svg viewBox="0 0 200 200" className="w-full h-full">
             <path
               d="M60 0 C120 0 200 20 200 80 C200 140 150 170 100 160 C50 150 0 120 10 60 C15 30 30 0 60 0 Z"
-              fill="#64d8ec"
+              fill="rgb(var(--c-sky-blue-light))"
             />
           </svg>
           <span className="absolute top-10 left-10 text-3xl">⭐</span>
-          <span className="absolute top-24 left-28 w-3 h-3 rounded-full bg-[#E0B0FF]" />
-          <span className="absolute top-16 right-10 w-4 h-4 rounded-full bg-[#ff6fae]" />
-          <span className="absolute bottom-6 left-16 w-5 h-5 rounded-full bg-[#64d8ec]" />
+          <span className="absolute top-24 left-28 w-3 h-3 rounded-full bg-blush-pop" />
+          <span className="absolute top-16 right-10 w-4 h-4 rounded-full bg-pink-soft" />
+          <span className="absolute bottom-6 left-16 w-5 h-5 rounded-full bg-sky-blue-light" />
         </div>
 
         <div className="container relative z-[1] text-center max-w-2xl px-4">
@@ -166,11 +166,11 @@ export default function AboutPage() {
           <svg viewBox="0 0 200 200" className="w-full h-full">
             <path
               d="M40 200 C0 160 -10 100 40 60 C90 20 160 30 180 80 C200 130 160 180 110 195 C85 202 60 200 40 200 Z"
-              fill="#CBC3E3"
+              fill="rgb(var(--c-bright-lavender))"
             />
           </svg>
-          <span className="absolute top-10 left-16 w-3 h-3 rounded-full bg-[#64d8ec]" />
-          <span className="absolute top-24 left-8 w-4 h-4 rounded-full bg-[#E0B0FF]" />
+          <span className="absolute top-10 left-16 w-3 h-3 rounded-full bg-sky-blue-light" />
+          <span className="absolute top-24 left-8 w-4 h-4 rounded-full bg-blush-pop" />
         </div>
 
         {/* Decorative blob bottom-right */}
@@ -178,7 +178,7 @@ export default function AboutPage() {
           <svg viewBox="0 0 200 200" className="w-full h-full">
             <path
               d="M160 200 C200 160 210 100 160 60 C110 20 40 30 20 80 C0 130 40 180 90 195 C115 202 140 200 160 200 Z"
-              fill="#ff6fae"
+              fill="rgb(var(--c-pink-soft))"
             />
           </svg>
         </div>

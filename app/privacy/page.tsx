@@ -102,7 +102,7 @@ export default function PrivacyPage() {
   return (
     <>
       <Navbar />
-      <section className="pt-16 pb-14 md:pt-20 md:pb-16 text-center px-4" style={{ backgroundColor: "#ffc4fb" }}>
+      <section className="bg-pagebg pt-16 pb-14 md:pt-20 md:pb-16 text-center px-4">
         <div className="container">
           <h1 className="font-display text-[1.5rem] md:text-[3.4rem] text-ink mb-3 uppercase">Privacy Policy</h1>
           <p className="text-ink-soft text-[0.95rem] md:text-[1.05rem] max-w-xl mx-auto">

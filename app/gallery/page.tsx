@@ -28,8 +28,7 @@ export default function GalleryPage() {
       <Navbar />
 
       <section
-        className="py-[50px] md:py-[70px] text-center px-4"
-        style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}
+        className="hero-gradient py-[50px] md:py-[70px] text-center px-4"
       >
         <div className="container">
           <h1 className="font-display text-[1.5rem] md:text-[3.2rem] mt-3 mb-3 text-ink">

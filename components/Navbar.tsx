@@ -75,7 +75,7 @@ export default function Navbar() {
   }, []);
 
   return (
-    <nav className="sticky top-0 z-[1000] backdrop-blur-md overflow-visible shadow-sm transition-all" style={{ backgroundColor: "#abf7dc" }}>
+    <nav className="navbar-bg sticky top-0 z-[1000] backdrop-blur-md overflow-visible shadow-sm transition-all">
       <div className={`container flex items-center justify-between gap-6 transition-all ${scrolled ? "py-1.5" : "py-4"}`}>
         <Link href="/" className="flex items-center gap-2.5 flex-shrink-0">
           <Image
@@ -125,7 +125,7 @@ export default function Navbar() {
               </Link>
               <button
                 onClick={handleLogout}
-                className="text-ink/50 hover:text-[#ff2d78] hover:bg-ink/5 rounded-full w-9 h-9 grid place-items-center transition-colors"
+                className="text-ink/50 hover:text-hot-pink hover:bg-ink/5 rounded-full w-9 h-9 grid place-items-center transition-colors"
                 aria-label="Sign out"
                 title="Sign out"
               >
@@ -160,7 +160,7 @@ export default function Navbar() {
                 <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
               </svg>
               {itemCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 w-5 h-5 rounded-full bg-[#ff2d78] text-white text-[0.65rem] font-bold grid place-items-center">
+                <span className="absolute -top-0.5 -right-0.5 w-5 h-5 rounded-full bg-hot-pink text-on-accent text-[0.65rem] font-bold grid place-items-center">
                   {itemCount}
                 </span>
               )}
@@ -175,7 +175,7 @@ export default function Navbar() {
       </div>
 
       {open && (
-        <ul className="md:hidden px-6 pb-4 flex flex-col gap-1" style={{ backgroundColor: "#abf7dc" }}>
+        <ul className="navbar-bg md:hidden px-6 pb-4 flex flex-col gap-1">
           {navLinks.map((link) => (
             <li key={link.href}>
               <Link
@@ -208,7 +208,7 @@ export default function Navbar() {
             <li>
               <button
                 onClick={() => { setOpen(false); handleLogout(); }}
-                className="block w-full text-left py-2 font-display text-[1.1rem] px-4 rounded-full transition-all text-ink/70 hover:bg-ink/8 hover:text-[#ff2d78]"
+                className="block w-full text-left py-2 font-display text-[1.1rem] px-4 rounded-full transition-all text-ink/70 hover:bg-ink/8 hover:text-hot-pink"
               >
                 Sign Out
               </button>

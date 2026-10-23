@@ -69,7 +69,7 @@ function SuccessContent() {
   return (
     <>
       <Navbar />
-      <section className="py-[50px] md:py-[70px] text-center" style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}>
+      <section className="hero-gradient py-[50px] md:py-[70px] text-center">
         <div className="container max-w-2xl">
           <div className="text-5xl md:text-6xl mb-4">🎉</div>
           <h1 className="font-display text-[1.5rem] md:text-[2.5rem] text-ink mb-3">Order Confirmed!</h1>

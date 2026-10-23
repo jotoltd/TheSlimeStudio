@@ -168,9 +168,9 @@ export default function Calendar({
                     disabled
                       ? "text-ink/20 cursor-not-allowed"
                       : sel
-                      ? "bg-[#ff2d78] text-white font-semibold"
+                      ? "bg-hot-pink text-on-accent font-semibold"
                       : today
-                      ? "bg-[#ff2d78]/10 text-[#ff2d78] font-semibold hover:bg-[#ff2d78]/20"
+                      ? "bg-hot-pink/10 text-hot-pink font-semibold hover:bg-hot-pink/20"
                       : hasEvent
                       ? "bg-purple-100 text-purple-700 font-medium hover:bg-purple-200"
                       : "text-ink hover:bg-ink/5"

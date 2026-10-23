@@ -669,7 +669,7 @@ function BookingPageInner() {
     <>
       {!isAdLanding && <Navbar />}
 
-      <section className="py-[50px] md:py-[70px] text-center px-4" style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}>
+      <section className="hero-gradient py-[50px] md:py-[70px] text-center px-4">
         <div className="container">
           <h1 className={`font-display ${isAdLanding ? "text-[2rem]" : "text-[1.5rem]"} md:text-[3.2rem] mt-3 mb-3 text-ink`}>{c.booking_title}</h1>
           <p className={`${isAdLanding ? "text-[1.2rem]" : "text-[1.1rem]"} md:text-[1.3rem] text-ink/90 mb-2 font-display`}>{c.booking_subtitle}</p>
@@ -1164,7 +1164,7 @@ function BookingPageInner() {
                       <span className="text-[0.85rem] font-medium text-green-700">Code &quot;{appliedDiscount.code}&quot; applied</span>
                       <span className="text-[0.8rem] text-green-600 ml-2">−£{appliedDiscount.discountAmount.toFixed(2)}</span>
                     </div>
-                    <button type="button" onClick={removeDiscount} className="text-[0.8rem] text-ink-soft hover:text-[#ff2d78]">Remove</button>
+                    <button type="button" onClick={removeDiscount} className="text-[0.8rem] text-ink-soft hover:text-hot-pink">Remove</button>
                   </div>
                 ) : showDiscountField ? (
                   <div className="flex gap-2">
@@ -1200,7 +1200,7 @@ function BookingPageInner() {
                   </button>
                 )}
                 {discountError && (
-                  <p className="text-[0.8rem] text-[#ff2d78] mt-1.5">{discountError}</p>
+                  <p className="text-[0.8rem] text-hot-pink mt-1.5">{discountError}</p>
                 )}
               </div>
 
@@ -1212,7 +1212,7 @@ function BookingPageInner() {
                       <span className="text-[0.85rem] font-medium text-purple-700">Gift card applied</span>
                       <span className="text-[0.8rem] text-purple-600 ml-2">£{giftCardBalance.toFixed(2)} available</span>
                     </div>
-                    <button type="button" onClick={removeGiftCard} className="text-[0.8rem] text-ink-soft hover:text-[#ff2d78]">Remove</button>
+                    <button type="button" onClick={removeGiftCard} className="text-[0.8rem] text-ink-soft hover:text-hot-pink">Remove</button>
                   </div>
                 ) : !showGiftCardField ? (
                   // On /go the gift card field is normally revealed together
@@ -1250,7 +1250,7 @@ function BookingPageInner() {
                   </div>
                 )}
                 {giftCardError && (
-                  <p className="text-[0.8rem] text-[#ff2d78] mt-1.5">{giftCardError}</p>
+                  <p className="text-[0.8rem] text-hot-pink mt-1.5">{giftCardError}</p>
                 )}
               </div>
 
@@ -1303,7 +1303,7 @@ function BookingPageInner() {
                     type="checkbox"
                     checked={termsAgreed}
                     onChange={(e) => setTermsAgreed(e.target.checked)}
-                    className="accent-[#ff2d78] w-5 h-5 mt-0.5 flex-shrink-0"
+                    className="accent-hot-pink w-5 h-5 mt-0.5 flex-shrink-0"
                   />
                   <span className="text-[0.8rem] text-ink-soft leading-relaxed">
                     I confirm that I am aged 18 or over and have read and agree to The Slime Studio Participation Terms & Consent. Where I am booking for or accompanying children, I confirm that I am authorised to accept these terms on their behalf.
@@ -1402,7 +1402,7 @@ function BookingPageInner() {
       )}
 
       {/* What to Expect — always expanded on the /go landing page */}
-      <section className="py-8 md:py-10 px-4" style={{ backgroundColor: "#f9f5f0" }}>
+      <section className="py-8 md:py-10 px-4 bg-cream">
         <div className="container max-w-2xl">
           <div className="bg-white rounded-2xl p-5 md:p-7 shadow-sm">
             <button
@@ -1444,7 +1444,7 @@ function BookingPageInner() {
       {isAdLanding ? (
         <section className="px-4 pb-14 pt-4">
           <div className="container max-w-2xl">
-            <div className="rounded-3xl p-8 md:p-12 text-center text-white shadow-lg" style={{ background: "linear-gradient(135deg, #ff2d78, #a855f7)" }}>
+            <div className="cta-gradient rounded-3xl p-8 md:p-12 text-center text-on-accent shadow-lg">
               <h2 className="font-display text-[1.4rem] md:text-[2.2rem] mb-3">{c.cta_title}</h2>
               <p className="text-[0.95rem] md:text-[1.05rem] mb-6 opacity-90 max-w-md mx-auto">{c.cta_text}</p>
               <a href="#book" className="inline-block bg-white text-ink font-semibold rounded-full px-8 py-3.5 hover:scale-[1.03] transition-transform">Book Your Slot</a>

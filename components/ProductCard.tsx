@@ -12,10 +12,10 @@ const categoryLabels: Record<string, string> = {
 };
 
 const categoryGradients: Record<string, string> = {
-  handmade: "from-[#64d8ec] to-[#abf7dc]",
-  diy: "from-[#E0B0FF] to-[#CBC3E3]",
-  textures: "from-[#ffc4fb] to-[#E0B0FF]",
-  accessories: "from-[#CBC3E3] to-[#abf7dc]",
+  handmade: "from-sky-blue-light to-aquamarine",
+  diy: "from-blush-pop to-bright-lavender",
+  textures: "from-pagebg to-blush-pop",
+  accessories: "from-bright-lavender to-aquamarine",
 };
 
 const categoryEmojis: Record<string, string> = {
@@ -33,7 +33,7 @@ export default function ProductCard({ product }: { product: Product }) {
     <div className="reveal group cursor-pointer transition-transform duration-300 hover:-translate-y-1.5 hover:shadow-lg rounded-2xl overflow-hidden bg-white shadow-md">
       <div
         className={`relative aspect-square grid place-items-center bg-gradient-to-br ${
-          categoryGradients[product.category] || "from-[#ffc4fb] to-[#64d8ec]"
+          categoryGradients[product.category] || "from-pagebg to-sky-blue-light"
         } overflow-hidden`}
       >
         <span className="absolute top-3 left-3 bg-ink/80 text-white text-xs px-3 py-1 rounded-full z-10">
@@ -61,7 +61,7 @@ export default function ProductCard({ product }: { product: Product }) {
             className={`px-3 md:px-4 py-1.5 md:py-2 rounded-full text-xs md:text-sm font-medium transition-all ${
               outOfStock
                 ? "bg-gray-300 text-gray-400 cursor-not-allowed opacity-50"
-                : "bg-[#64d8ec] text-ink hover:bg-[#4cc5db] hover:scale-105"
+                : "bg-sky-blue-light text-ink hover:bg-[#4cc5db] hover:scale-105"
             }`}
           >
             {outOfStock ? "Sold Out" : "Add to Cart"}

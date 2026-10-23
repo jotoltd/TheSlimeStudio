@@ -45,7 +45,7 @@ export default function GiftCardSuccessPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-sky-blue-light/20 via-white to-bright-lavender/20 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-sky-blue-light/20 via-card to-bright-lavender/20 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-blue-light mx-auto mb-4"></div>
           <p className="text-ink-soft">Loading your gift card...</p>
@@ -56,7 +56,7 @@ export default function GiftCardSuccessPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-sky-blue-light/20 via-white to-bright-lavender/20 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-gradient-to-br from-sky-blue-light/20 via-card to-bright-lavender/20 flex items-center justify-center px-4">
         <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
           <div className="text-red-500 text-5xl mb-4">⚠️</div>
           <h1 className="font-display text-2xl text-ink mb-3">Something went wrong</h1>
@@ -70,7 +70,7 @@ export default function GiftCardSuccessPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-blue-light/20 via-white to-bright-lavender/20 flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-gradient-to-br from-sky-blue-light/20 via-card to-bright-lavender/20 flex items-center justify-center px-4 py-12">
       <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
         <div className="text-green-500 text-5xl mb-4">🎉</div>
         <h1 className="font-display text-2xl text-ink mb-3">Gift Card Purchased!</h1>

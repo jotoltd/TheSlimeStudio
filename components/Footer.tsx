@@ -32,7 +32,7 @@ export default function Footer() {
   }, []);
 
   return (
-    <footer className="text-ink pt-[60px] pb-[30px]" style={{ backgroundColor: "#FBF8F5" }}>
+    <footer className="text-ink pt-[60px] pb-[30px] bg-cream">
       <div className="container">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[2fr_1fr_1fr_1fr] gap-6 md:gap-10 pb-8 md:pb-12 border-b border-ink/15">
           <div>

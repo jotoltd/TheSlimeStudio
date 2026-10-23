@@ -108,7 +108,7 @@ function SubscribePageInner() {
     return (
       <>
         <Navbar />
-        <section className="py-[70px] text-center" style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}>
+        <section className="hero-gradient py-[70px] text-center">
           <div className="container">
             <h1 className="font-display text-[2rem] md:text-[3.2rem] mt-3 mb-3 text-ink">{c.subscribe_disabled_title}</h1>
           </div>
@@ -129,7 +129,7 @@ function SubscribePageInner() {
     <>
       <Navbar />
 
-      <section className="py-[50px] md:py-[70px] text-center px-4" style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}>
+      <section className="hero-gradient py-[50px] md:py-[70px] text-center px-4">
         <div className="container">
           <h1 className="font-display text-[1.5rem] md:text-[3.2rem] mt-3 mb-3 text-ink">{settings.box_name || c.subscribe_title}</h1>
           <p className="text-[0.95rem] md:text-[1.1rem] text-ink/80 max-w-[560px] mx-auto">

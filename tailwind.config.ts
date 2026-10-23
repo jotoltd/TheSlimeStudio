@@ -1,5 +1,11 @@
 import type { Config } from "tailwindcss";
 
+// Palette lives in CSS variables (see globals.css :root) so the whole site can
+// be re-themed at runtime via html[data-theme="..."].
+function themed(name: string) {
+  return `rgb(var(${name}) / <alpha-value>)`;
+}
+
 const config: Config = {
   content: [
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
@@ -9,18 +15,26 @@ const config: Config = {
     extend: {
       colors: {
         // Primary — Mint
-        aquamarine: "#abf7dc",
-        "sky-blue-light": "#64d8ec",
+        aquamarine: themed("--c-aquamarine"),
+        "sky-blue-light": themed("--c-sky-blue-light"),
         // Secondary — Lavender
-        "bright-lavender": "#CBC3E3",
-        "blush-pop": "#E0B0FF",
+        "bright-lavender": themed("--c-bright-lavender"),
+        "blush-pop": themed("--c-blush-pop"),
         // Accent — Coral
-        "canary-yellow": "#F2734C",
-        peach: "#F2734C",
+        "canary-yellow": themed("--c-canary-yellow"),
+        peach: themed("--c-peach"),
         // Neutrals
-        ink: "#211B3D",
-        "ink-soft": "#5A5278",
-        cream: "#FBF8F5",
+        ink: themed("--c-ink"),
+        "ink-soft": themed("--c-ink-soft"),
+        cream: themed("--c-cream"),
+        pagebg: themed("--c-body-bg"),
+        card: themed("--c-card"),
+        "on-accent": themed("--c-on-accent"),
+        // Brand accents & surfaces (hex values kept as tokens so themes recolour them)
+        "hot-pink": themed("--c-hot-pink"),
+        magenta: themed("--c-magenta"),
+        "pink-soft": themed("--c-pink-soft"),
+        "soft-pink": themed("--c-soft-pink"),
       },
       fontFamily: {
         display: ["Avenir", "Avenir Next", "var(--font-poppins)", "system-ui", "sans-serif"],

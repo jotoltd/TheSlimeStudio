@@ -43,7 +43,7 @@ export default function FAQsPage() {
       <Navbar />
 
       {/* Hero */}
-      <section className="pt-16 pb-14 md:pt-20 md:pb-16 text-center px-4" style={{ backgroundColor: "#ffc4fb" }}>
+      <section className="bg-pagebg pt-16 pb-14 md:pt-20 md:pb-16 text-center px-4">
         <div className="container">
           <h1 className="font-display text-[1.5rem] md:text-[3.4rem] text-ink mb-3 uppercase">
             {c.faq_title}
@@ -56,7 +56,7 @@ export default function FAQsPage() {
       </section>
 
       {/* FAQ Accordion */}
-      <section className="py-10 md:py-16 px-4" style={{ backgroundColor: "#ffc4fb" }}>
+      <section className="bg-pagebg py-10 md:py-16 px-4">
         <div className="container max-w-3xl">
           <div className="space-y-3 md:space-y-4">
             {faqs.map((faq, i) => (
@@ -64,8 +64,7 @@ export default function FAQsPage() {
                 <summary className="font-display text-[0.9rem] md:text-[1.05rem] cursor-pointer list-none flex justify-between items-center gap-3 md:gap-4">
                   <span>{faq.q}</span>
                   <span
-                    className="text-2xl flex-shrink-0 transition-transform group-open:rotate-45"
-                    style={{ color: "#ff2d78" }}
+                    className="text-2xl flex-shrink-0 transition-transform group-open:rotate-45 text-hot-pink"
                   >
                     +
                   </span>
@@ -78,7 +77,7 @@ export default function FAQsPage() {
       </section>
 
       {/* CTA */}
-      <section className="py-12 text-center" style={{ backgroundColor: "#ffc4fb" }}>
+      <section className="bg-pagebg py-12 text-center">
         <div className="container">
           <h2 className="font-display text-[1.2rem] md:text-[1.5rem] text-ink mb-6 uppercase">
             {c.faq_cta_title}

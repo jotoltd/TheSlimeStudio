@@ -88,7 +88,7 @@ export default function PartiesPage() {
       </div>
 
       {/* Intro */}
-      <section className="text-center py-10 md:py-16 px-4" style={{ backgroundColor: "#ffc4fb" }}>
+      <section className="bg-pagebg text-center py-10 md:py-16 px-4">
         <div className="container max-w-2xl">
           <h1 className="font-display text-[1.4rem] md:text-[2.6rem] leading-[1.2] mb-3 text-ink">
             {c.parties_hero_title}
@@ -96,7 +96,7 @@ export default function PartiesPage() {
           <p className="text-[0.9rem] md:text-[1rem] text-ink/80 leading-relaxed mb-4">
             {c.parties_hero_text}
           </p>
-          <p className="font-display text-[1.05rem] mb-4" style={{ color: "#ff2d78" }}>
+          <p className="font-display text-[1.05rem] mb-4 text-hot-pink">
             {c.parties_tagline}
           </p>
           <div className="inline-flex items-center gap-2 bg-white/50 rounded-full px-4 py-2 text-[0.85rem] text-ink">
@@ -107,7 +107,7 @@ export default function PartiesPage() {
       </section>
 
       {/* Party Prices */}
-      <section className="py-14 md:py-16" style={{ backgroundColor: "#fdeef7" }}>
+      <section className="bg-soft-pink py-14 md:py-16">
         <div className="container max-w-4xl">
           <div className="flex items-center justify-center gap-3 mb-3">
             <span className="text-ink/40">↝</span>
@@ -120,22 +120,22 @@ export default function PartiesPage() {
 
           {/* Three headline boxes — mirrors the poster */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-5 mb-6">
-            <div className="bg-white rounded-2xl p-7 text-center shadow-sm border-2 border-[#ff6fae]/30">
-              <div className="inline-block rounded-full px-4 py-1 mb-3 text-[0.7rem] font-semibold uppercase tracking-wider text-white" style={{ backgroundColor: "#ff2d78" }}>
+            <div className="bg-white rounded-2xl p-7 text-center shadow-sm border-2 border-pink-soft/30">
+              <div className="inline-block rounded-full px-4 py-1 mb-3 text-[0.7rem] font-semibold uppercase tracking-wider text-on-accent bg-hot-pink">
                 Party Package
               </div>
-              <div className="font-display text-[2.4rem] leading-none mb-2" style={{ color: "#ff2d78" }}>£100</div>
+              <div className="font-display text-[2.4rem] leading-none mb-2 text-hot-pink">£100</div>
               <div className="text-[0.85rem] text-ink-soft leading-snug">
                 Includes up to<br />
                 <span className="font-semibold text-ink">{BASE_CHILDREN} children</span>
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl p-7 text-center shadow-sm border-2 border-[#64d8ec]/40">
-              <div className="inline-block rounded-full px-4 py-1 mb-3 text-[0.7rem] font-semibold uppercase tracking-wider text-white" style={{ backgroundColor: "#2ba7c4" }}>
+            <div className="bg-white rounded-2xl p-7 text-center shadow-sm border-2 border-sky-blue-light/40">
+              <div className="inline-block rounded-full px-4 py-1 mb-3 text-[0.7rem] font-semibold uppercase tracking-wider text-white bg-[#2ba7c4]">
                 Each Additional Child
               </div>
-              <div className="font-display text-[2.4rem] leading-none mb-2" style={{ color: "#2ba7c4" }}>£{ADDITIONAL_CHILD_PRICE.toFixed(2)}</div>
+              <div className="font-display text-[2.4rem] leading-none mb-2 text-[#2ba7c4]">£{ADDITIONAL_CHILD_PRICE.toFixed(2)}</div>
               <div className="text-[0.85rem] text-ink-soft leading-snug">
                 Per child<br />
                 <span className="font-semibold text-ink">Maximum {MAX_CHILDREN} children</span>
@@ -144,7 +144,7 @@ export default function PartiesPage() {
 
             <div className="bg-white rounded-2xl p-7 text-center shadow-sm border-2 border-[#8b5fbf]/30">
               <div className="mb-3 text-2xl">🕐</div>
-              <div className="font-display text-[2.4rem] leading-none mb-2" style={{ color: "#8b5fbf" }}>90 Mins</div>
+              <div className="font-display text-[2.4rem] leading-none mb-2 text-[#8b5fbf]">90 Mins</div>
               <div className="text-[0.85rem] text-ink-soft leading-snug">
                 Private<br />
                 <span className="font-semibold text-ink">studio time</span>
@@ -160,7 +160,7 @@ export default function PartiesPage() {
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               {EXAMPLES.map((count) => (
-                <div key={count} className="rounded-xl px-3 py-4 text-center" style={{ backgroundColor: "#fdeef7" }}>
+                <div key={count} className="bg-soft-pink rounded-xl px-3 py-4 text-center">
                   <div className="text-[0.78rem] text-ink-soft uppercase tracking-wider mb-1">
                     {count} {count === 1 ? "child" : "children"}
                   </div>
@@ -191,7 +191,7 @@ export default function PartiesPage() {
       </section>
 
       {/* What's Included */}
-      <section className="py-14 md:py-16" style={{ backgroundColor: "#ffc4fb" }}>
+      <section className="bg-pagebg py-14 md:py-16">
         <div className="container max-w-4xl">
           <div className="flex items-center justify-center gap-3 mb-10">
             <span className="text-ink/40">↝</span>
@@ -224,7 +224,7 @@ export default function PartiesPage() {
       </section>
 
       {/* Enquiry Form */}
-      <section className="py-14 md:py-16" style={{ backgroundColor: "#fdeef7" }}>
+      <section className="bg-soft-pink py-14 md:py-16">
         <div className="container max-w-2xl">
           <div className="flex items-center justify-center gap-3 mb-8">
             <span className="text-ink/40">↝</span>
@@ -257,7 +257,7 @@ export default function PartiesPage() {
                     name="name"
                     required
                     placeholder="Jane Smith"
-                    className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-[#ff2d78]"
+                    className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-hot-pink"
                   />
                 </div>
                 <div>
@@ -267,7 +267,7 @@ export default function PartiesPage() {
                     name="email"
                     required
                     placeholder="jane@example.com"
-                    className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-[#ff2d78]"
+                    className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-hot-pink"
                   />
                 </div>
               </div>
@@ -279,7 +279,7 @@ export default function PartiesPage() {
                     type="tel"
                     name="phone"
                     placeholder="07900 123456"
-                    className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-[#ff2d78]"
+                    className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-hot-pink"
                   />
                 </div>
                 <div>
@@ -287,7 +287,7 @@ export default function PartiesPage() {
                   <input
                     type="date"
                     name="party_date"
-                    className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-[#ff2d78]"
+                    className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-hot-pink"
                   />
                 </div>
               </div>
@@ -300,7 +300,7 @@ export default function PartiesPage() {
                   min={1}
                   max={MAX_CHILDREN}
                   placeholder="e.g. 8"
-                  className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-[#ff2d78]"
+                  className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-hot-pink"
                 />
                 <p className="text-[0.78rem] text-ink-soft mt-2">
                   £{BASE_PRICE} for up to {BASE_CHILDREN} children, then £{ADDITIONAL_CHILD_PRICE.toFixed(2)} per extra child (max {MAX_CHILDREN}).
@@ -313,7 +313,7 @@ export default function PartiesPage() {
                   name="message"
                   rows={3}
                   placeholder="Tell us about the occasion, any special requests, etc."
-                  className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-[#ff2d78] resize-none"
+                  className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-hot-pink resize-none"
                 />
               </div>
 
@@ -334,7 +334,7 @@ export default function PartiesPage() {
       </section>
 
       {/* Contact */}
-      <section className="py-14 md:py-16" style={{ backgroundColor: "#ffc4fb" }}>
+      <section className="bg-pagebg py-14 md:py-16">
         <div className="container max-w-3xl">
           <div className="bg-white rounded-[28px] p-8 md:p-10 shadow-sm text-center">
             <h2 className="font-display text-[1.3rem] mb-2 text-ink">Get In Touch</h2>
@@ -342,13 +342,13 @@ export default function PartiesPage() {
               {c.parties_contact_text}
             </p>
             <div className="flex flex-col items-center gap-3 mb-8">
-              <a href="https://instagram.com/theslimestudioexperience" target="_blank" rel="noopener noreferrer" className="text-[0.95rem] text-ink hover:text-[#ff2d78] transition-colors inline-flex items-center gap-1.5">
+              <a href="https://instagram.com/theslimestudioexperience" target="_blank" rel="noopener noreferrer" className="text-[0.95rem] text-ink hover:text-hot-pink transition-colors inline-flex items-center gap-1.5">
                 <InstagramIcon size={16} /> Instagram: @theslimestudioexperience
               </a>
-              <a href="mailto:studio@theslimestudio.co.uk" className="text-[0.95rem] text-ink hover:text-[#ff2d78] transition-colors">
+              <a href="mailto:studio@theslimestudio.co.uk" className="text-[0.95rem] text-ink hover:text-hot-pink transition-colors">
                 <Heart size={14} /> Email: studio@theslimestudio.co.uk
               </a>
-              <a href="https://theslimestudio.co.uk" target="_blank" rel="noopener noreferrer" className="text-[0.95rem] text-ink hover:text-[#ff2d78] transition-colors">
+              <a href="https://theslimestudio.co.uk" target="_blank" rel="noopener noreferrer" className="text-[0.95rem] text-ink hover:text-hot-pink transition-colors">
                 <Heart size={14} /> Website: theslimestudio.co.uk
               </a>
             </div>

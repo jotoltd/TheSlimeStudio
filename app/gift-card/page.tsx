@@ -115,7 +115,7 @@ export default function GiftCardPage() {
   return (
     <>
       <Navbar />
-      <div className="min-h-screen bg-gradient-to-br from-sky-blue-light/20 via-white to-bright-lavender/20 py-12 px-4">
+      <div className="min-h-screen bg-gradient-to-br from-sky-blue-light/20 via-card to-bright-lavender/20 py-12 px-4">
         <div className="max-w-2xl mx-auto">
         <div className="text-center mb-8">
           {/* Gift Card Illustration */}

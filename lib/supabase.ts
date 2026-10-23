@@ -120,10 +120,13 @@ export type Admin = {
   created_at: string;
 };
 
+export type SiteTheme = "default" | "halloween";
+
 export type SiteSettings = {
   id: number;
   maintenance_mode: boolean;
   loyalty_enabled: boolean;
+  theme?: SiteTheme;
   stamps_per_reward: number;
   launch_date: string;
   stripe_mode?: string;

@@ -68,8 +68,7 @@ export default function AccountLoginPage() {
       <Navbar />
 
       <section
-        className="py-[50px] md:py-[70px] text-center px-4"
-        style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}
+        className="hero-gradient py-[50px] md:py-[70px] text-center px-4"
       >
         <div className="container">
           <h1 className="font-display text-[1.5rem] md:text-[3.2rem] mt-3 mb-3 text-ink">
@@ -171,8 +170,8 @@ export default function AccountLoginPage() {
               </div>
 
               {error && (
-                <div className="bg-[#ff2d78]/10 border-2 border-[#ff2d78]/20 rounded-xl p-3 text-center">
-                  <p className="text-[0.85rem] text-[#ff2d78]">{error}</p>
+                <div className="bg-hot-pink/10 border-2 border-hot-pink/20 rounded-xl p-3 text-center">
+                  <p className="text-[0.85rem] text-hot-pink">{error}</p>
                 </div>
               )}
 

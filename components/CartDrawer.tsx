@@ -50,7 +50,7 @@ export default function CartDrawer() {
               {items.map((item) => (
                 <div key={item.product.id} className="flex gap-3 items-center">
                   {/* Image / placeholder */}
-                  <div className="relative w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br from-[#ffc4fb] to-[#abf7dc] grid place-items-center">
+                  <div className="relative w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br from-pagebg to-aquamarine grid place-items-center">
                     {item.product.image_url ? (
                       <Image src={item.product.image_url} alt={item.product.name} fill sizes="64px" className="object-cover" />
                     ) : (
@@ -107,7 +107,7 @@ export default function CartDrawer() {
             <Link
               href="/shop/checkout"
               onClick={closeCart}
-              className="block w-full text-center px-5 py-3 rounded-full bg-[#ff2d78] text-white text-[0.9rem] font-medium hover:opacity-90 transition-opacity"
+              className="block w-full text-center px-5 py-3 rounded-full bg-hot-pink text-on-accent text-[0.9rem] font-medium hover:opacity-90 transition-opacity"
             >
               Checkout
             </Link>

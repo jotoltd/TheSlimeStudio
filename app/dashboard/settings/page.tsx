@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase, type BookingSettings, type SiteSettings, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, MAX_DAILY_BOOKINGS as DEFAULT_MAX, STAMPS_PER_REWARD as DEFAULT_STAMPS } from "@/lib/supabase";
+import { supabase, type BookingSettings, type SiteSettings, type SiteTheme, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, MAX_DAILY_BOOKINGS as DEFAULT_MAX, STAMPS_PER_REWARD as DEFAULT_STAMPS } from "@/lib/supabase";
 
 export default function SettingsPage() {
   const [tab, setTab] = useState<"site" | "bookings" | "payments" | "loyalty" | "ads">("site");
@@ -10,6 +10,9 @@ export default function SettingsPage() {
   const [siteSettings, setSiteSettings] = useState<SiteSettings | null>(null);
   const [maintDate, setMaintDate] = useState("");
   const [savingMaint, setSavingMaint] = useState(false);
+  const [theme, setTheme] = useState<SiteTheme>("default");
+  const [savingTheme, setSavingTheme] = useState(false);
+  const [themeMsg, setThemeMsg] = useState("");
 
   // Loyalty settings
   const [stampsPerReward, setStampsPerReward] = useState(DEFAULT_STAMPS);
@@ -71,6 +74,7 @@ export default function SettingsPage() {
       setGoogleAdsEnabled(!!s.google_ads_enabled);
       setSnapchatPixelId(s.snapchat_pixel_id || "");
       setSnapchatPixelEnabled(!!s.snapchat_pixel_enabled);
+      setTheme(s.theme === "halloween" ? "halloween" : "default");
     }
 
     try {
@@ -117,6 +121,22 @@ export default function SettingsPage() {
     setSavingLoyalty(false);
     if (error) setLoyaltyMsg("Failed to save: " + error.message);
     else setLoyaltyMsg("Loyalty settings saved!");
+  }
+
+  async function switchTheme(newTheme: SiteTheme) {
+    if (newTheme === theme) return;
+    const previous = theme;
+    setTheme(newTheme);
+    setThemeMsg("");
+    setSavingTheme(true);
+    const { error } = await supabase.from("site_settings").update({ theme: newTheme }).eq("id", 1);
+    setSavingTheme(false);
+    if (error) {
+      setTheme(previous);
+      setThemeMsg("Failed to save: " + error.message);
+    } else {
+      setThemeMsg(newTheme === "halloween" ? "🎃 Halloween theme is live!" : "Theme saved.");
+    }
   }
 
   async function saveMaintDate() {
@@ -278,6 +298,55 @@ export default function SettingsPage() {
                 />
               </button>
             </div>
+          </div>
+
+          <div className="border-t border-ink/[0.08] pt-6 mt-6">
+            <h2 className="font-display text-[1.1rem] mb-1">Website Theme</h2>
+            <p className="text-[0.85rem] text-ink-soft mb-4">
+              Applies to the public website instantly — the dashboard always stays on the default look.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-xl">
+              {([
+                {
+                  key: "default" as SiteTheme,
+                  icon: "🫧",
+                  name: "Slime Studio",
+                  desc: "The classic pastel look",
+                  swatch: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)",
+                },
+                {
+                  key: "halloween" as SiteTheme,
+                  icon: "🎃",
+                  name: "Halloween",
+                  desc: "Spooky dark mode — pumpkins, bats & cobwebs",
+                  swatch: "linear-gradient(135deg, #14092a 0%, #4a1d52 55%, #ff7300 140%)",
+                },
+              ]).map((t) => (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => switchTheme(t.key)}
+                  disabled={savingTheme}
+                  className={`text-left rounded-2xl border-2 p-4 transition-all ${
+                    theme === t.key
+                      ? "border-sky-blue-light bg-sky-blue-light/10 shadow-sm"
+                      : "border-ink/10 bg-white hover:border-ink/25"
+                  } disabled:opacity-60`}
+                >
+                  <div className="h-14 rounded-xl mb-3" style={{ background: t.swatch }} />
+                  <div className="flex items-center justify-between">
+                    <span className="text-[0.95rem] font-medium text-ink">
+                      {t.icon} {t.name}
+                    </span>
+                    {theme === t.key && <span className="text-[0.75rem] font-medium text-sky-blue-light">Active</span>}
+                  </div>
+                  <div className="text-[0.78rem] text-ink-soft mt-0.5">{t.desc}</div>
+                </button>
+              ))}
+            </div>
+            {themeMsg && (
+              <p className={`text-[0.85rem] mt-3 ${themeMsg.startsWith("Failed") ? "text-red-600" : "text-green-600"}`}>{themeMsg}</p>
+            )}
           </div>
 
           <div className="border-t border-ink/[0.08] pt-6 mt-6">

@@ -14,19 +14,19 @@ export default function ContactPage() {
 
   const INFO_CARDS = [
     {
-      bg: "#ff2d78",
+      bg: "bg-hot-pink",
       icon: "📍",
       title: "Visit Us",
       lines: c.contact_address.split(","),
     },
     {
-      bg: "#3fc9a0",
+      bg: "bg-[#3fc9a0]",
       icon: "🕐",
       title: "Opening Hours",
       lines: c.contact_hours.split(","),
     },
     {
-      bg: "#8b5fbf",
+      bg: "bg-[#8b5fbf]",
       icon: "✉️",
       title: "Email",
       lines: [c.contact_email],
@@ -60,7 +60,7 @@ export default function ContactPage() {
       <Navbar />
 
       {/* Hero */}
-      <section className="pt-16 pb-14 md:pt-20 md:pb-16 text-center px-4" style={{ backgroundColor: "#ffc4fb" }}>
+      <section className="bg-pagebg pt-16 pb-14 md:pt-20 md:pb-16 text-center px-4">
         <div className="container">
           <h1 className="font-display text-[1.5rem] md:text-[3.4rem] text-ink mb-3 uppercase">
             Contact Us
@@ -74,7 +74,7 @@ export default function ContactPage() {
       </section>
 
       {/* Form + Info */}
-      <section className="py-14 md:py-16 px-4" style={{ backgroundColor: "#ffc4fb" }}>
+      <section className="bg-pagebg py-14 md:py-16 px-4">
         <div className="container grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-8 md:gap-10">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -85,7 +85,7 @@ export default function ContactPage() {
                   type="text"
                   required
                   placeholder="Your name"
-                  className="w-full pl-11 pr-4 py-3.5 rounded-xl border-2 border-white bg-white text-sm focus:outline-none focus:border-[#ff2d78]"
+                  className="w-full pl-11 pr-4 py-3.5 rounded-xl border-2 border-white bg-white text-sm focus:outline-none focus:border-hot-pink"
                 />
               </div>
               <div className="relative">
@@ -95,7 +95,7 @@ export default function ContactPage() {
                   type="email"
                   required
                   placeholder="Your email"
-                  className="w-full pl-11 pr-4 py-3.5 rounded-xl border-2 border-white bg-white text-sm focus:outline-none focus:border-[#ff2d78]"
+                  className="w-full pl-11 pr-4 py-3.5 rounded-xl border-2 border-white bg-white text-sm focus:outline-none focus:border-hot-pink"
                 />
               </div>
             </div>
@@ -107,7 +107,7 @@ export default function ContactPage() {
                 required
                 rows={5}
                 placeholder="How can we help?"
-                className="w-full pl-11 pr-4 py-3.5 rounded-xl border-2 border-white bg-white text-sm focus:outline-none focus:border-[#ff2d78] resize-none"
+                className="w-full pl-11 pr-4 py-3.5 rounded-xl border-2 border-white bg-white text-sm focus:outline-none focus:border-hot-pink resize-none"
               />
             </div>
 
@@ -126,8 +126,7 @@ export default function ContactPage() {
             {INFO_CARDS.map((card) => (
               <div key={card.title} className="flex items-start gap-4">
                 <div
-                  className="w-11 h-11 rounded-full grid place-items-center flex-shrink-0 text-lg text-white shadow-sm"
-                  style={{ backgroundColor: card.bg }}
+                  className={`w-11 h-11 rounded-full grid place-items-center flex-shrink-0 text-lg text-white shadow-sm ${card.bg}`}
                 >
                   {card.icon}
                 </div>
@@ -148,7 +147,7 @@ export default function ContactPage() {
       </section>
 
       {/* CTA */}
-      <section className="py-12 text-center" style={{ backgroundColor: "#ffc4fb" }}>
+      <section className="bg-pagebg py-12 text-center">
         <div className="container">
           <h2 className="font-display text-[1.2rem] md:text-[1.5rem] text-ink mb-6 uppercase">
             Ready To Make Some Slime?

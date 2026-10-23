@@ -213,7 +213,7 @@ export default function AccountDashboardPage() {
               className={`text-[0.75rem] font-medium px-2.5 py-1 rounded-full ${
                 isPaid
                   ? "bg-sky-blue-light/20 text-ink"
-                  : "bg-[#ff2d78]/10 text-[#ff2d78]"
+                  : "bg-hot-pink/10 text-hot-pink"
               }`}
             >
               {isPaid ? "Paid" : "Pending"}
@@ -260,8 +260,7 @@ export default function AccountDashboardPage() {
       <Navbar />
 
       <section
-        className="py-[50px] md:py-[70px] text-center px-4"
-        style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}
+        className="hero-gradient py-[50px] md:py-[70px] text-center px-4"
       >
         <div className="container">
           <h1 className="font-display text-[1.5rem] md:text-[3.2rem] mt-3 mb-3 text-ink">
@@ -288,7 +287,7 @@ export default function AccountDashboardPage() {
               <button
                 onClick={handleLogout}
                 disabled={loggingOut}
-                className="text-[0.85rem] text-ink-soft hover:text-[#ff2d78] transition-colors px-3 py-2 rounded-lg hover:bg-ink/5"
+                className="text-[0.85rem] text-ink-soft hover:text-hot-pink transition-colors px-3 py-2 rounded-lg hover:bg-ink/5"
               >
                 {loggingOut ? "..." : "Sign Out"}
               </button>
@@ -526,8 +525,8 @@ export default function AccountDashboardPage() {
               </div>
 
               {rescheduleError && (
-                <div className="bg-[#ff2d78]/10 border-2 border-[#ff2d78]/20 rounded-xl p-3 text-center">
-                  <p className="text-[0.85rem] text-[#ff2d78]">{rescheduleError}</p>
+                <div className="bg-hot-pink/10 border-2 border-hot-pink/20 rounded-xl p-3 text-center">
+                  <p className="text-[0.85rem] text-hot-pink">{rescheduleError}</p>
                 </div>
               )}
             </div>

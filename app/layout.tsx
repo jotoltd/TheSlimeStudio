@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Script from "next/script";
-import { Poppins } from "next/font/google";
+import { Poppins, Creepster } from "next/font/google";
 import "./globals.css";
 import MaintenanceGate from "@/components/MaintenanceGate";
 import { CartProvider } from "@/components/CartContext";
@@ -14,6 +14,14 @@ const poppins = Poppins({
   weight: ["300", "400", "500", "600", "700"],
   subsets: ["latin"],
   variable: "--font-poppins",
+  display: "swap",
+});
+
+// Display font used by the Halloween theme (html[data-theme="halloween"]).
+const creepster = Creepster({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-creepster",
   display: "swap",
 });
 
@@ -92,9 +100,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={poppins.variable}>
+    <html lang="en" className={`${poppins.variable} ${creepster.variable}`} suppressHydrationWarning>
       <head>
         <meta name="facebook-domain-verification" content="v7vy4a3rp37u3t887z6kbtpw16lqo8" />
+
+        {/* Apply the cached site theme before first paint so returning visitors
+            don't see a flash of the default theme. MaintenanceGate confirms
+            the real value from site_settings after hydration. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var p=location.pathname;if(!/^\\/(admin|api|dashboard)/.test(p)){var t=localStorage.getItem("siteTheme");if(t==="halloween"||t==="default"){document.documentElement.dataset.theme=t}}}catch(e){}`,
+          }}
+        />
 
         {/* Google tag loads unconditionally with Consent Mode denied — GA4 and
             Google Ads get cookieless pings until the cookie banner grants

@@ -154,7 +154,7 @@ export default function AdPixels() {
           </button>
           <button
             onClick={() => choose("accepted")}
-            className="px-5 py-2 rounded-full text-sm font-semibold bg-[#ff2d78] text-white hover:opacity-90 transition-opacity"
+            className="px-5 py-2 rounded-full text-sm font-semibold bg-hot-pink text-on-accent hover:opacity-90 transition-opacity"
           >
             Accept
           </button>

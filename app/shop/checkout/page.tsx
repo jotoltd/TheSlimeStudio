@@ -182,7 +182,7 @@ export default function CheckoutPage() {
   return (
     <>
       <Navbar />
-      <section className="py-[50px] md:py-[70px] text-center px-4" style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}>
+      <section className="hero-gradient py-[50px] md:py-[70px] text-center px-4">
         <div className="container">
           <h1 className="font-display text-[1.5rem] md:text-[2.5rem] text-ink">Checkout</h1>
         </div>
@@ -204,7 +204,7 @@ export default function CheckoutPage() {
                 <h2 className="font-display text-[1.1rem] mb-4">Delivery Method</h2>
                 <div className="space-y-3">
                   <label className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-colors ${shippingMethod === "collection" ? "border-sky-blue-light bg-sky-blue-light/5" : "border-ink/10"}`}>
-                    <input type="radio" name="shipping" value="collection" checked={shippingMethod === "collection"} onChange={() => setShippingMethod("collection")} className="accent-[#ff2d78]" />
+                    <input type="radio" name="shipping" value="collection" checked={shippingMethod === "collection"} onChange={() => setShippingMethod("collection")} className="accent-hot-pink" />
                     <div className="flex-1">
                       <div className="font-medium text-[0.9rem]">Collect from Studio</div>
                       <div className="text-[0.8rem] text-ink-soft">Unit A, Feathers Yard, Holt, NR25 6BF — Free</div>
@@ -212,7 +212,7 @@ export default function CheckoutPage() {
                     <span className="font-display text-[0.9rem]">£0.00</span>
                   </label>
                   <label className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-colors ${shippingMethod === "delivery" ? "border-sky-blue-light bg-sky-blue-light/5" : "border-ink/10"}`}>
-                    <input type="radio" name="shipping" value="delivery" checked={shippingMethod === "delivery"} onChange={() => setShippingMethod("delivery")} className="accent-[#ff2d78]" />
+                    <input type="radio" name="shipping" value="delivery" checked={shippingMethod === "delivery"} onChange={() => setShippingMethod("delivery")} className="accent-hot-pink" />
                     <div className="flex-1">
                       <div className="font-medium text-[0.9rem]">UK Delivery</div>
                       <div className="text-[0.8rem] text-ink-soft">£{DELIVERY_FEE.toFixed(2)} · Free over £{FREE_DELIVERY_THRESHOLD}</div>
@@ -276,7 +276,7 @@ export default function CheckoutPage() {
                 <div className="space-y-3 mb-4">
                   {items.map((item) => (
                     <div key={item.product.id} className="flex gap-3 items-center">
-                      <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-gradient-to-br from-[#ffc4fb] to-[#abf7dc] grid place-items-center">
+                      <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-gradient-to-br from-pagebg to-aquamarine grid place-items-center">
                         {item.product.image_url ? (
                           <Image src={item.product.image_url} alt={item.product.name} fill sizes="48px" className="object-cover" />
                         ) : (
@@ -320,7 +320,7 @@ export default function CheckoutPage() {
                   {appliedDiscount ? (
                     <div className="flex items-center justify-between bg-green-50 border-2 border-green-200 rounded-xl p-3">
                       <span className="text-[0.85rem] font-medium text-green-700">Code &quot;{appliedDiscount.code}&quot; applied</span>
-                      <button type="button" onClick={removeDiscount} className="text-[0.8rem] text-ink-soft hover:text-[#ff2d78]">Remove</button>
+                      <button type="button" onClick={removeDiscount} className="text-[0.8rem] text-ink-soft hover:text-hot-pink">Remove</button>
                     </div>
                   ) : (
                     <div className="flex gap-2">
@@ -342,7 +342,7 @@ export default function CheckoutPage() {
                       </button>
                     </div>
                   )}
-                  {discountError && <p className="text-[0.8rem] text-[#ff2d78] mt-1.5">{discountError}</p>}
+                  {discountError && <p className="text-[0.8rem] text-hot-pink mt-1.5">{discountError}</p>}
                 </div>
 
                 {/* Gift card input */}
@@ -350,7 +350,7 @@ export default function CheckoutPage() {
                   {giftCardBalance !== null ? (
                     <div className="flex items-center justify-between bg-purple-50 border-2 border-purple-200 rounded-xl p-3">
                       <span className="text-[0.85rem] font-medium text-purple-700">Gift card applied — £{giftCardBalance.toFixed(2)} available</span>
-                      <button type="button" onClick={removeGiftCard} className="text-[0.8rem] text-ink-soft hover:text-[#ff2d78]">Remove</button>
+                      <button type="button" onClick={removeGiftCard} className="text-[0.8rem] text-ink-soft hover:text-hot-pink">Remove</button>
                     </div>
                   ) : (
                     <div className="flex gap-2">
@@ -372,7 +372,7 @@ export default function CheckoutPage() {
                       </button>
                     </div>
                   )}
-                  {giftCardError && <p className="text-[0.8rem] text-[#ff2d78] mt-1.5">{giftCardError}</p>}
+                  {giftCardError && <p className="text-[0.8rem] text-hot-pink mt-1.5">{giftCardError}</p>}
                 </div>
 
                 {error && <p className="text-red-600 text-[0.85rem] mt-4">{error}</p>}
@@ -380,7 +380,7 @@ export default function CheckoutPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full mt-6 px-5 py-3 rounded-full bg-[#ff2d78] text-white text-[0.9rem] font-medium disabled:opacity-60 hover:opacity-90 transition-opacity"
+                  className="w-full mt-6 px-5 py-3 rounded-full bg-hot-pink text-on-accent text-[0.9rem] font-medium disabled:opacity-60 hover:opacity-90 transition-opacity"
                 >
                   {loading ? "Redirecting to payment..." : `Pay £${total.toFixed(2)}`}
                 </button>

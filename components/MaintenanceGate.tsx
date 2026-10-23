@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { supabase, type SiteSettings } from "@/lib/supabase";
+import { supabase, type SiteSettings, type SiteTheme } from "@/lib/supabase";
+import HalloweenDecor from "@/components/HalloweenDecor";
 
 function useCountdown(target: Date) {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
@@ -30,14 +31,29 @@ export default function MaintenanceGate({ children }: { children: React.ReactNod
   const [checked, setChecked] = useState(false);
   const [inMaintenance, setInMaintenance] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [theme, setTheme] = useState<SiteTheme>("default");
   const [launchDate, setLaunchDate] = useState(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
   const countdown = useCountdown(launchDate);
+  const isPublicRoute = !pathname.startsWith("/admin") && !pathname.startsWith("/api") && !pathname.startsWith("/dashboard");
+  const spooky = theme === "halloween" && isPublicRoute;
 
   useEffect(() => {
-    if (pathname.startsWith("/admin") || pathname.startsWith("/api") || pathname.startsWith("/dashboard")) {
+    if (!isPublicRoute) {
+      delete document.documentElement.dataset.theme;
       setChecked(true);
       return;
     }
+
+    // Re-apply the last known theme instantly, then confirm from the DB —
+    // avoids a flash of the default theme on repeat visits. localStorage can
+    // throw when storage is disabled, so keep it behind try/catch.
+    try {
+      const cached = localStorage.getItem("siteTheme");
+      if (cached === "halloween" || cached === "default") {
+        document.documentElement.dataset.theme = cached;
+        setTheme(cached);
+      }
+    } catch {}
 
     supabase.from("site_settings").select("*").eq("id", 1).single().then(async ({ data }) => {
       let session = null;
@@ -49,18 +65,34 @@ export default function MaintenanceGate({ children }: { children: React.ReactNod
         const s = data as SiteSettings;
         setInMaintenance(s.maintenance_mode);
         setLaunchDate(new Date(s.launch_date));
+        // ?theme=halloween|default previews a theme without saving it
+        const preview = new URLSearchParams(window.location.search).get("theme");
+        const t: SiteTheme =
+          preview === "halloween" || preview === "default"
+            ? preview
+            : s.theme === "halloween" ? "halloween" : "default";
+        setTheme(t);
+        document.documentElement.dataset.theme = t;
+        try {
+          if (!preview) localStorage.setItem("siteTheme", t);
+        } catch {}
       }
       setIsAdmin(!!session?.authenticated);
       setChecked(true);
     });
-  }, [pathname]);
+  }, [pathname, isPublicRoute]);
 
   if (!checked) {
     return <div className="min-h-screen grid place-items-center bg-cream text-ink-soft">Loading...</div>;
   }
 
   if (!inMaintenance) {
-    return <>{children}</>;
+    return (
+      <>
+        {spooky && <HalloweenDecor />}
+        {children}
+      </>
+    );
   }
 
   if (isAdmin) {
@@ -70,19 +102,21 @@ export default function MaintenanceGate({ children }: { children: React.ReactNod
           🔧 Maintenance mode is ON for visitors — you&apos;re viewing the live site as admin.{" "}
           <a href="/dashboard" className="underline font-medium">Go to dashboard</a>
         </div>
+        {spooky && <HalloweenDecor />}
         {children}
       </>
     );
   }
 
   return (
-    <div className="min-h-screen grid place-items-center p-6 text-center" style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}>
+    <div className="min-h-screen grid place-items-center p-6 text-center hero-gradient">
+      {spooky && <HalloweenDecor />}
       <div className="max-w-2xl mx-auto">
         <div className="text-5xl mb-6">🫧✨🫧</div>
         <div className="flex items-center justify-center gap-3 mb-4">
-          <span className="text-[#64d8ec] text-2xl">↝</span>
-          <h2 className="font-display text-[1.3rem] tracking-wide text-[#64d8ec] uppercase">The Slime Studio</h2>
-          <span className="text-[#64d8ec] text-2xl">↜</span>
+          <span className="text-sky-blue-light text-2xl">↝</span>
+          <h2 className="font-display text-[1.3rem] tracking-wide text-sky-blue-light uppercase">The Slime Studio</h2>
+          <span className="text-sky-blue-light text-2xl">↜</span>
         </div>
         <h1 className="font-display text-[2.4rem] md:text-[3.4rem] leading-[1.1] mb-4 text-ink">
           We&apos;ll Be Back Soon!

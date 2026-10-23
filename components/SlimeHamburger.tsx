@@ -25,13 +25,13 @@ export default function SlimeHamburger({
           <g className="sm-blob">
             <path
               d="M22 8 C27 8 31 11 32 16 C35 17 37 20 36 24 C35 27 33 29 31 30 C32 33 30 36 27 37 C25 38 22 38 22 36 C21 38 18 38 16 37 C13 36 11 33 12 30 C10 29 8 27 8 24 C7 20 9 17 12 16 C13 11 17 8 22 8 Z"
-              fill="#abf7dc"
-              stroke="#64d8ec"
+              fill="rgb(var(--c-aquamarine))"
+              stroke="rgb(var(--c-sky-blue-light))"
               strokeWidth="1.5"
             />
             <path
               d="M22 8 C24 8 25 9 25 11 C25 13 23 14 22 14 C21 14 19 13 19 11 C19 9 20 8 22 8 Z"
-              fill="#ffc4fb"
+              fill="rgb(var(--c-body-bg))"
               opacity="0.85"
             />
             <circle cx="16" cy="15" r="2.5" fill="white" opacity="0.5" />
@@ -39,15 +39,15 @@ export default function SlimeHamburger({
 
           {/* Hamburger lines */}
           <g className="sm-lines">
-            <line x1="12" y1="16" x2="32" y2="16" stroke="#2d2d2d" strokeWidth="3" strokeLinecap="round" className="sm-ln sm-ln-1" />
-            <line x1="12" y1="22" x2="32" y2="22" stroke="#2d2d2d" strokeWidth="3" strokeLinecap="round" className="sm-ln sm-ln-2" />
-            <line x1="12" y1="28" x2="32" y2="28" stroke="#2d2d2d" strokeWidth="3" strokeLinecap="round" className="sm-ln sm-ln-3" />
+            <line x1="12" y1="16" x2="32" y2="16" stroke="rgb(var(--c-ink))" strokeWidth="3" strokeLinecap="round" className="sm-ln sm-ln-1" />
+            <line x1="12" y1="22" x2="32" y2="22" stroke="rgb(var(--c-ink))" strokeWidth="3" strokeLinecap="round" className="sm-ln sm-ln-2" />
+            <line x1="12" y1="28" x2="32" y2="28" stroke="rgb(var(--c-ink))" strokeWidth="3" strokeLinecap="round" className="sm-ln sm-ln-3" />
           </g>
 
           {/* X lines (open state) */}
           <g className="sm-x">
-            <line x1="14" y1="14" x2="30" y2="30" stroke="#2d2d2d" strokeWidth="3" strokeLinecap="round" className="sm-x-1" />
-            <line x1="30" y1="14" x2="14" y2="30" stroke="#2d2d2d" strokeWidth="3" strokeLinecap="round" className="sm-x-2" />
+            <line x1="14" y1="14" x2="30" y2="30" stroke="rgb(var(--c-ink))" strokeWidth="3" strokeLinecap="round" className="sm-x-1" />
+            <line x1="30" y1="14" x2="14" y2="30" stroke="rgb(var(--c-ink))" strokeWidth="3" strokeLinecap="round" className="sm-x-2" />
           </g>
         </g>
       </svg>
