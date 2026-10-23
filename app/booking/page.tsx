@@ -670,9 +670,9 @@ function BookingPageInner() {
 
       <section className="py-[50px] md:py-[70px] text-center px-4" style={{ background: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)" }}>
         <div className="container">
-          <h1 className="font-display text-[1.5rem] md:text-[3.2rem] mt-3 mb-3 text-ink">{c.booking_title}</h1>
-          <p className="text-[1.1rem] md:text-[1.3rem] text-ink/90 mb-2 font-display">{c.booking_subtitle}</p>
-          <p className="text-[0.95rem] md:text-[1.1rem] text-ink/80 max-w-[560px] mx-auto">
+          <h1 className={`font-display ${isAdLanding ? "text-[2rem]" : "text-[1.5rem]"} md:text-[3.2rem] mt-3 mb-3 text-ink`}>{c.booking_title}</h1>
+          <p className={`${isAdLanding ? "text-[1.2rem]" : "text-[1.1rem]"} md:text-[1.3rem] text-ink/90 mb-2 font-display`}>{c.booking_subtitle}</p>
+          <p className={`${isAdLanding ? "text-[1rem]" : "text-[0.95rem]"} md:text-[1.1rem] text-ink/80 max-w-[560px] mx-auto`}>
             {c.booking_info}
           </p>
           <div className="mt-4 inline-flex items-center gap-2 bg-white/50 rounded-full px-4 py-2 text-[0.85rem] text-ink">
@@ -685,7 +685,7 @@ function BookingPageInner() {
           </div>
           {isAdLanding && (
             <div className="mt-6">
-              <a href="#book" className="btn-primary btn-book-now inline-block">Book Your Slot</a>
+              <a href="#book" className="btn-primary btn-book-now inline-block !px-10 !py-4 !text-[1.05rem]">Book Your Slot</a>
             </div>
           )}
         </div>
@@ -1298,19 +1298,21 @@ function BookingPageInner() {
                 <h2 className="font-display text-[1.8rem] md:text-[2.6rem] mt-4 mb-3 text-ink">{c.how_it_works_title}</h2>
                 <p className="text-[1.05rem] text-ink-soft max-w-[620px] mx-auto">{c.how_it_works_text}</p>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
                 {[
                   { img: "/images/slime_studio_slime_toppings.jpg.jpeg", title: c.how_it_works_step1_title, desc: c.how_it_works_step1_desc },
                   { img: "/images/slime_mixing.jpg.jpeg", title: c.how_it_works_step2_title, desc: c.how_it_works_step2_desc },
                   { img: "/images/pink_slime_action.jpg.jpeg", title: c.how_it_works_step3_title, desc: c.how_it_works_step3_desc },
                   { img: "/images/purple_finished_slime.jpg.jpeg", title: c.how_it_works_step4_title, desc: c.how_it_works_step4_desc },
                 ].map((step) => (
-                  <div key={step.title} className="bg-white rounded-[16px] md:rounded-[20px] p-4 md:p-9 text-center shadow-sm">
-                    <div className="relative w-[56px] h-[56px] md:w-[72px] md:h-[72px] rounded-full overflow-hidden mx-auto mb-3 md:mb-4">
+                  <div key={step.title} className="bg-white rounded-[16px] md:rounded-[20px] p-4 md:p-9 shadow-sm flex items-center gap-4 sm:block sm:text-center">
+                    <div className="relative w-[56px] h-[56px] md:w-[72px] md:h-[72px] rounded-full overflow-hidden flex-shrink-0 sm:mx-auto sm:mb-3 md:mb-4">
                       <Image src={step.img} alt={step.title} fill sizes="72px" className="object-cover" />
                     </div>
-                    <h3 className="font-display text-[0.9rem] md:text-[1.15rem] mb-1 md:mb-1.5">{step.title}</h3>
-                    <p className="text-[0.75rem] md:text-[0.9rem] text-ink-soft">{step.desc}</p>
+                    <div>
+                      <h3 className="font-display text-[1rem] md:text-[1.15rem] mb-0.5 md:mb-1.5">{step.title}</h3>
+                      <p className="text-[0.85rem] md:text-[0.9rem] text-ink-soft">{step.desc}</p>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1331,8 +1333,8 @@ function BookingPageInner() {
                 ].map((item) => (
                   <div key={item.title} className="bg-white rounded-[16px] md:rounded-[20px] p-5 md:p-8 shadow-sm text-center">
                     <div className="text-[1.8rem] md:text-[2.5rem] mb-2 md:mb-3">{item.icon}</div>
-                    <h3 className="font-display text-[0.85rem] md:text-[1.05rem] mb-1.5 md:mb-2">{item.title}</h3>
-                    <p className="text-[0.75rem] md:text-[0.9rem] text-ink-soft">{item.desc}</p>
+                    <h3 className="font-display text-[1rem] md:text-[1.05rem] mb-1.5 md:mb-2">{item.title}</h3>
+                    <p className="text-[0.85rem] md:text-[0.9rem] text-ink-soft">{item.desc}</p>
                   </div>
                 ))}
               </div>
@@ -1354,7 +1356,7 @@ function BookingPageInner() {
               <span className="text-ink-soft text-[1.2rem] transition-transform" style={{ transform: showWhatToExpect ? "rotate(180deg)" : "" }}>⌄</span>
             </button>
             {(showWhatToExpect || isAdLanding) && (
-              <div className="mt-4 space-y-3 text-[0.85rem] md:text-[0.9rem] text-ink-soft leading-relaxed">
+              <div className={`mt-4 space-y-3 ${isAdLanding ? "text-[0.92rem] md:text-[1rem]" : "text-[0.85rem] md:text-[0.9rem]"} text-ink-soft leading-relaxed`}>
                 <div className="flex gap-3">
                   <span className="text-[1.1rem] flex-shrink-0">🕐</span>
                   <p>Each session lasts <strong className="text-ink">1 hour</strong>. Please arrive 5 minutes before your slot so we can get you set up and ready to squish!</p>
