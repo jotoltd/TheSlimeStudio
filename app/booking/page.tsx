@@ -94,6 +94,7 @@ function BookingPageInner() {
   const [termsPreAgreed, setTermsPreAgreed] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [showDiscountField, setShowDiscountField] = useState(false);
+  const [showGiftCardField, setShowGiftCardField] = useState(false);
   const [showWhatToExpect, setShowWhatToExpect] = useState(false);
   const [giftCardCode, setGiftCardCode] = useState("");
   const [giftCardBalance, setGiftCardBalance] = useState<number | null>(null);
@@ -870,7 +871,7 @@ function BookingPageInner() {
             <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-5 md:p-8 shadow-sm">
 
               <div className="mb-6">
-                <label className="block text-sm font-medium mb-2">Date</label>
+                <label className="block text-sm font-medium mb-2">{isAdLanding ? "1 · Pick a date" : "Date"}</label>
                 <Calendar value={date} onChange={(d) => { setDate(d); setSelectedSession("slime"); setSelectedEvent(null); setTimeSlot(""); }} min={todayISO()} disableDays={[]} blockedDates={[...blockedDates.filter((bd) => {
                   // Don't block dates that have an 'open' override
                   const ov = dateOverrides.find((o) => o.date === bd);
@@ -882,7 +883,9 @@ function BookingPageInner() {
                 {eventDates.length > 0 && null}
               </div>
 
-              {/* Choose a session card */}
+              {/* Choose a session card — /go skips this unless the day has events,
+                  since slime is already the selected (and only relevant) option */}
+              {(!isAdLanding || dayEvents.length > 0) && (
               <div className="mb-6">
                 <label className="block text-sm font-medium mb-3">Choose a Session</label>
                 {loadingSlots ? (
@@ -957,11 +960,20 @@ function BookingPageInner() {
                   </div>
                 )}
               </div>
+              )}
+
+              {/* /go: the session picker is hidden when no events exist, so surface
+                  the closed-day notice here instead */}
+              {isAdLanding && dayEvents.length === 0 && !loadingSlots && timeSlots.length === 0 && (
+                <div className="mb-6 text-sm text-ink-soft py-4 text-center bg-ink/[0.03] rounded-xl">
+                  We&apos;re closed on this day. Please choose another date.
+                </div>
+              )}
 
               {/* Time slots — only when Slime Making Session is selected */}
               {selectedSession === "slime" && timeSlots.length > 0 && (
                 <div className="mb-6">
-                  <label className="block text-sm font-medium mb-3">Time Slot</label>
+                  <label className="block text-sm font-medium mb-3">{isAdLanding ? "2 · Pick a time" : "Time Slot"}</label>
                   {loadingSlots ? (
                     <div className="text-sm text-ink-soft py-4 text-center">Checking availability...</div>
                   ) : (
@@ -1075,7 +1087,7 @@ function BookingPageInner() {
               <>
               <div className="mb-6">
                 <label className="block text-sm font-medium mb-2">
-                  Number of Slime Makers {timeSlot && `(max ${maxPeopleForSlot} available)`}
+                  {isAdLanding ? "3 · How many slime makers" : "Number of Slime Makers"} {timeSlot && `(max ${maxPeopleForSlot} available)`}
                 </label>
                 <div className="flex items-center gap-4">
                   <button
@@ -1096,6 +1108,9 @@ function BookingPageInner() {
                 </div>
               </div>
 
+              {isAdLanding && (
+                <label className="block text-sm font-medium mb-2">4 · Your details</label>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">Your Name</label>
@@ -1150,13 +1165,13 @@ function BookingPageInner() {
                       onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
                       onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), applyDiscount())}
                       placeholder="Discount code"
-                      className="flex-1 px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light uppercase"
+                      className="flex-1 min-w-0 px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light uppercase"
                     />
                     <button
                       type="button"
                       onClick={applyDiscount}
                       disabled={discountChecking || !discountCode.trim()}
-                      className="px-4 py-2.5 rounded-xl bg-ink/5 text-ink text-sm font-medium hover:bg-ink/10 disabled:opacity-60"
+                      className="shrink-0 px-4 py-2.5 rounded-xl bg-ink/5 text-ink text-sm font-medium hover:bg-ink/10 disabled:opacity-60"
                     >
                       {discountChecking ? "..." : "Apply"}
                     </button>
@@ -1185,6 +1200,14 @@ function BookingPageInner() {
                     </div>
                     <button type="button" onClick={removeGiftCard} className="text-[0.8rem] text-ink-soft hover:text-[#ff2d78]">Remove</button>
                   </div>
+                ) : isAdLanding && !showGiftCardField ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowGiftCardField(true)}
+                    className="text-[0.8rem] text-sky-blue-light hover:underline"
+                  >
+                    Have a gift card?
+                  </button>
                 ) : (
                   <div className="flex gap-2">
                     <input
@@ -1193,13 +1216,13 @@ function BookingPageInner() {
                       onChange={(e) => setGiftCardCode(e.target.value.toUpperCase())}
                       onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), validateGiftCard())}
                       placeholder="SS-XXXXX"
-                      className="flex-1 px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light uppercase"
+                      className="flex-1 min-w-0 px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light uppercase"
                     />
                     <button
                       type="button"
                       onClick={validateGiftCard}
                       disabled={giftCardChecking || !giftCardCode.trim()}
-                      className="px-4 py-2.5 rounded-xl bg-ink/5 text-ink text-sm font-medium hover:bg-ink/10 disabled:opacity-60"
+                      className="shrink-0 px-4 py-2.5 rounded-xl bg-ink/5 text-ink text-sm font-medium hover:bg-ink/10 disabled:opacity-60"
                     >
                       {giftCardChecking ? "..." : "Apply"}
                     </button>
