@@ -208,8 +208,11 @@ const OVERLAY_OPTIONS = [
   { id: "dark", label: "Dark", swatch: "#1e1b2e" },
 ];
 
+// Session-booking ads land on /go — the dedicated ad-landing page whose
+// visits are provably ad-channel. Gift card / party / shop / event ads keep
+// their own pages because /go can only book slime sessions.
 const LAUNCH_DESTINATIONS: Record<string, { link: string; ctaType: string }> = {
-  session: { link: "https://theslimestudio.co.uk/booking", ctaType: "BOOK_NOW" },
+  session: { link: "https://theslimestudio.co.uk/go", ctaType: "BOOK_NOW" },
   halloween: { link: "https://theslimestudio.co.uk/events/halloween-slime-session", ctaType: "BOOK_NOW" },
   giftcards: { link: "https://theslimestudio.co.uk/gift-card", ctaType: "SHOP_NOW" },
   parties: { link: "https://theslimestudio.co.uk/parties", ctaType: "LEARN_MORE" },
@@ -218,8 +221,8 @@ const LAUNCH_DESTINATIONS: Record<string, { link: string; ctaType: string }> = {
   afterschool: { link: "https://theslimestudio.co.uk/events", ctaType: "BOOK_NOW" },
   christmas: { link: "https://theslimestudio.co.uk/events", ctaType: "BOOK_NOW" },
   kits: { link: "https://theslimestudio.co.uk/shop", ctaType: "SHOP_NOW" },
-  halfterm: { link: "https://theslimestudio.co.uk/booking", ctaType: "BOOK_NOW" },
-  rainyday: { link: "https://theslimestudio.co.uk/booking", ctaType: "BOOK_NOW" },
+  halfterm: { link: "https://theslimestudio.co.uk/go", ctaType: "BOOK_NOW" },
+  rainyday: { link: "https://theslimestudio.co.uk/go", ctaType: "BOOK_NOW" },
 };
 
 const AD_AUDIENCES = [
