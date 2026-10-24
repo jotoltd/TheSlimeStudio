@@ -17,6 +17,9 @@ export default function SubscriptionsAdminPage() {
     price: "",
     current_theme: "",
     current_theme_description: "",
+    next_theme: "",
+    next_theme_description: "",
+    theme_change_date: "",
     perks: "",
   });
 
@@ -29,12 +32,29 @@ export default function SubscriptionsAdminPage() {
     const { data: settingsData } = await supabase.from("subscription_settings").select("*").eq("id", 1).single();
     if (settingsData) {
       const s = settingsData as SubscriptionSettings;
+      // A scheduled swap whose date has arrived gets promoted into the live
+      // theme here, so the admin always sees what the site shows.
+      const nextIsLive = !!s.next_theme && !!s.theme_change_date &&
+        new Date(s.theme_change_date + "T00:00:00").getTime() <= Date.now();
+      if (nextIsLive) {
+        await supabase.from("subscription_settings").update({
+          current_theme: s.next_theme,
+          current_theme_description: s.next_theme_description || "",
+          next_theme: "",
+          next_theme_description: "",
+          theme_change_date: null,
+        }).eq("id", 1);
+        return loadData();
+      }
       setSettings(s);
       setForm({
         box_name: s.box_name,
         price: String(s.price),
         current_theme: s.current_theme,
         current_theme_description: s.current_theme_description,
+        next_theme: s.next_theme || "",
+        next_theme_description: s.next_theme_description || "",
+        theme_change_date: s.theme_change_date || "",
         perks: (s.perks || []).join("\n"),
       });
     }
@@ -62,6 +82,9 @@ export default function SubscriptionsAdminPage() {
       frequency: "monthly",
       current_theme: form.current_theme.trim(),
       current_theme_description: form.current_theme_description.trim(),
+      next_theme: form.next_theme.trim(),
+      next_theme_description: form.next_theme_description.trim(),
+      theme_change_date: form.theme_change_date || null,
       perks: form.perks.split("\n").map((p) => p.trim()).filter(Boolean),
     };
     await supabase.from("subscription_settings").update(payload).eq("id", 1);
@@ -166,6 +189,42 @@ export default function SubscriptionsAdminPage() {
                   placeholder="Describe this month's slime box theme"
                   className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
                 />
+              </div>
+              <div className="md:col-span-2 bg-sky-blue-light/10 rounded-2xl p-5">
+                <label className="block text-sm font-medium mb-1">Next Theme — scheduled swap</label>
+                <p className="text-[0.78rem] text-ink-soft mb-3">
+                  Optional: on the switch date the site starts showing this theme instead of the current one — it becomes the live theme automatically.
+                </p>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <input
+                    value={form.next_theme}
+                    onChange={(e) => setForm({ ...form, next_theme: e.target.value })}
+                    placeholder="Next theme name, e.g. Winter Wonderland"
+                    className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm bg-white focus:outline-none focus:border-sky-blue-light"
+                  />
+                  <input
+                    type="date"
+                    value={form.theme_change_date}
+                    onChange={(e) => setForm({ ...form, theme_change_date: e.target.value })}
+                    className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm bg-white focus:outline-none focus:border-sky-blue-light"
+                  />
+                </div>
+                <textarea
+                  value={form.next_theme_description}
+                  onChange={(e) => setForm({ ...form, next_theme_description: e.target.value })}
+                  rows={2}
+                  placeholder="Next theme description (optional)"
+                  className="w-full mt-3 px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm bg-white focus:outline-none focus:border-sky-blue-light"
+                />
+                {form.next_theme && form.theme_change_date && (
+                  <p className="text-[0.8rem] text-ink-soft mt-2">
+                    ⏳ Scheduled — switches to <strong>{form.next_theme}</strong> on{" "}
+                    {new Date(form.theme_change_date + "T12:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "long" })}.
+                  </p>
+                )}
+                {form.next_theme && !form.theme_change_date && (
+                  <p className="text-[0.8rem] text-amber-600 mt-2">Pick a switch date or the next theme is never used.</p>
+                )}
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium mb-2">Perks (one per line)</label>

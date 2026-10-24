@@ -88,6 +88,9 @@ export type SubscriptionSettings = {
   frequency: string;
   current_theme: string;
   current_theme_description: string;
+  next_theme?: string;
+  next_theme_description?: string;
+  theme_change_date?: string | null;
   perks: string[];
   updated_at: string;
 };

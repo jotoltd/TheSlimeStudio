@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
   const {
     items,
     customerName,
-    customerEmail,
+    customerEmail: rawCustomerEmail,
     customerPhone,
     shippingMethod,
     shippingAddress,
@@ -34,6 +34,8 @@ export async function POST(req: NextRequest) {
     discountCode?: string;
     giftCardCode?: string;
   };
+
+  const customerEmail = String(rawCustomerEmail || "").trim().toLowerCase();
 
   if (!items || items.length === 0) {
     return NextResponse.json({ error: "Cart is empty" }, { status: 400 });

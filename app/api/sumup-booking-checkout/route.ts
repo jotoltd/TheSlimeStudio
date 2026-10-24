@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const {
     name,
-    email,
+    email: rawEmail,
     phone,
     date,
     timeSlot,
@@ -29,6 +29,8 @@ export async function POST(req: NextRequest) {
     discountCode?: string;
     giftCardCode?: string;
   };
+
+  const email = String(rawEmail || "").trim().toLowerCase();
 
   if (!name || !email || totalPrice == null || !date || !timeSlot) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });

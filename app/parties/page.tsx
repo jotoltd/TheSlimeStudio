@@ -58,7 +58,7 @@ export default function PartiesPage() {
 
     const { error } = await supabase.from("enquiries").insert({
       name,
-      email,
+      email: email.trim().toLowerCase(),
       message: `Party Enquiry — Date: ${partyDate || "TBD"}, Children: ${childrenCount || "TBD"}, Phone: ${phone || "N/A"}\n\n${message}`,
     });
 

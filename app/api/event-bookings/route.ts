@@ -20,7 +20,8 @@ type InstanceRow = { id: string; date: string; start_time: string };
 // POST — create a booking for an event instance
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { instance_id, event_id, name, email, phone, quantity } = body;
+  const { instance_id, event_id, name, email: rawEmail, phone, quantity } = body;
+  const email = String(rawEmail || "").trim().toLowerCase();
 
   if (!instance_id || !event_id || !name || !email || !quantity) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });

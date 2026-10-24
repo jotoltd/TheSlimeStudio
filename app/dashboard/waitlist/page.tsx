@@ -31,7 +31,7 @@ export default function WaitlistPage() {
       if (!res.ok) setLoadErr(data.error || "Failed to load");
       else setEntries(data.waitlist || []);
     } catch {
-      setLoadErr("Failed to load waitlist — if this is a new feature, run /api/run-migration first");
+      setLoadErr("Failed to load waitlist — if this is a new feature, apply the SQL in supabase/migrations/ via the Supabase SQL Editor");
     }
     setLoading(false);
   }

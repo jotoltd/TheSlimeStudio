@@ -106,7 +106,7 @@ export async function createPaidBooking(details: BookingDetails): Promise<Create
       people,
       total_price: totalPrice,
       name,
-      email,
+      email: email.toLowerCase(),
       phone: phone || null,
       is_party: isParty || false,
       payment_status: "paid",

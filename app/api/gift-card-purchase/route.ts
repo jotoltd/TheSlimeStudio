@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { amount, purchaserName, purchaserEmail, recipientName, recipientEmail, message, paymentMethod, customerId, adSource } = body as {
+  const { amount, purchaserName, purchaserEmail: rawPurchaserEmail, recipientName, recipientEmail: rawRecipientEmail, message, paymentMethod, customerId, adSource } = body as {
     amount: number;
     purchaserName: string;
     purchaserEmail: string;
@@ -18,6 +18,9 @@ export async function POST(req: NextRequest) {
     customerId?: string;
     adSource?: string;
   };
+
+  const purchaserEmail = String(rawPurchaserEmail || "").trim().toLowerCase();
+  const recipientEmail = rawRecipientEmail ? String(rawRecipientEmail).trim().toLowerCase() : undefined;
 
   if (!amount || amount < 10) {
     return NextResponse.json({ error: "Gift card amount must be at least £10" }, { status: 400 });

@@ -35,10 +35,12 @@ export async function POST(req: NextRequest) {
   const isSumUp = order.stripe_session_id.startsWith("SLM-");
 
   if (isSumUp) {
-    // SumUp has no hosted-checkout refund API — mark refunded and tell the
-    // admin to issue the actual refund in the SumUp app/dashboard.
+    // SumUp has no hosted-checkout refund API — flag the order as pending a
+    // manual refund. The admin issues the refund in the SumUp app/dashboard,
+    // then confirms it on the order, which marks it refunded for real. This
+    // keeps a forgotten manual refund from looking completed.
     await supabaseAdmin
-      .from("shop_orders").update({ payment_status: "refunded" }).eq("id", orderId);
+      .from("shop_orders").update({ payment_status: "refund_pending" }).eq("id", orderId);
     return NextResponse.json({ success: true, refunded: false, manualRefund: "sumup" });
   }
 

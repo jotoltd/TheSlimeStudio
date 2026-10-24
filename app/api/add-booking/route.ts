@@ -14,7 +14,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { date, time_slot, people, name, email, phone, is_party, notes, total_price, duration } = await req.json();
+  const { date, time_slot, people, name, email: rawEmail, phone, is_party, notes, total_price, duration } = await req.json();
+  const email = String(rawEmail || "").trim().toLowerCase();
 
   if (!date || !time_slot || !name) {
     return NextResponse.json({ error: "Date, time slot and name are required" }, { status: 400 });

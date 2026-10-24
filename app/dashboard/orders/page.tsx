@@ -65,7 +65,7 @@ export default function OrdersPage() {
   async function updateFulfilment(id: string, status: string) {
     const { error } = await supabase.from("shop_orders").update({ fulfillment_status: status }).eq("id", id);
     if (error) {
-      toast("Couldn't update fulfilment — run /api/run-migration to add the column", "error");
+      toast("Couldn't update fulfilment — apply the latest SQL from supabase/migrations/ in the Supabase SQL Editor", "error");
       return;
     }
     loadOrders();
@@ -87,9 +87,9 @@ export default function OrdersPage() {
       if (!res.ok) {
         setOrderMsg(data.error || "Refund failed");
       } else if (data.manualRefund === "sumup") {
-        setOrderMsg("Marked refunded — issue the actual refund in the SumUp app (SumUp has no automatic refund API).");
+        setOrderMsg("Marked refund pending — issue the actual refund in the SumUp app, then come back and confirm it here.");
         loadOrders();
-        setSelectedOrder({ ...order, payment_status: "refunded" });
+        setSelectedOrder({ ...order, payment_status: "refund_pending" });
       } else {
         setOrderMsg("Refund issued — the money is on its way back to the customer.");
         loadOrders();
@@ -117,6 +117,7 @@ export default function OrdersPage() {
     pending: "bg-amber-100 text-amber-700",
     expired: "bg-gray-100 text-gray-500",
     refunded: "bg-red-100 text-red-700",
+    refund_pending: "bg-orange-100 text-orange-700",
     cancelled: "bg-gray-100 text-gray-500",
   };
 
@@ -146,13 +147,13 @@ export default function OrdersPage() {
 
       {/* Filter */}
       <div className="flex gap-2 flex-wrap mb-6">
-        {["all", "to_fulfil", "paid", "pending", "expired", "refunded"].map((f) => (
+        {["all", "to_fulfil", "paid", "pending", "expired", "refund_pending", "refunded"].map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className={`px-4 py-2 rounded-full text-[0.85rem] font-medium capitalize transition-all ${filter === f ? "bg-sky-blue-light text-ink shadow-sm" : "bg-white text-ink hover:bg-sky-blue-light/20"}`}
+            className={`px-4 py-2 rounded-full text-[0.85rem] font-medium transition-all ${filter === f ? "bg-sky-blue-light text-ink shadow-sm" : "bg-white text-ink hover:bg-sky-blue-light/20"}`}
           >
-            {f === "all" ? "All Orders" : f === "to_fulfil" ? `To Fulfil (${orders.filter(needsFulfil).length})` : f}
+            {f === "all" ? "All Orders" : f === "to_fulfil" ? `To Fulfil (${orders.filter(needsFulfil).length})` : f === "refund_pending" ? `Refund pending (${orders.filter((o) => o.payment_status === "refund_pending").length})` : f}
           </button>
         ))}
       </div>
@@ -193,7 +194,7 @@ export default function OrdersPage() {
                     <td className="py-3 pr-4 text-[0.85rem] capitalize">{o.shipping_method}</td>
                     <td className="py-3 pr-4">
                       <span className={`px-3 py-1 rounded-full text-[0.75rem] font-medium capitalize ${statusColors[o.payment_status] || "bg-gray-100 text-gray-500"}`}>
-                        {o.payment_status}
+                        {o.payment_status === "refund_pending" ? "refund pending" : o.payment_status}
                       </span>
                     </td>
                     <td className="py-3 pr-4">
@@ -332,7 +333,20 @@ export default function OrdersPage() {
                     {refunding ? "Refunding…" : "Refund Order"}
                   </button>
                 )}
+                {selectedOrder.payment_status === "refund_pending" && (
+                  <button
+                    onClick={() => updateOrderStatus(selectedOrder.id, "refunded")}
+                    className="px-4 py-2 rounded-full text-[0.8rem] font-medium bg-orange-100 text-orange-700 hover:bg-orange-200 transition-all"
+                  >
+                    Confirm refund sent in SumUp
+                  </button>
+                )}
               </div>
+              {selectedOrder.payment_status === "refund_pending" && (
+                <p className="text-[0.8rem] text-orange-600 mt-2">
+                  Refund flagged but not sent — SumUp has no automatic refund API. Issue it in the SumUp app, then confirm here.
+                </p>
+              )}
               {orderMsg && <p className={`text-[0.85rem] mt-3 ${orderMsg.includes("on its way") ? "text-green-600" : orderMsg.includes("SumUp") ? "text-amber-600" : "text-red-600"}`}>{orderMsg}</p>}
             </div>
           </div>

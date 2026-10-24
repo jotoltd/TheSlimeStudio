@@ -57,7 +57,7 @@ function SubscribePageInner() {
     setSubmitting(true);
     const { data: inserted, error: insertError } = await supabase.from("subscribers").insert({
       name: form.name.trim(),
-      email: form.email.trim(),
+      email: form.email.trim().toLowerCase(),
       phone: form.phone.trim() || null,
       address: form.address.trim(),
       postcode: form.postcode.trim(),
@@ -76,7 +76,7 @@ function SubscribePageInner() {
         body: JSON.stringify({
           subscriberId: (inserted as { id: string }).id,
           name: form.name.trim(),
-          email: form.email.trim(),
+          email: form.email.trim().toLowerCase(),
           price: Number(settings?.price || 0),
           boxName: settings?.box_name || "Slime Subscription",
           gclid: getGclid(),
@@ -84,7 +84,7 @@ function SubscribePageInner() {
       });
       const data = await res.json();
       if (data.url) {
-        stashPurchaseEmail(form.email.trim());
+        stashPurchaseEmail(form.email.trim().toLowerCase());
         window.location.href = data.url;
         return;
       }
@@ -142,15 +142,25 @@ function SubscribePageInner() {
         <div className="container max-w-4xl grid md:grid-cols-2 gap-6 md:gap-10">
           {/* Details */}
           <div>
-            {settings.current_theme && (
-              <div className="bg-white rounded-3xl p-5 md:p-8 shadow-sm mb-4 md:mb-6">
-                <span className="eyebrow">This Month&apos;s Theme</span>
-                <h2 className="font-display text-lg md:text-xl mt-2 mb-3">{settings.current_theme}</h2>
-                {settings.current_theme_description && (
-                  <p className="text-sm text-ink-soft">{settings.current_theme_description}</p>
-                )}
-              </div>
-            )}
+            {(() => {
+              // Scheduled swap: once theme_change_date arrives, next_theme is
+              // what customers see — the dashboard promotes it into
+              // current_theme on next load.
+              const nextIsLive =
+                !!settings.next_theme && !!settings.theme_change_date &&
+                new Date(settings.theme_change_date + "T00:00:00").getTime() <= Date.now();
+              const theme = nextIsLive ? settings.next_theme! : settings.current_theme;
+              const themeDesc = nextIsLive ? settings.next_theme_description : settings.current_theme_description;
+              return theme ? (
+                <div className="bg-white rounded-3xl p-5 md:p-8 shadow-sm mb-4 md:mb-6">
+                  <span className="eyebrow">This Month&apos;s Theme</span>
+                  <h2 className="font-display text-lg md:text-xl mt-2 mb-3">{theme}</h2>
+                  {themeDesc && (
+                    <p className="text-sm text-ink-soft">{themeDesc}</p>
+                  )}
+                </div>
+              ) : null;
+            })()}
 
             <div className="bg-white rounded-3xl p-5 md:p-8 shadow-sm mb-4 md:mb-6">
               <div className="font-display text-2xl md:text-3xl mb-1">
