@@ -109,7 +109,7 @@ export default function RootLayout({
             the real value from site_settings after hydration. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var p=location.pathname;if(!/^\\/(admin|api|dashboard)/.test(p)){var t=localStorage.getItem("siteTheme");if(t==="halloween"||t==="default"){document.documentElement.dataset.theme=t}}}catch(e){}`,
+            __html: `try{var p=location.pathname;if(!/^\\/(admin|api|dashboard)/.test(p)){var t=localStorage.getItem("siteTheme"),e=localStorage.getItem("siteThemeEnd");if(t==="halloween"||t==="default"){if(t!=="default"&&e&&new Date(e).getTime()<Date.now())t="default";document.documentElement.dataset.theme=t}}}catch(e){}`,
           }}
         />
 

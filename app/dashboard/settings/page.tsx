@@ -211,6 +211,21 @@ export default function SettingsPage() {
     }
   }
 
+  async function saveThemeEndDate(dateStr: string) {
+    if (!siteSettings) return;
+    // Theme shows until the end of the chosen day, then the site reverts to default.
+    const iso = dateStr ? new Date(dateStr + "T23:59:59").toISOString() : null;
+    setSiteSettings({ ...siteSettings, theme_end_date: iso });
+    const { error } = await supabase.from("site_settings").update({ theme_end_date: iso }).eq("id", 1);
+    if (error) {
+      setThemeMsg("Failed to save: " + error.message);
+    } else {
+      setThemeMsg(dateStr
+        ? `Theme will switch back to Slime Studio after ${new Date(dateStr + "T12:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "long" })}`
+        : "Theme end date cleared — it will stay until you change it");
+    }
+  }
+
   async function saveMaintDate() {
     if (!maintDate) return;
     setSavingMaint(true);
@@ -416,6 +431,18 @@ export default function SettingsPage() {
                   <div className="text-[0.78rem] text-ink-soft mt-0.5">{t.desc}</div>
                 </button>
               ))}
+            </div>
+            <div className="mt-5 max-w-xl">
+              <label className="block text-sm font-medium mb-1">Automatically switch back to Slime Studio after</label>
+              <input
+                type="date"
+                value={siteSettings?.theme_end_date ? new Date(siteSettings.theme_end_date).toLocaleDateString("sv-SE") : ""}
+                onChange={(e) => saveThemeEndDate(e.target.value)}
+                className="px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
+              />
+              <p className="text-[0.78rem] text-ink-soft mt-1">
+                The theme shows until the end of that day, then the site reverts to Slime Studio on its own. Leave blank to keep it until you change it manually.
+              </p>
             </div>
             {themeMsg && (
               <p className={`text-[0.85rem] mt-3 ${themeMsg.startsWith("Failed") ? "text-red-600" : "text-green-600"}`}>{themeMsg}</p>

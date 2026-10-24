@@ -128,6 +128,7 @@ export type SiteSettings = {
   loyalty_enabled: boolean;
   referrals_enabled?: boolean;
   theme?: SiteTheme;
+  theme_end_date?: string | null;
   stamps_per_reward: number;
   launch_date: string;
   stripe_mode?: string;

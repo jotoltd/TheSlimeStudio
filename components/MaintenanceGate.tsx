@@ -49,9 +49,12 @@ export default function MaintenanceGate({ children }: { children: React.ReactNod
     // throw when storage is disabled, so keep it behind try/catch.
     try {
       const cached = localStorage.getItem("siteTheme");
+      const cachedEnd = localStorage.getItem("siteThemeEnd");
       if (cached === "halloween" || cached === "default") {
-        document.documentElement.dataset.theme = cached;
-        setTheme(cached);
+        const expired = cached !== "default" && cachedEnd && new Date(cachedEnd).getTime() < Date.now();
+        const t = expired ? "default" : cached;
+        document.documentElement.dataset.theme = t;
+        setTheme(t);
       }
     } catch {}
 
@@ -67,14 +70,23 @@ export default function MaintenanceGate({ children }: { children: React.ReactNod
         setLaunchDate(new Date(s.launch_date));
         // ?theme=halloween|default previews a theme without saving it
         const preview = new URLSearchParams(window.location.search).get("theme");
+        // A scheduled theme auto-reverts to default once theme_end_date passes —
+        // no write needed, the effective theme is computed on every load.
+        const scheduledExpired =
+          s.theme && s.theme !== "default" && s.theme_end_date &&
+          new Date(s.theme_end_date).getTime() < Date.now();
         const t: SiteTheme =
           preview === "halloween" || preview === "default"
             ? preview
-            : s.theme === "halloween" ? "halloween" : "default";
+            : s.theme === "halloween" && !scheduledExpired ? "halloween" : "default";
         setTheme(t);
         document.documentElement.dataset.theme = t;
         try {
-          if (!preview) localStorage.setItem("siteTheme", t);
+          if (!preview) {
+            localStorage.setItem("siteTheme", t);
+            if (s.theme_end_date) localStorage.setItem("siteThemeEnd", s.theme_end_date);
+            else localStorage.removeItem("siteThemeEnd");
+          }
         } catch {}
       }
       setIsAdmin(!!session?.authenticated);

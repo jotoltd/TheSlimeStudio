@@ -110,6 +110,9 @@ CREATE POLICY "Service role can manage waitlist" ON public.waitlist FOR ALL TO s
 
 -- Referral codes on/off switch (defaults on — existing behaviour preserved)
 ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS referrals_enabled boolean DEFAULT true;
+
+-- Theme scheduling: after this timestamp the site falls back to the default theme
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS theme_end_date timestamptz;
 `;
 
 export async function GET(req: NextRequest) {
