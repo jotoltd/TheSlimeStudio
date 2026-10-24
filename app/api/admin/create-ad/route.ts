@@ -41,8 +41,9 @@ export async function POST(req: NextRequest) {
   if (!metaToken || !pixelId) return NextResponse.json({ error: "Meta ads not configured" }, { status: 500 });
 
   const body = await req.json();
-  const { image, name, primaryText, headline, link, ctaType, audience, dailyBudget, startTime, endTime } = body as {
+  const { image, name, primaryText, headline, primaryTexts, headlines, descriptions, link, ctaType, audience, dailyBudget, startTime, endTime } = body as {
     image?: string; name?: string; primaryText?: string; headline?: string; link?: string;
+    primaryTexts?: string[]; headlines?: string[]; descriptions?: string[];
     ctaType?: string; audience?: string; dailyBudget?: number; startTime?: string; endTime?: string;
   };
 
@@ -100,24 +101,54 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Ad set failed: " + (adset.error?.error_user_msg || adset.error?.message || "unknown"), campaignId: campaign.id }, { status: 400 });
   }
 
-  // 5. Creative + ad (paused)
-  const creative = await metaPost(metaToken, `${ACT}/adcreatives`, {
+  // 5. Creative + ad (paused). Multiple text variants become Meta's "text
+  // options" (asset_feed_spec) — Meta rotates the combinations and pushes
+  // budget toward the winner. A single variant uses the simpler link_data
+  // creative. Meta caps each text field at 5 options.
+  const norm = (arr: string[] | undefined, single: string | undefined, fallback: string) => {
+    const list = (arr?.length ? arr : [single || fallback])
+      .map((s) => String(s || "").trim())
+      .filter(Boolean);
+    return Array.from(new Set(list)).slice(0, 5);
+  };
+  const bodies = norm(primaryTexts, primaryText, "");
+  const titles = norm(headlines, headline, name);
+  const descs = (descriptions || []).map((s) => String(s || "").trim()).filter(Boolean).slice(0, 5);
+  const multiVariant = bodies.length > 1 || titles.length > 1 || descs.length > 1;
+
+  const creativeParams: Record<string, string> = {
     name: `${name} — creative`,
     // url_tags is baked in at creative creation — it can't be added later
     // without rebuilding the creative. This is what lets bookings show the
     // campaign/ad name instead of just "Meta Ad".
     url_tags: META_AD_URL_TAGS,
-    object_story_spec: JSON.stringify({
+  };
+  if (multiVariant) {
+    // asset_feed_spec creatives still need the page for the ad's identity.
+    creativeParams.object_story_spec = JSON.stringify({ page_id: pageId });
+    creativeParams.asset_feed_spec = JSON.stringify({
+      ad_formats: ["SINGLE_IMAGE"],
+      optimization_type: "DEGREES_OF_FREEDOM",
+      bodies: bodies.map((text) => ({ text })),
+      titles: titles.map((text) => ({ text })),
+      ...(descs.length ? { descriptions: descs.map((text) => ({ text })) } : {}),
+      images: [{ hash: imageHash }],
+      call_to_action_types: [ctaType || "BOOK_NOW"],
+      link_urls: [{ website_url: link }],
+    });
+  } else {
+    creativeParams.object_story_spec = JSON.stringify({
       page_id: pageId,
       link_data: {
         image_hash: imageHash,
         link,
-        message: primaryText || "",
-        name: headline || name,
+        message: bodies[0] || "",
+        name: titles[0] || name,
         call_to_action: { type: ctaType || "BOOK_NOW", value: { link } },
       },
-    }),
-  });
+    });
+  }
+  const creative = await metaPost(metaToken, `${ACT}/adcreatives`, creativeParams);
   if (!creative.id) {
     return NextResponse.json({ error: "Creative failed: " + (creative.error?.error_user_msg || creative.error?.message || "unknown"), campaignId: campaign.id, adsetId: adset.id }, { status: 400 });
   }
@@ -132,5 +163,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Ad failed: " + (ad.error?.error_user_msg || ad.error?.message || "unknown"), campaignId: campaign.id, adsetId: adset.id, creativeId: creative.id }, { status: 400 });
   }
 
-  return NextResponse.json({ success: true, campaignId: campaign.id, adsetId: adset.id, adId: ad.id });
+  return NextResponse.json({ success: true, campaignId: campaign.id, adsetId: adset.id, adId: ad.id, textOptions: Math.max(bodies.length, titles.length) });
 }
