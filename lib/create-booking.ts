@@ -194,6 +194,12 @@ async function isOverCapacity(date: string, timeSlot: string, people: number): P
 // use earns the referrer the configured reward (currently always a loyalty
 // stamp). Call once per confirmed paid booking/order that used the code.
 export async function awardReferrerReward(discountCode: string) {
+  // Referrals switch (Settings → Loyalty) — when off, codes already issued
+  // still work as plain discounts but no referrer reward is awarded.
+  const { data: siteSettings } = await supabaseAdmin
+    .from("site_settings").select("referrals_enabled").eq("id", 1).single();
+  if (siteSettings && siteSettings.referrals_enabled === false) return;
+
   const { data: code } = await supabaseAdmin
     .from("discount_codes")
     .select("id, referrer_customer_id, referrer_reward")

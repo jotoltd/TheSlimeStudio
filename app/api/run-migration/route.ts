@@ -107,6 +107,9 @@ CREATE TABLE IF NOT EXISTS public.waitlist (
 ALTER TABLE public.waitlist ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Service role can manage waitlist" ON public.waitlist;
 CREATE POLICY "Service role can manage waitlist" ON public.waitlist FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- Referral codes on/off switch (defaults on — existing behaviour preserved)
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS referrals_enabled boolean DEFAULT true;
 `;
 
 export async function GET(req: NextRequest) {

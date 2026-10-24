@@ -52,24 +52,34 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Could not create your account. Please try again." }, { status: 500 });
   }
 
-  // Auto-create a referral code for the new customer
+  // Auto-create a referral code for the new customer — only while the
+  // referrals switch is on in Settings → Loyalty.
+  let referralsOn = true;
   try {
-    const refCode = "REF-" + customer.id.slice(0, 8).toUpperCase();
-    await supabaseAdmin.from("discount_codes").insert({
-      code: refCode,
-      description: `Referral code for ${cleanName}`,
-      discount_type: "percentage",
-      value: 10,
-      scope: "both",
-      min_spend: 0,
-      max_uses: null,
-      used_count: 0,
-      active: true,
-      referrer_customer_id: customer.id,
-      referrer_reward: "loyalty_stamp",
-    });
-  } catch (e) {
-    console.error("Failed to create referral code:", e);
+    const { data: siteSettings } = await supabaseAdmin
+      .from("site_settings").select("referrals_enabled").eq("id", 1).single();
+    if (siteSettings && siteSettings.referrals_enabled === false) referralsOn = false;
+  } catch { /* column missing → default to on */ }
+
+  if (referralsOn) {
+    try {
+      const refCode = "REF-" + customer.id.slice(0, 8).toUpperCase();
+      await supabaseAdmin.from("discount_codes").insert({
+        code: refCode,
+        description: `Referral code for ${cleanName}`,
+        discount_type: "percentage",
+        value: 10,
+        scope: "both",
+        min_spend: 0,
+        max_uses: null,
+        used_count: 0,
+        active: true,
+        referrer_customer_id: customer.id,
+        referrer_reward: "loyalty_stamp",
+      });
+    } catch (e) {
+      console.error("Failed to create referral code:", e);
+    }
   }
 
   const token = createCustomerToken({ sub: customer.id, email: customer.email, name: customer.name });

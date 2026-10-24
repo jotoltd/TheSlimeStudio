@@ -126,6 +126,7 @@ export type SiteSettings = {
   id: number;
   maintenance_mode: boolean;
   loyalty_enabled: boolean;
+  referrals_enabled?: boolean;
   theme?: SiteTheme;
   stamps_per_reward: number;
   launch_date: string;

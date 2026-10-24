@@ -178,6 +178,14 @@ export default function SettingsPage() {
     await supabase.from("site_settings").update({ loyalty_enabled: newVal }).eq("id", 1);
   }
 
+  async function toggleReferrals() {
+    if (!siteSettings) return;
+    const newVal = !(siteSettings.referrals_enabled ?? true);
+    setSiteSettings({ ...siteSettings, referrals_enabled: newVal });
+    const { error } = await supabase.from("site_settings").update({ referrals_enabled: newVal }).eq("id", 1);
+    if (error) setSiteSettings({ ...siteSettings, referrals_enabled: !newVal });
+  }
+
   async function saveLoyaltySettings() {
     if (stampsPerReward < 1) { setLoyaltyMsg("Stamps per reward must be at least 1"); return; }
     setSavingLoyalty(true); setLoyaltyMsg("");
@@ -627,6 +635,30 @@ export default function SettingsPage() {
                 <span
                   className={`absolute top-1 left-1 w-7 h-7 rounded-full bg-white shadow-sm transition-transform ${
                     siteSettings?.loyalty_enabled ? "translate-x-7" : ""
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
+          {/* Referral codes */}
+          <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div>
+                <h2 className="font-display text-[1.1rem] mb-1">Referral Codes</h2>
+                <p className="text-[0.85rem] text-ink-soft">
+                  {(siteSettings?.referrals_enabled ?? true)
+                    ? "ON — every new account gets a REF- code to share; referrers earn a stamp per use"
+                    : "OFF — no new codes are issued and referrers stop earning stamps; existing codes still work as discounts"}
+                </p>
+              </div>
+              <button
+                onClick={toggleReferrals}
+                className={`relative w-16 h-9 rounded-full transition-colors ${(siteSettings?.referrals_enabled ?? true) ? "bg-green-400" : "bg-ink/15"}`}
+              >
+                <span
+                  className={`absolute top-1 left-1 w-7 h-7 rounded-full bg-white shadow-sm transition-transform ${
+                    (siteSettings?.referrals_enabled ?? true) ? "translate-x-7" : ""
                   }`}
                 />
               </button>
