@@ -110,10 +110,6 @@ export async function POST(req: NextRequest) {
         const red = await redeemGiftCard(giftCardCode, redeemAmount, { bookingId: result.bookingId });
         if (!red.success) {
           console.error("Gift card redeem failed:", red.error);
-        } else if (people > 1) {
-          // Gift card bookings earn a stamp per slime maker; the booking itself
-          // already earned one, so award the remainder.
-          await awardLoyaltyStamp(name, email, people - 1);
         }
       }
     } catch (e) {

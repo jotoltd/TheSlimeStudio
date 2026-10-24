@@ -181,10 +181,6 @@ export async function POST(req: NextRequest) {
             const red = await redeemGiftCard(body.giftCardCode, redeemAmount, { bookingId: result.bookingId });
             if (!red.success) {
               console.error("Gift card redeem failed:", red.error);
-            } else if (fallbackDetails.people > 1) {
-              // Gift card bookings earn a stamp per slime maker; one was
-              // already awarded for the booking itself.
-              await awardLoyaltyStamp(fallbackDetails.name, fallbackDetails.email, fallbackDetails.people - 1);
             }
           }
         } catch (e) {
@@ -233,7 +229,8 @@ async function sendNotificationsAndLoyalty(booking: {
   };
   await sendCustomerConfirmation(details).catch(() => {});
   await sendAdminNotification(details, false).catch(() => {});
-  await awardLoyaltyStamp(booking.name, booking.email).catch(() => {});
+  // One stamp per slime maker paid for.
+  await awardLoyaltyStamp(booking.name, booking.email, booking.people).catch(() => {});
   if (booking.discount_code && booking.discount_code.toUpperCase().startsWith("FREE-")) {
     await redeemRewardCode(booking.discount_code, booking.email).catch(() => {});
   }

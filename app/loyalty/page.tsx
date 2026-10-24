@@ -218,7 +218,7 @@ export default function LoyaltyPage() {
               </div>
               <p className="text-[0.95rem] text-ink mb-1">No loyalty card yet</p>
               <p className="text-[0.85rem] text-ink-soft mb-4">
-                You&apos;ll automatically get a stamp when you book a paid session online. Make sure to use the same email each time!
+                You&apos;ll automatically get a stamp for every slime maker you pay for when you book online. Make sure to use the same email each time!
               </p>
               <a href="/booking" className="btn-primary inline-block">
                 Book a Session
@@ -240,7 +240,7 @@ export default function LoyaltyPage() {
                 <div className="w-10 h-10 rounded-full bg-sky-blue-light/30 grid place-items-center mx-auto mb-2">
                   <span className="font-display text-[0.9rem] text-ink">2</span>
                 </div>
-                <p className="text-[0.8rem] text-ink-soft">Earn 1 stamp per paid booking</p>
+                <p className="text-[0.8rem] text-ink-soft">Earn 1 stamp per slime maker — pay for 3, get 3 stamps</p>
               </div>
               <div className="text-center">
                 <div className="w-10 h-10 rounded-full bg-sky-blue-light/30 grid place-items-center mx-auto mb-2">

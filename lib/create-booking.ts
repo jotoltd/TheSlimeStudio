@@ -141,7 +141,8 @@ export async function createPaidBooking(details: BookingDetails): Promise<Create
   // Best-effort side effects — never let these fail the booking.
   await sendCustomerConfirmation(details).catch(() => {});
   await sendAdminNotification(details, overCapacity).catch(() => {});
-  await awardLoyaltyStamp(name, email).catch(() => {});
+  // One stamp per slime maker paid for — a booking for 3 earns 3 stamps.
+  await awardLoyaltyStamp(name, email, people).catch(() => {});
 
   if (discountCode && discountCode.toUpperCase().startsWith("FREE-")) {
     await redeemRewardCode(discountCode, email).catch(() => {});

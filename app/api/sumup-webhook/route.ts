@@ -167,7 +167,7 @@ export async function POST(req: NextRequest) {
 
       await sendCustomerConfirmation(details).catch(() => {});
       await sendAdminNotification(details, false).catch(() => {});
-      await awardLoyaltyStamp(booking.name, booking.email).catch(() => {});
+      await awardLoyaltyStamp(booking.name, booking.email, booking.people).catch(() => {});
       if (booking.discount_code && booking.discount_code.toUpperCase().startsWith("FREE-")) {
         await redeemRewardCode(booking.discount_code, booking.email).catch(() => {});
       }
