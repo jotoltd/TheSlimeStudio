@@ -30,7 +30,18 @@ type MetaAd = {
   name: string;
   status?: string;
   effective_status?: string;
-  creative?: { id?: string; url_tags?: string };
+  campaign?: { name?: string };
+  adset?: { name?: string };
+  creative?: {
+    id?: string;
+    url_tags?: string;
+    object_story_spec?: {
+      link_data?: { link?: string };
+      video_data?: { call_to_action?: { value?: { link?: string } } };
+      photo_data?: { call_to_action?: { value?: { link?: string } } };
+    };
+    asset_feed_spec?: { link_urls?: { website_url?: string }[] };
+  };
 };
 
 type MetaCampaign = {
@@ -83,6 +94,40 @@ function describeTargeting(t: MetaTargeting | undefined): string {
   return parts.join(" · ");
 }
 
+// Where the ad's button actually sends people — link posts store it in
+// link_data, video/photo creatives in the call_to_action, dynamic creatives
+// in asset_feed_spec. Boosted posts can return nothing (link lives on the post).
+function creativeLink(c: MetaAd["creative"]): string | null {
+  const spec = c?.object_story_spec;
+  return (
+    spec?.link_data?.link ||
+    spec?.video_data?.call_to_action?.value?.link ||
+    spec?.photo_data?.call_to_action?.value?.link ||
+    c?.asset_feed_spec?.link_urls?.[0]?.website_url ||
+    null
+  );
+}
+
+// A click only forwards /booking → /go when it carries a paid-click marker.
+const PAID_MEDIUM_RE = /utm_medium=(paid|cpc|ppc|paid[-_]?social)/;
+
+function adHealth(a: MetaAd) {
+  const tags = a.creative?.url_tags || "";
+  return {
+    tracked: tags.includes("utm_campaign"),
+    paid: PAID_MEDIUM_RE.test(tags),
+  };
+}
+
+// Merge only the url_tags keys an ad is missing — an ad stamped
+// "utm_source=ig&utm_campaign=..." gets just "&utm_medium=paid&..."
+// appended rather than a duplicate utm_source.
+function mergeUrlTags(existing: string): string {
+  const keys = new Set(existing.split("&").map((p) => p.split("=")[0]).filter(Boolean));
+  const missing = META_AD_URL_TAGS.split("&").filter((p) => !keys.has(p.split("=")[0]));
+  return missing.length ? (existing ? `${existing}&${missing.join("&")}` : missing.join("&")) : existing;
+}
+
 function checkAdmin(req: NextRequest): boolean {
   const token = req.cookies.get("admin_token")?.value;
   return !!(token && verifyToken(token));
@@ -121,7 +166,7 @@ export async function GET(req: NextRequest) {
         safe(metaGet(metaToken, `${accountId}/insights`, { fields: "spend,impressions,clicks", time_range: JSON.stringify({ since, until }) }) as Promise<InsightRow[]>),
         safe(metaGet(metaToken, `${accountId}/campaigns`, { fields: "name,status,effective_status,daily_budget" }) as Promise<MetaCampaign[]>),
         safe(metaGet(metaToken, `${accountId}/adsets`, { fields: "name,status,effective_status,daily_budget,campaign{name},targeting,optimization_goal,promoted_object" }) as Promise<MetaAdset[]>),
-        safe(metaGet(metaToken, `${accountId}/ads`, { fields: "name,status,effective_status,creative{url_tags}" }) as Promise<MetaAd[]>),
+        safe(metaGet(metaToken, `${accountId}/ads`, { fields: "name,status,effective_status,campaign{name},adset{name},creative{url_tags,object_story_spec,asset_feed_spec}" }) as Promise<MetaAd[]>),
       ])
     : [[], [], [], []] as [InsightRow[], MetaCampaign[], MetaAdset[], MetaAd[]];
 
@@ -266,7 +311,9 @@ export async function GET(req: NextRequest) {
       })),
       ads: adCreatives.map((a) => ({
         id: a.id, name: a.name, status: a.status, effectiveStatus: a.effective_status,
-        tracked: !!(a.creative?.url_tags || "").includes("utm_campaign"),
+        campaignName: a.campaign?.name, adsetName: a.adset?.name,
+        link: creativeLink(a.creative),
+        ...adHealth(a),
       })),
     },
     sources,
@@ -308,12 +355,13 @@ export async function POST(req: NextRequest) {
     for (const ad of liveAds) {
       if (["ARCHIVED", "DELETED"].includes(ad.effective_status || "") || !ad.creative?.id) continue;
       const existing = (ad.creative?.url_tags || "") as string;
-      if (existing.includes("utm_campaign")) { results.push({ ad: ad.name, ok: true, detail: "already tracked" }); continue; }
+      const merged = mergeUrlTags(existing);
+      if (merged === existing) { results.push({ ad: ad.name, ok: true, detail: "already tracked" }); continue; }
       try {
         const cr = await metaRead(metaToken, ad.creative.id, "name,object_story_id,object_story_spec,asset_feed_spec");
         const params: Record<string, string> = {
           name: cr.name || `${ad.name} — creative`,
-          url_tags: existing ? `${existing}&${META_AD_URL_TAGS}` : META_AD_URL_TAGS,
+          url_tags: merged,
         };
         if (cr.object_story_id) params.object_story_id = cr.object_story_id;
         else if (cr.object_story_spec) params.object_story_spec = JSON.stringify(cr.object_story_spec);

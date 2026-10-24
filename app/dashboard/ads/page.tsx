@@ -24,9 +24,12 @@ type ManagedEntity = {
   effectiveStatus: string;
   dailyBudget: number | null;
   campaignName?: string;
+  adsetName?: string;
   targeting?: string;
   optimisesFor?: string | null;
   tracked?: boolean;
+  paid?: boolean;
+  link?: string | null;
 };
 
 type Data = {
@@ -51,6 +54,50 @@ type Data = {
 };
 
 const fmt = (n: number) => `£${n.toFixed(2)}`;
+
+// Meta's effective_status jargon → what it actually means for delivery.
+// status (the toggle you set) vs effective_status (what's really happening)
+// is the #1 confusion: an "ACTIVE" ad inside a paused ad set delivers nothing.
+function statusBadge(effectiveStatus: string): { text: string; cls: string } | null {
+  switch (effectiveStatus) {
+    case "ACTIVE": return { text: "Live now", cls: "bg-green-100 text-green-700" };
+    case "IN_PROCESS": return { text: "In review", cls: "bg-blue-100 text-blue-700" };
+    case "ADSET_PAUSED": return { text: "Off — ad set paused", cls: "bg-ink/[0.08] text-ink-soft" };
+    case "CAMPAIGN_PAUSED": return { text: "Off — campaign paused", cls: "bg-ink/[0.08] text-ink-soft" };
+    case "PAUSED": return { text: "Paused", cls: "bg-ink/[0.08] text-ink-soft" };
+    case "PENDING_REVIEW": return { text: "Pending review", cls: "bg-blue-100 text-blue-700" };
+    case "DISAPPROVED": return { text: "Disapproved", cls: "bg-red-100 text-red-700" };
+    case "ARCHIVED":
+    case "DELETED": return null;
+    default: return { text: effectiveStatus, cls: "bg-ink/[0.08] text-ink-soft" };
+  }
+}
+
+const isGone = (e: { effectiveStatus: string }) => ["ARCHIVED", "DELETED"].includes(e.effectiveStatus);
+
+// Short display form of an ad's click destination, e.g. "/booking" or "/go".
+function linkPath(link: string | null | undefined): string {
+  if (!link) return "";
+  try {
+    const u = new URL(link);
+    return u.pathname === "/" ? u.hostname : u.pathname;
+  } catch {
+    return link;
+  }
+}
+
+// Where a click ends up after our /booking → /go redirect rule.
+function landingBadge(a: ManagedEntity): { text: string; cls: string } | null {
+  const p = linkPath(a.link);
+  if (!p) return null;
+  if (p === "/go") return { text: "clicks → /go", cls: "bg-green-100 text-green-700" };
+  if (p === "/booking") {
+    return a.paid
+      ? { text: "clicks → /go (via redirect)", cls: "bg-green-100 text-green-700" }
+      : { text: "stays on /booking", cls: "bg-amber-100 text-amber-700" };
+  }
+  return { text: `clicks → ${p}`, cls: "bg-ink/[0.08] text-ink-soft" };
+}
 
 const SOURCES: { key: SourceKey; label: string; dot: string; badge: string; isAd?: boolean }[] = [
   { key: "meta", label: "Meta ads (Facebook & Instagram)", dot: "bg-blue-500", badge: "bg-blue-100 text-blue-700", isAd: true },
@@ -116,7 +163,7 @@ export default function AdsPage() {
         setTrackingMsg(
           names.length
             ? `Done for ${json.fixed} ad${json.fixed === 1 ? "" : "s"} — couldn't update: ${names.join(", ")} (set URL parameters on those in Ads Manager).`
-            : `Done — campaign tracking is on for ${json.fixed} ad${json.fixed === 1 ? "" : "s"}.`
+            : `Done — tracking is fully on for ${json.fixed} ad${json.fixed === 1 ? "" : "s"}.`
         );
         await load();
       }
@@ -126,7 +173,11 @@ export default function AdsPage() {
     setFixingTracking(false);
   }
 
-  const untrackedAds = (data?.manage?.ads || []).filter((a) => a.tracked === false && !["ARCHIVED", "DELETED"].includes(a.effectiveStatus));
+  const liveAdsList = (data?.manage?.ads || []).filter((a) => !isGone(a));
+  const untrackedAds = liveAdsList.filter((a) => a.tracked === false);
+  // Tracked enough to attribute bookings, but missing utm_medium=paid so a
+  // /booking click won't forward to the /go ad-landing page.
+  const noRedirectAds = liveAdsList.filter((a) => a.tracked !== false && a.paid === false && linkPath(a.link) === "/booking");
   const rangeLabel = range === "today" ? "today" : range === "7d" ? "last 7 days" : range === "90d" ? "last 90 days" : "last 30 days";
 
   const metaSpend = data?.meta?.spend || 0;
@@ -266,39 +317,46 @@ export default function AdsPage() {
           {(data.manage.campaigns.length > 0 || data.manage.adsets.length > 0 || data.google.campaigns.length > 0) && (
             <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm mb-8">
               <h2 className="font-display text-[1.1rem] mb-2">Manage ads</h2>
-              <p className="text-[0.8rem] text-ink-soft mb-5">Pause or resume Meta campaigns and ad sets, and edit daily budgets — no need to open Ads Manager.</p>
+              <p className="text-[0.8rem] text-ink-soft mb-5">Pause or resume Meta campaigns, ad sets and individual ads, and edit daily budgets — no need to open Ads Manager.</p>
               {actionMsg && <div className="text-[0.8rem] text-red-600 mb-4">{actionMsg}</div>}
 
-              {(untrackedAds.length > 0 || trackingMsg) && (
+              {(untrackedAds.length > 0 || noRedirectAds.length > 0 || trackingMsg) && (
                 <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-5 flex items-start justify-between gap-4 flex-wrap">
-                  <div className="text-[0.85rem] text-amber-900">
-                    {untrackedAds.length > 0
-                      ? `Campaign tracking is off for ${untrackedAds.length} ad${untrackedAds.length === 1 ? "" : "s"} — their bookings just say "Meta Ad".`
-                      : ""}
+                  <div className="text-[0.85rem] text-amber-900 space-y-1">
+                    {untrackedAds.length > 0 && (
+                      <div>
+                        {untrackedAds.length} ad{untrackedAds.length === 1 ? "" : "s"} missing tracking tags — bookings from {untrackedAds.length === 1 ? "it" : "them"} just say &quot;Meta Ad&quot; and clicks won&apos;t reach the /go booking page.
+                      </div>
+                    )}
+                    {noRedirectAds.length > 0 && (
+                      <div>
+                        {noRedirectAds.length} tracked ad{noRedirectAds.length === 1 ? "" : "s"} land on /booking but won&apos;t forward to /go (missing <code className="text-[0.75rem]">utm_medium=paid</code>).
+                      </div>
+                    )}
                     {trackingMsg && <div className="font-medium">{trackingMsg}</div>}
                   </div>
-                  {untrackedAds.length > 0 && (
+                  {(untrackedAds.length > 0 || noRedirectAds.length > 0) && (
                     <button
                       onClick={fixTracking}
                       disabled={fixingTracking}
                       className="px-4 py-2 rounded-xl bg-amber-600 text-white text-[0.8rem] font-semibold hover:bg-amber-700 disabled:opacity-50 flex-shrink-0"
                     >
-                      {fixingTracking ? "Turning on..." : "Turn on tracking"}
+                      {fixingTracking ? "Fixing..." : "Fix tracking tags"}
                     </button>
                   )}
                 </div>
               )}
 
               <div className="space-y-0.5">
-                {[...data.manage.campaigns.map((c) => ({ ...c, kind: "Campaign" })), ...data.manage.adsets.map((a) => ({ ...a, kind: "Ad set" }))].map((e) => (
+                {[...data.manage.campaigns.map((c) => ({ ...c, kind: "Campaign" })), ...data.manage.adsets.map((a) => ({ ...a, kind: "Ad set" }))]
+                  .filter((e) => !isGone(e))
+                  .map((e) => (
                   <div key={e.id} className="flex items-center justify-between gap-3 py-2.5 border-b border-ink/[0.06] last:border-0 flex-wrap">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium text-[0.9rem] truncate">{e.name}</span>
                         <span className="text-[0.6rem] bg-ink/[0.06] text-ink-soft px-1.5 py-0.5 rounded-full">{e.kind}</span>
-                        <span className={`text-[0.6rem] px-1.5 py-0.5 rounded-full font-medium ${e.effectiveStatus === "ACTIVE" ? "bg-green-100 text-green-700" : "bg-ink/[0.08] text-ink-soft"}`}>
-                          {e.effectiveStatus === "ACTIVE" ? "Live" : e.effectiveStatus}
-                        </span>
+                        {(() => { const b = statusBadge(e.effectiveStatus); return b && <span className={`text-[0.6rem] px-1.5 py-0.5 rounded-full font-medium ${b.cls}`}>{b.text}</span>; })()}
                       </div>
                       {e.campaignName && <div className="text-[0.7rem] text-ink-soft">{e.campaignName}</div>}
                       {e.targeting && <div className="text-[0.7rem] text-ink-soft">🎯 {e.targeting}{e.optimisesFor ? ` · optimising for ${e.optimisesFor === "PURCHASE" ? "Purchases" : e.optimisesFor}` : ""}</div>}
@@ -334,6 +392,46 @@ export default function AdsPage() {
                     </div>
                   </div>
                 ))}
+
+                {liveAdsList.length > 0 && (
+                  <>
+                    <div className="text-[0.7rem] text-ink-soft uppercase tracking-wider pt-5 pb-1">
+                      Individual ads — where each click lands
+                    </div>
+                    {liveAdsList.map((a) => {
+                      const sb = statusBadge(a.effectiveStatus);
+                      const lb = landingBadge(a);
+                      return (
+                        <div key={a.id} className="flex items-center justify-between gap-3 py-2.5 border-b border-ink/[0.06] last:border-0 flex-wrap">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-medium text-[0.9rem] truncate">{a.name}</span>
+                              {sb && <span className={`text-[0.6rem] px-1.5 py-0.5 rounded-full font-medium ${sb.cls}`}>{sb.text}</span>}
+                              {lb && <span className={`text-[0.6rem] px-1.5 py-0.5 rounded-full font-medium ${lb.cls}`} title={a.link || ""}>{lb.text}</span>}
+                              {a.tracked
+                                ? <span className="text-[0.6rem] px-1.5 py-0.5 rounded-full font-medium bg-green-100 text-green-700">Tracked</span>
+                                : <span className="text-[0.6rem] px-1.5 py-0.5 rounded-full font-medium bg-red-100 text-red-700">No tracking</span>}
+                            </div>
+                            <div className="text-[0.7rem] text-ink-soft">
+                              {[a.adsetName, a.campaignName].filter(Boolean).join(" · ")}
+                              {a.link ? ` — ${a.link}` : " — link not readable via API"}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => control(a.id, { status: a.status === "ACTIVE" ? "PAUSED" : "ACTIVE" })}
+                            disabled={busyId === a.id}
+                            className={`px-3 py-1.5 rounded-lg text-[0.75rem] font-medium disabled:opacity-50 flex-shrink-0 ${a.status === "ACTIVE" ? "bg-orange-100 text-orange-700 hover:bg-orange-200" : "bg-green-100 text-green-700 hover:bg-green-200"}`}
+                          >
+                            {busyId === a.id ? "..." : a.status === "ACTIVE" ? "Pause" : "Resume"}
+                          </button>
+                        </div>
+                      );
+                    })}
+                    <p className="text-[0.7rem] text-ink-soft pt-2">
+                      &quot;Off — ad set/campaign paused&quot; means the ad itself is switched on but its parent is off, so nothing delivers. Resume the parent to go live.
+                    </p>
+                  </>
+                )}
 
                 {data.google.campaigns.length > 0 && (
                   <>
