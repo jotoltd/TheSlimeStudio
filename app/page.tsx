@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { preload } from "react-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import RefCapture from "@/components/RefCapture";
@@ -10,6 +11,15 @@ import { useContent } from "@/lib/useContent";
 
 export default function HomePage() {
   const { content: c } = useContent();
+  // Hero backdrop is a CSS background rather than <Image fill>: as an LCP
+  // candidate the absolute-positioned image kept re-stamping its paint time
+  // every time the header reflowed (font swaps, content fetches, hydration),
+  // landing the recorded LCP at 5-7s. As decoration it loads just as fast and
+  // stops competing with the round logo for LCP.
+  preload("/_next/image?url=%2Fimages%2Fslime_mixing.jpg.jpeg&w=1080&q=60", {
+    as: "image",
+    fetchPriority: "high",
+  });
 
   return (
     <>
@@ -18,16 +28,15 @@ export default function HomePage() {
 
       {/* Hero */}
       <header className="relative pt-[40px] pb-[50px] md:pt-[60px] md:pb-[70px] overflow-hidden text-center">
-        <div className="absolute inset-0 z-[1]">
-          <Image
-            src="/images/slime_mixing.jpg.jpeg"
-            alt="Children mixing colourful slime at The Slime Studio in Holt, Norfolk"
-            fill
-            priority
-            fetchPriority="high"
-            sizes="100vw"
-            className="object-cover"
-          />
+        <div
+          className="absolute inset-0 z-[1] bg-cover bg-center"
+          role="img"
+          aria-label="Children mixing colourful slime at The Slime Studio in Holt, Norfolk"
+          style={{
+            backgroundImage:
+              "url('/_next/image?url=%2Fimages%2Fslime_mixing.jpg.jpeg&w=1080&q=60')",
+          }}
+        >
           <div className="hero-overlay absolute inset-0" />
         </div>
         <div className="container relative z-[2]">
