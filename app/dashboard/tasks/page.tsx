@@ -604,7 +604,7 @@ export default function TasksPage() {
             />
             <label className="block text-[0.75rem] uppercase tracking-wide text-ink-soft font-semibold mb-1.5">Notes</label>
             <textarea
-              rows={4}
+              rows={6}
               value={editingCard.description || ""}
               onChange={(e) => setEditingCard({ ...editingCard, description: e.target.value })}
               onBlur={(e) => {
@@ -613,7 +613,7 @@ export default function TasksPage() {
                 }
               }}
               placeholder="Add details, links, reminders..."
-              className="w-full text-[0.88rem] rounded-xl border border-ink/15 px-3 py-2 resize-y focus:outline-none focus:border-bright-lavender mb-4"
+              className="w-full text-[0.88rem] leading-relaxed rounded-xl border border-ink/15 px-3 py-2.5 resize-y focus:outline-none focus:border-bright-lavender mb-4"
             />
             <label className="block text-[0.75rem] uppercase tracking-wide text-ink-soft font-semibold mb-1.5">Label</label>
             <div className="flex gap-2 mb-4">
