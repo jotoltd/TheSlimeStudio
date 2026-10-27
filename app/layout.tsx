@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Script from "next/script";
+import { unstable_cache } from "next/cache";
 import { Poppins, Creepster } from "next/font/google";
 import "./globals.css";
+import { supabaseAdmin, type SiteTheme } from "@/lib/supabase";
 import MaintenanceGate from "@/components/MaintenanceGate";
 import { CartProvider } from "@/components/CartContext";
 import CartDrawer from "@/components/CartDrawer";
@@ -9,6 +11,34 @@ import AdPixels from "@/components/AdPixels";
 import Preconnect from "@/components/Preconnect";
 
 const SITE_URL = "https://theslimestudio.co.uk";
+
+// Baking the seasonal theme into the SSR <html data-theme> means first-time
+// visitors get the themed page from the first byte — the client-side flip
+// (head script + MaintenanceGate) then only kicks in if the theme changed
+// after this deploy. Without it, every cold load paints default first and
+// repaints the whole page a few seconds in, which wrecks LCP. Cached briefly
+// so dynamic pages don't hit Supabase per request; static pages fetch once
+// at build time.
+const getSiteTheme = unstable_cache(
+  async (): Promise<SiteTheme> => {
+    try {
+      const { data } = await supabaseAdmin
+        .from("site_settings")
+        .select("theme, theme_end_date")
+        .eq("id", 1)
+        .single();
+      const t = data?.theme;
+      const expired =
+        t && t !== "default" && data?.theme_end_date &&
+        new Date(data.theme_end_date).getTime() < Date.now();
+      return !expired && t === "halloween" ? "halloween" : "default";
+    } catch {
+      return "default";
+    }
+  },
+  ["site-theme"],
+  { revalidate: 60 }
+);
 
 const poppins = Poppins({
   weight: ["300", "400", "500", "600", "700"],
@@ -91,13 +121,19 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const siteTheme = await getSiteTheme();
   return (
-    <html lang="en" className={`${poppins.variable} ${creepster.variable}`} suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`${poppins.variable} ${creepster.variable}`}
+      data-theme={siteTheme === "default" ? undefined : siteTheme}
+      suppressHydrationWarning
+    >
       <head>
         <meta name="facebook-domain-verification" content="v7vy4a3rp37u3t887z6kbtpw16lqo8" />
 
