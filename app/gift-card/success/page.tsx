@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { trackPurchase } from "@/lib/ad-tracking";
 
-export default function GiftCardSuccessPage() {
+function GiftCardSuccessInner() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("session_id");
   const sumupRef = searchParams.get("ref");
@@ -119,5 +119,13 @@ export default function GiftCardSuccessPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function GiftCardSuccessPage() {
+  return (
+    <Suspense fallback={<div className="min-h-[50vh] grid place-items-center text-ink-soft">Loading...</div>}>
+      <GiftCardSuccessInner />
+    </Suspense>
   );
 }

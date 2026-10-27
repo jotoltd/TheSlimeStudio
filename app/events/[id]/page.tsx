@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { supabaseAdmin } from "@/lib/supabase";
 import EventDetailClient from "./EventDetailClient";
 import Navbar from "@/components/Navbar";
@@ -99,7 +100,9 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
   return (
     <>
       <Navbar />
-      <EventDetailClient event={event} instances={instancesWithCounts} />
+      <Suspense fallback={<div className="min-h-[50vh] grid place-items-center text-ink-soft">Loading...</div>}>
+        <EventDetailClient event={event} instances={instancesWithCounts} />
+      </Suspense>
       <Footer />
     </>
   );

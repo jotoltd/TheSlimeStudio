@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -10,7 +10,7 @@ import Footer from "@/components/Footer";
 
 const PRESET_AMOUNTS = [10, 15, 25, 50, 75, 100];
 
-export default function GiftCardPage() {
+function GiftCardInner() {
   const searchParams = useSearchParams();
   const cancelled = searchParams.get("cancelled");
 
@@ -346,5 +346,13 @@ export default function GiftCardPage() {
       </div>
       <Footer />
     </>
+  );
+}
+
+export default function GiftCardPage() {
+  return (
+    <Suspense fallback={<div className="min-h-[50vh] grid place-items-center text-ink-soft">Loading...</div>}>
+      <GiftCardInner />
+    </Suspense>
   );
 }

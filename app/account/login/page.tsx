@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
-export default function AccountLoginPage() {
+function AccountLoginInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [mode, setMode] = useState<"login" | "register">("login");
@@ -222,5 +222,13 @@ export default function AccountLoginPage() {
 
       <Footer />
     </>
+  );
+}
+
+export default function AccountLoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-[50vh] grid place-items-center text-ink-soft">Loading...</div>}>
+      <AccountLoginInner />
+    </Suspense>
   );
 }
