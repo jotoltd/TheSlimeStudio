@@ -18,7 +18,14 @@ type TaskList = {
   id: string;
   title: string;
   position: number;
+  board_id: string;
   cards: TaskCard[];
+};
+
+type TaskBoard = {
+  id: string;
+  name: string;
+  position: number;
 };
 
 const COLORS: Record<string, string> = {
@@ -41,9 +48,17 @@ function isOverdue(d: string) {
 
 export default function TasksPage() {
   const [lists, setLists] = useState<TaskList[]>([]);
+  const [boards, setBoards] = useState<TaskBoard[]>([]);
+  const [activeBoard, setActiveBoard] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadErr, setLoadErr] = useState("");
   const { toast } = useToast();
+
+  const [addingBoard, setAddingBoard] = useState(false);
+  const [newBoardName, setNewBoardName] = useState("");
+  const [renamingBoard, setRenamingBoard] = useState(false);
+  const [renameBoardName, setRenameBoardName] = useState("");
+  const [boardMenu, setBoardMenu] = useState(false);
 
   const [addingCardTo, setAddingCardTo] = useState<string | null>(null);
   const [newCardTitle, setNewCardTitle] = useState("");
@@ -67,17 +82,67 @@ export default function TasksPage() {
     return () => document.removeEventListener("mousedown", close);
   }, []);
 
-  async function load() {
+  async function load(boardId?: string | null) {
     setLoading(true); setLoadErr("");
     try {
-      const res = await fetch("/api/tasks", { cache: "no-store" });
+      const qs = boardId ? `?board_id=${boardId}` : "";
+      const res = await fetch(`/api/tasks${qs}`, { cache: "no-store" });
       const data = await res.json();
-      if (!res.ok) setLoadErr(data.error || "Failed to load board — apply supabase/migrations/20261027000001_task_board.sql in the Supabase SQL Editor");
-      else setLists(data.lists || []);
+      if (!res.ok) setLoadErr(data.error || "Failed to load board");
+      else {
+        setBoards(data.boards || []);
+        setActiveBoard(data.board_id || null);
+        setLists(data.lists || []);
+      }
     } catch {
-      setLoadErr("Failed to load board — apply supabase/migrations/20261027000001_task_board.sql in the Supabase SQL Editor");
+      setLoadErr("Failed to load board");
     }
     setLoading(false);
+  }
+
+  // ---------- boards ----------
+
+  async function addBoard() {
+    const name = newBoardName.trim();
+    if (!name) return;
+    const res = await fetch("/api/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ entity: "board", name }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setBoards((prev) => [...prev, data.board]);
+      setNewBoardName("");
+      setAddingBoard(false);
+      load(data.board.id);
+    } else {
+      toast(data.error || "Failed to add board", "error");
+    }
+  }
+
+  async function renameBoard() {
+    const name = renameBoardName.trim();
+    const id = activeBoard;
+    setRenamingBoard(false);
+    if (!name || !id) return;
+    setBoards((prev) => prev.map((b) => (b.id === id ? { ...b, name } : b)));
+    await fetch("/api/tasks", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ entity: "board", id, name }),
+    });
+  }
+
+  async function deleteBoard() {
+    const board = boards.find((b) => b.id === activeBoard);
+    if (!board) return;
+    if (!confirm(`Delete "${board.name}" and all its lists and cards?`)) return;
+    setBoardMenu(false);
+    await fetch(`/api/tasks?entity=board&id=${board.id}`, { method: "DELETE" });
+    const remaining = boards.filter((b) => b.id !== board.id);
+    setBoards(remaining);
+    load(remaining[0]?.id || null);
   }
 
   function findCard(id: string) {
@@ -192,7 +257,7 @@ export default function TasksPage() {
     const res = await fetch("/api/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ entity: "list", title }),
+      body: JSON.stringify({ entity: "list", title, board_id: activeBoard }),
     });
     const data = await res.json();
     if (res.ok) {
@@ -235,10 +300,91 @@ export default function TasksPage() {
     <div className="py-8 md:py-10 px-5 md:px-10 h-full flex flex-col">
       <PageHeader title="Task Board" subtitle="Organise studio jobs, ideas and to-dos. Drag cards between lists to update their status." />
 
+      {/* Board switcher */}
+      <div className="flex items-center gap-2 mb-5 overflow-x-auto pb-1">
+        {renamingBoard ? (
+          <input
+            autoFocus
+            value={renameBoardName}
+            onChange={(e) => setRenameBoardName(e.target.value)}
+            onBlur={renameBoard}
+            onKeyDown={(e) => { if (e.key === "Enter") renameBoard(); if (e.key === "Escape") setRenamingBoard(false); }}
+            className="text-[0.9rem] font-display bg-white rounded-full px-4 py-2 border border-ink/15 focus:outline-none focus:border-bright-lavender w-56"
+          />
+        ) : (
+          boards.map((b) => (
+            <button
+              key={b.id}
+              onClick={() => { if (b.id !== activeBoard) load(b.id); }}
+              className={`px-4 py-2 rounded-full text-[0.88rem] font-medium whitespace-nowrap transition-colors ${
+                b.id === activeBoard
+                  ? "bg-ink text-white shadow-sm"
+                  : "bg-white/70 text-ink-soft hover:bg-white hover:text-ink"
+              }`}
+            >
+              {b.name}
+            </button>
+          ))
+        )}
+        {addingBoard ? (
+          <div className="flex items-center gap-2">
+            <input
+              autoFocus
+              value={newBoardName}
+              onChange={(e) => setNewBoardName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") addBoard(); if (e.key === "Escape") { setAddingBoard(false); setNewBoardName(""); } }}
+              placeholder="Board name..."
+              className="text-[0.88rem] bg-white rounded-full px-4 py-2 border border-ink/15 focus:outline-none focus:border-bright-lavender w-44"
+            />
+            <button onClick={addBoard} className="px-3 py-2 rounded-full bg-ink text-white text-[0.8rem] hover:bg-ink/85 transition-colors">
+              Add
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setAddingBoard(true)}
+            className="px-4 py-2 rounded-full text-[0.88rem] text-ink-soft border-2 border-dashed border-ink/15 hover:border-ink/30 hover:text-ink transition-colors whitespace-nowrap"
+          >
+            + New board
+          </button>
+        )}
+        {activeBoard && !renamingBoard && (
+          <div className="relative" ref={boardMenu ? menuRef : undefined}>
+            <button
+              onClick={() => setBoardMenu(!boardMenu)}
+              className="w-8 h-8 rounded-full grid place-items-center text-ink-soft hover:bg-ink/5 transition-colors"
+              aria-label="Board options"
+            >
+              ⋯
+            </button>
+            {boardMenu && (
+              <div className="absolute left-0 top-9 bg-white rounded-xl shadow-lg border border-ink/10 py-1.5 z-30 w-44">
+                <button
+                  onClick={() => { setRenameBoardName(boards.find((b) => b.id === activeBoard)?.name || ""); setRenamingBoard(true); setBoardMenu(false); }}
+                  className="w-full text-left px-4 py-2 text-[0.85rem] hover:bg-ink/5"
+                >
+                  Rename board
+                </button>
+                <button
+                  onClick={deleteBoard}
+                  className="w-full text-left px-4 py-2 text-[0.85rem] text-red-600 hover:bg-red-50"
+                >
+                  Delete board
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {loading ? (
         <div className="text-center py-16 text-ink-soft text-[0.9rem]">Loading board...</div>
       ) : loadErr ? (
         <div className="bg-white rounded-[20px] p-8 shadow-sm text-center text-red-600 text-[0.9rem]">{loadErr}</div>
+      ) : !activeBoard ? (
+        <div className="bg-white rounded-[20px] p-10 shadow-sm text-center text-ink-soft text-[0.9rem]">
+          No boards yet — create one with <strong>+ New board</strong> above to get started.
+        </div>
       ) : (
         <div className="flex gap-4 items-start overflow-x-auto pb-4 flex-1">
           {lists.map((list) => (
