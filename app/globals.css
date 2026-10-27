@@ -447,11 +447,13 @@ html[data-theme="halloween"] .bg-sky-blue-light.text-ink {
     font-size: 1rem;
   }
   /* iOS Safari zooms the page when an input under 16px is focused — floor
-     form fields at the root size to prevent it. */
-  input.text-sm,
+     form fields at the root size to prevent it. Date/time pickers are
+     excluded: their native UI clips larger fonts and the value goes
+     invisible, and they don't trigger the text-zoom anyway. */
+  input.text-sm:not([type="date"]):not([type="time"]):not([type="datetime-local"]):not([type="month"]):not([type="week"]),
   select.text-sm,
   textarea.text-sm,
-  input.text-xs,
+  input.text-xs:not([type="date"]):not([type="time"]):not([type="datetime-local"]):not([type="month"]):not([type="week"]),
   select.text-xs,
   textarea.text-xs {
     font-size: 1rem;
