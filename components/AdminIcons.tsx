@@ -11,6 +11,16 @@ const base = (size: number = 20) => ({
   strokeLinejoin: "round" as const,
 });
 
+export function BoardIcon({ className, size }: IconProps) {
+  return (
+    <svg {...base(size)} className={className}>
+      <rect x="3" y="4" width="5" height="16" rx="1.5" />
+      <rect x="9.5" y="4" width="5" height="10" rx="1.5" />
+      <rect x="16" y="4" width="5" height="13" rx="1.5" />
+    </svg>
+  );
+}
+
 export function HomeIcon({ className, size }: IconProps) {
   return (
     <svg {...base(size)} className={className}>
