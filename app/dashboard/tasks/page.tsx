@@ -72,7 +72,10 @@ export default function TasksPage() {
   const [dropTarget, setDropTarget] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    const saved = typeof localStorage !== "undefined" ? localStorage.getItem("taskBoard") : null;
+    load(saved);
+  }, []);
 
   useEffect(() => {
     const close = (e: MouseEvent) => {
@@ -93,6 +96,7 @@ export default function TasksPage() {
         setBoards(data.boards || []);
         setActiveBoard(data.board_id || null);
         setLists(data.lists || []);
+        if (data.board_id) localStorage.setItem("taskBoard", data.board_id);
       }
     } catch {
       setLoadErr("Failed to load board");
