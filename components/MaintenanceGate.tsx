@@ -58,7 +58,11 @@ export default function MaintenanceGate({ children }: { children: React.ReactNod
       }
     } catch {}
 
-    supabase.from("site_settings").select("*").eq("id", 1).single().then(async ({ data }) => {
+    // The head script already fired this fetch pre-hydration (see layout.tsx)
+    // so the theme/maintenance answer arrives ~2s sooner on cold loads.
+    const early = (window as { __siteSettings?: Promise<SiteSettings | null> }).__siteSettings;
+    const settingsPromise = early ?? supabase.from("site_settings").select("*").eq("id", 1).single().then(({ data }) => data as SiteSettings | null);
+    settingsPromise.then(async (data) => {
       let session = null;
       if (data?.maintenance_mode) {
         const response = await fetch("/api/session");

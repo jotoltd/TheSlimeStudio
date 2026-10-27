@@ -102,11 +102,14 @@ export default function RootLayout({
         <meta name="facebook-domain-verification" content="v7vy4a3rp37u3t887z6kbtpw16lqo8" />
 
         {/* Apply the cached site theme before first paint so returning visitors
-            don't see a flash of the default theme. MaintenanceGate confirms
-            the real value from site_settings after hydration. */}
+            don't see a flash of the default theme — and kick off the live
+            settings fetch immediately (long before React hydrates) so a
+            seasonal theme flip repaints early instead of seconds after LCP.
+            MaintenanceGate consumes window.__siteSettings and owns the
+            maintenance-mode decision. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var p=location.pathname;if(!/^\\/(admin|api|dashboard)/.test(p)){var t=localStorage.getItem("siteTheme"),e=localStorage.getItem("siteThemeEnd");if(t==="halloween"||t==="default"){if(t!=="default"&&e&&new Date(e).getTime()<Date.now())t="default";document.documentElement.dataset.theme=t}}}catch(e){}`,
+            __html: `try{var p=location.pathname;if(!/^\\/(admin|api|dashboard)/.test(p)){var t=localStorage.getItem("siteTheme"),e=localStorage.getItem("siteThemeEnd");if(t==="halloween"||t==="default"){if(t!=="default"&&e&&new Date(e).getTime()<Date.now())t="default";document.documentElement.dataset.theme=t}window.__siteSettings=fetch(${JSON.stringify(process.env.NEXT_PUBLIC_SUPABASE_URL || "")}+"/rest/v1/site_settings?select=maintenance_mode,theme,theme_end_date,launch_date&id=eq.1",{headers:{apikey:${JSON.stringify(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "")},authorization:"Bearer "+${JSON.stringify(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "")}}}).then(function(r){return r.json()}).then(function(rows){var s=rows&&rows[0];var exp=s&&s.theme_end_date&&new Date(s.theme_end_date).getTime()<Date.now();var preview=new URLSearchParams(location.search).get("theme");if(!preview){if(s&&s.theme==="halloween"&&!exp){document.documentElement.dataset.theme="halloween"}else if(document.documentElement.dataset.theme==="halloween"){delete document.documentElement.dataset.theme}}return s||null}).catch(function(){return null})}}catch(e){}`,
           }}
         />
 
