@@ -386,11 +386,11 @@ export default function TasksPage() {
           No boards yet — create one with <strong>+ New board</strong> above to get started.
         </div>
       ) : (
-        <div className="flex gap-4 items-start overflow-x-auto pb-4 flex-1">
+        <div className="flex gap-4 items-start overflow-x-auto pb-4 flex-1 snap-x snap-mandatory md:snap-none">
           {lists.map((list) => (
             <div
               key={list.id}
-              className={`w-[290px] flex-shrink-0 rounded-[20px] p-3 transition-colors ${
+              className={`w-[85vw] max-w-[330px] md:w-[290px] snap-start flex-shrink-0 rounded-[20px] p-3 transition-colors ${
                 dropTarget === list.id ? "bg-bright-lavender/15 ring-2 ring-bright-lavender/40" : "bg-white/70"
               }`}
               onDragOver={(e) => { e.preventDefault(); setDropTarget(list.id); }}
@@ -466,7 +466,7 @@ export default function TasksPage() {
                       <div className="relative flex-shrink-0" ref={openMenu === `card-${card.id}` ? menuRef : undefined}>
                         <button
                           onClick={(e) => { e.stopPropagation(); setOpenMenu(openMenu === `card-${card.id}` ? null : `card-${card.id}`); }}
-                          className="w-6 h-6 rounded-md grid place-items-center text-ink-soft/60 hover:bg-ink/5 hover:text-ink transition-colors opacity-0 group-hover:opacity-100"
+                          className="w-6 h-6 rounded-md grid place-items-center text-ink-soft/60 hover:bg-ink/5 hover:text-ink transition-colors md:opacity-0 md:group-hover:opacity-100"
                           aria-label="Card options"
                         >
                           ⋯
@@ -551,7 +551,7 @@ export default function TasksPage() {
           ))}
 
           {/* Add list */}
-          <div className="w-[290px] flex-shrink-0">
+          <div className="w-[85vw] max-w-[330px] md:w-[290px] snap-start flex-shrink-0">
             {addingList ? (
               <div className="bg-white/70 rounded-[20px] p-3">
                 <input
@@ -590,7 +590,7 @@ export default function TasksPage() {
       {editingCard && (
         <div className="fixed inset-0 bg-ink/40 z-50 grid place-items-center p-4" onClick={() => setEditingCard(null)}>
           <div
-            className="bg-white rounded-[20px] shadow-xl w-full max-w-md p-6"
+            className="bg-white rounded-[20px] shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto p-5 md:p-6"
             onClick={(e) => e.stopPropagation()}
           >
             <input
