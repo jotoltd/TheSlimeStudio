@@ -85,12 +85,9 @@ export const metadata: Metadata = {
     canonical: SITE_URL,
   },
   icons: {
-    icon: [
-      { url: "/images/header_logo.png", type: "image/png" },
-      { url: "/favicon.svg", type: "image/svg+xml" },
-    ],
-    shortcut: "/images/header_logo.png",
-    apple: "/images/header_logo.png",
+    // app/icon.png + app/apple-icon.png are picked up automatically by the
+    // file convention — small files so browsers don't pull the 100KB+ logo
+    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
   },
 };
 
@@ -118,7 +115,7 @@ export default function RootLayout({
             storage, at which point AdPixels updates consent to granted. */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-QWN7QR5WH9"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
         />
         <Script id="gtag-init" strategy="afterInteractive">
           {`

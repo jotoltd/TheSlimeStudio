@@ -28,7 +28,7 @@ function useCountdown(target: Date) {
 
 export default function MaintenanceGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [checked, setChecked] = useState(false);
+  const [, setChecked] = useState(false);
   const [inMaintenance, setInMaintenance] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [theme, setTheme] = useState<SiteTheme>("default");
@@ -94,10 +94,11 @@ export default function MaintenanceGate({ children }: { children: React.ReactNod
     });
   }, [pathname, isPublicRoute]);
 
-  if (!checked) {
-    return <div className="min-h-screen grid place-items-center bg-cream text-ink-soft">Loading...</div>;
-  }
-
+  // Children render optimistically (including during SSR) — gating first
+  // paint on a client-side Supabase check was sending "Loading..." as the
+  // entire HTML, which pushed LCP out by seconds on mobile. If maintenance
+  // mode is on, the page swaps to the maintenance screen as soon as the
+  // settings check returns.
   if (!inMaintenance) {
     return (
       <>
