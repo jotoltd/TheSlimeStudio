@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase, type SubscriptionSettings, type Subscriber } from "@/lib/supabase";
 import Pagination from "@/components/Pagination";
 
@@ -23,11 +23,7 @@ export default function SubscriptionsAdminPage() {
     perks: "",
   });
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
     setLoading(true);
     const { data: settingsData } = await supabase.from("subscription_settings").select("*").eq("id", 1).single();
     if (settingsData) {
@@ -61,7 +57,11 @@ export default function SubscriptionsAdminPage() {
     const { data: subsData } = await supabase.from("subscribers").select("*").order("created_at", { ascending: false });
     if (subsData) setSubscribers(subsData as Subscriber[]);
     setLoading(false);
-  }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const totalPages = Math.max(1, Math.ceil(subscribers.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);

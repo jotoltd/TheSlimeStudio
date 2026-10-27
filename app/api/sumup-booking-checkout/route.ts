@@ -4,6 +4,7 @@ import { getSumUpKey, isSumUpConfigured } from "@/lib/payment";
 import { supabaseAdmin } from "@/lib/supabase";
 import { sendCapiEvent, metaContextFromRequest } from "@/lib/capi";
 import { withGclidTag, sanitizeAdSource } from "@/lib/google-ads";
+import { computeBookingPrice } from "@/lib/booking-price";
 
 export const runtime = "nodejs";
 
@@ -114,6 +115,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "This date is fully booked." }, { status: 409 });
   }
 
+  // Price is computed server-side — the client's totalPrice is display-only.
+  // Discount and gift-card codes are re-validated here so a tampered request
+  // can't create a free or underpaid booking.
+  const price = await computeBookingPrice({
+    people,
+    discountCode,
+    giftCardCode: body.giftCardCode,
+  });
+  if ("error" in price) {
+    return NextResponse.json({ error: price.error }, { status: price.status });
+  }
+  if (price.finalTotal !== Number(totalPrice)) {
+    console.warn(
+      `[sumup-booking-checkout] client total ${totalPrice} != computed ${price.finalTotal} for ${email}`
+    );
+  }
+
   if (!isSumUpConfigured()) {
     return NextResponse.json({ error: "SumUp is not configured" }, { status: 500 });
   }
@@ -135,11 +153,11 @@ export async function POST(req: NextRequest) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        amount: Number(totalPrice.toFixed(2)),
+        amount: Number(price.finalTotal.toFixed(2)),
         currency: "GBP",
         merchant_code: (process.env.SUMUP_MERCHANT_ID || "").toUpperCase() || undefined,
         checkout_reference: checkoutRef,
-        description: `Slime Studio Session — ${people} ${people === 1 ? "person" : "people"} — ${date} at ${timeSlot}`,
+        description: `Slime Studio Session — ${price.people} ${price.people === 1 ? "person" : "people"} — ${date} at ${timeSlot}`,
         redirect_url: `${origin}/booking?sumup_status=paid&ref=${checkoutRef}`,
         hosted_checkout: { enabled: true },
       }),
@@ -159,16 +177,16 @@ export async function POST(req: NextRequest) {
     const { data: booking, error: insertError } = await supabaseAdmin.from("bookings").insert({
       date,
       time_slot: timeSlot,
-      people,
-      total_price: totalPrice,
+      people: price.people,
+      total_price: price.finalTotal,
       name,
       email,
       phone: phone || null,
       is_party: false,
       payment_status: "pending",
       stripe_session_id: checkoutRef,
-      discount_code: discountCode || null,
-      discount_amount: 0,
+      discount_code: price.discountCode,
+      discount_amount: price.discountAmount,
       notes: withGclidTag(sanitizeAdSource(body.adSource), body.gclid),
     }).select().single();
 
@@ -194,7 +212,7 @@ export async function POST(req: NextRequest) {
       eventName: "InitiateCheckout",
       eventId: checkoutRef,
       email, name, phone,
-      value: totalPrice,
+      value: price.finalTotal,
       sourceUrl: "https://theslimestudio.co.uk/booking",
       ...meta,
     });

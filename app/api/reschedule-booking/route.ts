@@ -90,6 +90,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Failed to reschedule" }, { status: 500 });
   }
 
+  // A 2-hour booking's `_slot2` placeholder must move with it, otherwise it
+  // keeps blocking the old slot and leaves the new second hour open.
+  if (booking.stripe_session_id) {
+    const [h, m] = newTimeSlot.split(":").map(Number);
+    const nextSlot = `${String(h + 1).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+    await supabaseAdmin
+      .from("bookings")
+      .update({ date: newDate, time_slot: nextSlot, notes: `[Blocked for 2-hour party — primary slot ${newTimeSlot}]` })
+      .eq("stripe_session_id", `${booking.stripe_session_id}_slot2`);
+  }
+
   let emailed = false;
   if (notify && booking.email && (await emailEnabled("booking_confirmation"))) {
     try {

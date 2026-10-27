@@ -69,6 +69,7 @@ export default function Footer() {
             <h4 className="font-display text-[1rem] mb-4 text-ink">Visit</h4>
             <ul className="space-y-2.5">
               <li><Link href="/booking" className="text-[0.9rem] hover:text-ink transition-colors">Book Now</Link></li>
+              <li><Link href="/events" className="text-[0.9rem] hover:text-ink transition-colors">Events</Link></li>
               <li><Link href="/contact" className="text-[0.9rem] hover:text-ink transition-colors">Contact</Link></li>
             </ul>
           </div>

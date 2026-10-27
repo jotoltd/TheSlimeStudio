@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   // Fetch the booking and verify it belongs to this customer
   const { data: booking, error: fetchErr } = await supabaseAdmin
     .from("bookings")
-    .select("id, email, date, time_slot, people, is_party, payment_status")
+    .select("id, email, date, time_slot, people, is_party, payment_status, stripe_session_id")
     .eq("id", bookingId)
     .maybeSingle();
 
@@ -117,6 +117,16 @@ export async function POST(req: NextRequest) {
   if (updateErr) {
     console.error("Reschedule failed:", updateErr);
     return NextResponse.json({ error: "Could not reschedule. Please try again." }, { status: 500 });
+  }
+
+  // A 2-hour booking's `_slot2` placeholder must move with it, otherwise it
+  // keeps blocking the old slot and leaves the new second hour open.
+  if (booking.stripe_session_id) {
+    const nextSlot = `${String(h + 1).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+    await supabaseAdmin
+      .from("bookings")
+      .update({ date: newDate, time_slot: nextSlot, notes: `[Blocked for 2-hour party — primary slot ${newTimeSlot}]` })
+      .eq("stripe_session_id", `${booking.stripe_session_id}_slot2`);
   }
 
   return NextResponse.json({ ok: true });

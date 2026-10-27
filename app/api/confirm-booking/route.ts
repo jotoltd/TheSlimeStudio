@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripeAsync } from "@/lib/stripe";
-import { createPaidBooking, awardLoyaltyStamp } from "@/lib/create-booking";
+import { createPaidBooking } from "@/lib/create-booking";
 import { redeemGiftCard } from "@/lib/gift-cards";
 import { supabaseAdmin } from "@/lib/supabase";
 import { sendCapiEvent, metaContextFromRequest } from "@/lib/capi";
@@ -30,22 +30,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Payment has not been completed" }, { status: 400 });
   }
 
-  // If called from 3DS redirect with no booking details, read from Stripe metadata
-  if (fromRedirect || !email || !date || !timeSlot) {
-    const md = intent.metadata;
-    if (md) {
-      name = name || md.name || "";
-      email = email || md.email || "";
-      date = date || md.date || "";
-      timeSlot = timeSlot || md.timeSlot || "";
-      people = people ?? parseInt(md.people || "1", 10);
-      totalPrice = totalPrice ?? parseFloat(md.totalPrice || "0");
-      phone = phone || md.phone || "";
-      isParty = isParty || md.type === "party";
-      giftCardCode = giftCardCode || md.giftCardCode || undefined;
-      giftCardAmount = giftCardAmount || Number(md.giftCardAmount) || 0;
-    }
+  // Booking details come from the PaymentIntent metadata we stamped at
+  // creation — the client can't confirm different (or bigger) details than
+  // it actually paid for. Body values are only a fallback for intents that
+  // predate metadata stamping.
+  const md = intent.metadata;
+  if (md) {
+    name = md.name || name || "";
+    email = md.email || email || "";
+    date = md.date || date || "";
+    timeSlot = md.timeSlot || timeSlot || "";
+    people = parseInt(md.people || "", 10) || people;
+    totalPrice = md.totalPrice ? parseFloat(md.totalPrice) : totalPrice;
+    phone = md.phone || phone || "";
+    isParty = md.type === "party";
+    giftCardCode = giftCardCode || md.giftCardCode || undefined;
+    giftCardAmount = giftCardAmount || Number(md.giftCardAmount) || 0;
   }
+  people = Math.min(Math.max(1, Math.floor(Number(people)) || 1), 50);
+  void fromRedirect;
 
   if (!email || !date || !timeSlot) {
     return NextResponse.json({ error: "Missing required fields and no metadata available" }, { status: 400 });
@@ -68,9 +71,9 @@ export async function POST(req: NextRequest) {
     people,
     totalPrice,
     isParty,
-    discountCode: body.discountCode || intent.metadata?.discountCode || null,
-    adSource: body.adSource || intent.metadata?.adSource || null,
-    gclid: body.gclid || intent.metadata?.gclid || null,
+    discountCode: intent.metadata?.discountCode || body.discountCode || null,
+    adSource: intent.metadata?.adSource || body.adSource || null,
+    gclid: intent.metadata?.gclid || body.gclid || null,
   });
 
   if (!result.bookingId) {

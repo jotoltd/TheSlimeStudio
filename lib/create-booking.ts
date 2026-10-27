@@ -8,6 +8,7 @@ import {
   logEmail,
   bookingConfirmationHtml,
   adSourceLabel,
+  escapeHtml,
   emailEnabled,
   emailTemplates,
 } from "@/lib/email";
@@ -252,11 +253,11 @@ export async function sendAdminNotification(d: BookingDetails, overCapacity: boo
     html: `
       <h2>New Booking Received</h2>
       ${overCapacity ? "<p style=\"color:#c00\"><strong>This booking exceeds the slot/daily capacity.</strong> Payment was taken, so the booking has been recorded — please review it.</p>" : ""}
-      <p><strong>Name:</strong> ${d.name}</p>
-      <p><strong>Email:</strong> ${d.email}</p>
-      <p><strong>Phone:</strong> ${d.phone || "Not provided"}</p>
-      <p><strong>Date:</strong> ${d.date}</p>
-      <p><strong>Time:</strong> ${d.timeSlot}</p>
+      <p><strong>Name:</strong> ${escapeHtml(d.name)}</p>
+      <p><strong>Email:</strong> ${escapeHtml(d.email)}</p>
+      <p><strong>Phone:</strong> ${escapeHtml(d.phone || "Not provided")}</p>
+      <p><strong>Date:</strong> ${escapeHtml(d.date)}</p>
+      <p><strong>Time:</strong> ${escapeHtml(d.timeSlot)}</p>
       <p><strong>People:</strong> ${d.people}</p>
       <p><strong>Total:</strong> £${Number(d.totalPrice).toFixed(2)}</p>
       <p><strong>Payment:</strong> Paid</p>

@@ -7,12 +7,13 @@ import { redeemGiftCard } from "@/lib/gift-cards";
 import { getResend, EMAIL_FROM, bookingConfirmationHtml, logEmail, emailEnabled, emailTemplates } from "@/lib/email";
 import { sendCapiEvent, metaContextFromRequest } from "@/lib/capi";
 import { withGclidTag, uploadClickConversion, sanitizeGclid, sanitizeAdSource } from "@/lib/google-ads";
+import { computeBookingPrice } from "@/lib/booking-price";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { name, email: rawEmail, date, timeSlot, people, totalPrice, isParty, discountCode, giftCardCode } = body as {
+  const { name, email: rawEmail, date, timeSlot, totalPrice, isParty, discountCode, giftCardCode } = body as {
     name: string;
     email: string;
     date: string;
@@ -23,6 +24,7 @@ export async function POST(req: NextRequest) {
     discountCode?: string;
     giftCardCode?: string;
   };
+  let { people } = body as { people: number };
 
   const email = String(rawEmail || "").trim().toLowerCase();
 
@@ -43,6 +45,20 @@ export async function POST(req: NextRequest) {
   if (slotTime.getTime() < Date.now()) {
     return NextResponse.json({ error: "Cannot book a session in the past. Please choose a future time slot." }, { status: 400 });
   }
+
+  // Price is computed server-side — the client's totalPrice is display-only.
+  // Discount and gift-card codes are re-validated here, so a tampered request
+  // can't create a free or underpaid booking.
+  const price = await computeBookingPrice({ people, discountCode, giftCardCode });
+  if ("error" in price) {
+    return NextResponse.json({ error: price.error }, { status: price.status });
+  }
+  if (price.finalTotal !== Number(totalPrice)) {
+    console.warn(
+      `[create-payment-intent] client total ${totalPrice} != computed ${price.finalTotal} for ${email}`
+    );
+  }
+  people = price.people;
 
   // Validate time slot against opening hours
   const { data: override } = await supabaseAdmin
@@ -123,8 +139,8 @@ export async function POST(req: NextRequest) {
 
   const mode = await getStripeModeAsync();
 
-  // Free booking after discount — create booking directly, no payment needed
-  if (totalPrice === 0) {
+  // Free booking after discount/gift card — create booking directly, no payment needed
+  if (price.finalTotal === 0) {
     const { data: booking, error: bookingError } = await supabaseAdmin
       .from("bookings")
       .insert({
@@ -138,7 +154,8 @@ export async function POST(req: NextRequest) {
         payment_status: "paid",
         stripe_session_id: `free_${Date.now()}`,
         is_party: false,
-        discount_code: discountCode || null,
+        discount_code: price.discountCode,
+        discount_amount: price.discountAmount,
         notes: withGclidTag(sanitizeAdSource(body.adSource), body.gclid),
       })
       .select("id")
@@ -182,20 +199,10 @@ export async function POST(req: NextRequest) {
     }
 
     // If a gift card covered the whole price, redeem it now.
-    if (giftCardCode && booking?.id) {
+    if (giftCardCode && price.giftCardCover > 0 && booking?.id) {
       try {
-        const { data: giftCard } = await supabaseAdmin
-          .from("gift_cards")
-          .select("balance")
-          .eq("code", giftCardCode.trim().toUpperCase())
-          .single();
-
-        if (giftCard && giftCard.balance > 0) {
-          const cover = Number(body.giftCardAmount) > 0 ? Number(body.giftCardAmount) : giftCard.balance;
-          const redeemAmount = Math.min(giftCard.balance, cover);
-          const red = await redeemGiftCard(giftCardCode, redeemAmount, { bookingId: booking.id });
-          if (!red.success) console.error("Gift card redeem failed:", red.error);
-        }
+        const red = await redeemGiftCard(giftCardCode, price.giftCardCover, { bookingId: booking.id });
+        if (!red.success) console.error("Gift card redeem failed:", red.error);
       } catch (e) {
         console.error("Failed to redeem gift card:", e);
       }
@@ -210,17 +217,17 @@ export async function POST(req: NextRequest) {
     }
 
     // Redeem loyalty reward if a FREE- code was used
-    if (discountCode && discountCode.toUpperCase().startsWith("FREE-")) {
-      await redeemRewardCode(discountCode, email);
+    if (price.discountCode?.startsWith("FREE-")) {
+      await redeemRewardCode(price.discountCode, email);
     }
 
     // Mark discount code as used
-    if (discountCode) {
+    if (price.discountCode) {
       try {
         const { data: disc } = await supabaseAdmin
           .from("discount_codes")
           .select("id, used_count")
-          .eq("code", discountCode)
+          .eq("code", price.discountCode)
           .single();
         if (disc) {
           await supabaseAdmin
@@ -228,7 +235,7 @@ export async function POST(req: NextRequest) {
             .update({ used_count: (disc.used_count || 0) + 1 })
             .eq("id", disc.id);
         }
-        await awardReferrerReward(discountCode);
+        await awardReferrerReward(price.discountCode);
       } catch (e) {
         console.error("Failed to increment discount usage:", e);
       }
@@ -241,7 +248,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const intent = await stripe.paymentIntents.create({
-      amount: Math.round(totalPrice * 100),
+      amount: Math.round(price.finalTotal * 100),
       currency: "gbp",
       automatic_payment_methods: { enabled: true },
       metadata: {
@@ -252,11 +259,11 @@ export async function POST(req: NextRequest) {
         date,
         timeSlot,
         people: String(people),
-        totalPrice: String(totalPrice),
+        totalPrice: String(price.finalTotal),
         phone: body.phone || "",
-        discountCode: discountCode || "",
+        discountCode: price.discountCode || "",
         giftCardCode: giftCardCode || "",
-        giftCardAmount: String(Number(body.giftCardAmount) || ""),
+        giftCardAmount: String(price.giftCardCover),
         adSource: sanitizeAdSource(body.adSource) || "",
         gclid: (sanitizeGclid(body.gclid) || "").slice(0, 255),
         // Meta click context — lets the Conversions API Purchase event match
@@ -276,7 +283,7 @@ export async function POST(req: NextRequest) {
       eventName: "InitiateCheckout",
       eventId: intent.id,
       email, name, phone: body.phone,
-      value: totalPrice,
+      value: price.finalTotal,
       sourceUrl: "https://theslimestudio.co.uk/booking",
       ...meta,
     });

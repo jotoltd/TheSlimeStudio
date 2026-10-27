@@ -46,7 +46,7 @@ INSERT INTO site_content (key, value) VALUES
   ('about_feature3_desc', 'Your finished slime is yours to take home and enjoy.'),
   ('about_cta', 'Ready to make your own?'),
   ('contact_address', 'Unit A, Feathers Yard, Holt, NR25 6BF'),
-  ('contact_hours', 'Mon–Sat 10am–4pm, Sunday closed'),
+  ('contact_hours', 'Term time: Sat & Sun 10am–4pm, School holidays: Mon–Sat 10am–4pm (Sun closed)'),
   ('contact_email', 'studio@theslimestudio.co.uk'),
   ('contact_intro', 'Got questions? We''d love to hear from you.'),
   ('footer_about', 'Experience the magic of hands-on creativity. We bring kids and adults alike into the world of vibrant, tactile slime-making in Norfolk.'),

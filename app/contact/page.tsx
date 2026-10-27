@@ -45,6 +45,15 @@ export default function ContactPage() {
     const form = e.currentTarget;
     const formData = new FormData(form);
 
+    // Honeypot — real users never see or fill this field; bots do. Silently
+    // accept so the bot thinks it worked rather than retrying.
+    if (formData.get("website")) {
+      form.reset();
+      setStatus("sent");
+      setTimeout(() => setStatus("idle"), 2500);
+      return;
+    }
+
     const { error } = await supabase.from("enquiries").insert({
       name: formData.get("name"),
       email: String(formData.get("email") || "").trim().toLowerCase(),
@@ -83,10 +92,22 @@ export default function ContactPage() {
       <section className="bg-pagebg py-14 md:py-16 px-4">
         <div className="container grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-8 md:gap-10">
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Honeypot — hidden from humans, catnip for bots */}
+            <input
+              name="website"
+              type="text"
+              tabIndex={-1}
+              autoComplete="off"
+              aria-hidden="true"
+              className="absolute -left-[9999px] w-0 h-0 opacity-0 pointer-events-none"
+            />
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-ink/40">👤</span>
+                <label htmlFor="contact-name" className="sr-only">Your name</label>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-ink/40" aria-hidden="true">👤</span>
                 <input
+                  id="contact-name"
                   name="name"
                   type="text"
                   required
@@ -95,8 +116,10 @@ export default function ContactPage() {
                 />
               </div>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-ink/40">✉️</span>
+                <label htmlFor="contact-email" className="sr-only">Your email</label>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-ink/40" aria-hidden="true">✉️</span>
                 <input
+                  id="contact-email"
                   name="email"
                   type="email"
                   required
@@ -107,8 +130,10 @@ export default function ContactPage() {
             </div>
 
             <div className="relative">
-              <span className="absolute left-4 top-4 text-ink/40">💬</span>
+              <label htmlFor="contact-message" className="sr-only">How can we help?</label>
+              <span className="absolute left-4 top-4 text-ink/40" aria-hidden="true">💬</span>
               <textarea
+                id="contact-message"
                 name="message"
                 required
                 rows={5}

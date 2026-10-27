@@ -70,7 +70,7 @@ export const CONTACT_EMAIL = "studio@theslimestudio.co.uk";
 
 // utm params are attacker-controlled and this label is interpolated into
 // email HTML — escape anything we pass through.
-const escapeHtml = (s: string) =>
+export const escapeHtml = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 // Turns "[Ad: Facebook/Instagram Ad, utm:ig/My Campaign > My Ad]" into
@@ -95,7 +95,7 @@ export function emailWrapper(content: string): string {
   return `
     <div style="font-family: 'Poppins', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
       <div style="text-align: center; margin-bottom: 24px;">
-        <img src="https://theslimestudio.co.uk/images/logo.png" alt="The Slime Studio" width="180" style="max-width: 180px; height: auto;" />
+        <img src="https://theslimestudio.co.uk/images/logo-email.png" alt="The Slime Studio" width="180" style="max-width: 180px; height: auto;" />
       </div>
       ${content}
       <p style="color: #ff2d78; font-size: 0.9rem; margin-top: 24px;">
@@ -117,14 +117,14 @@ export function bookingConfirmationHtml(opts: {
   return emailWrapper(`
     <h1 style="color: #ff2d78; font-size: 1.5rem; margin-bottom: 16px;">${ov.email_tpl_booking_heading || "Booking Confirmed!"}</h1>
     <p style="color: #333; font-size: 1rem; line-height: 1.6;">
-      Hi ${opts.name},
+      Hi ${escapeHtml(opts.name)},
     </p>
     <p style="color: #333; font-size: 1rem; line-height: 1.6;">
       ${ov.email_tpl_booking_body || `${opts.isParty ? "Your birthday party booking at The Slime Studio is confirmed!" : "Your slime-making session at The Slime Studio is confirmed!"} We can't wait to see you.`}
     </p>
     <div style="background: #fdeef7; border-radius: 12px; padding: 16px; margin: 16px 0;">
       <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Date:</strong> ${dateStr}</p>
-      <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Time:</strong> ${opts.timeSlot}</p>
+      <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Time:</strong> ${escapeHtml(opts.timeSlot)}</p>
       <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>${opts.isParty ? "Children" : "People"}:</strong> ${opts.people}</p>
       <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Total:</strong> &pound;${opts.totalPrice.toFixed(2)}</p>
       ${opts.isParty ? '<p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Type:</strong> Birthday Party (1.5 hours)</p>' : '<p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Type:</strong> Standard Session (1 hour)</p>'}
@@ -158,14 +158,14 @@ export function cancellationHtml(opts: {
   return emailWrapper(`
     <h1 style="color: #ff2d78; font-size: 1.5rem; margin-bottom: 16px;">${ov.email_tpl_cancellation_heading || "Booking Cancelled"}</h1>
     <p style="color: #333; font-size: 1rem; line-height: 1.6;">
-      Hi ${opts.name},
+      Hi ${escapeHtml(opts.name)},
     </p>
     <p style="color: #333; font-size: 1rem; line-height: 1.6;">
       ${ov.email_tpl_cancellation_body || "We're writing to let you know that your Slime Studio booking has been cancelled."}
     </p>
     <div style="background: #fdeef7; border-radius: 12px; padding: 16px; margin: 16px 0;">
       <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Date:</strong> ${dateStr}</p>
-      <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Time:</strong> ${opts.timeSlot}</p>
+      <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Time:</strong> ${escapeHtml(opts.timeSlot)}</p>
       <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>${opts.isParty ? "Children" : "People"}:</strong> ${opts.people}</p>
       ${opts.isParty ? '<p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Type:</strong> Birthday Party</p>' : ''}
     </div>
@@ -189,15 +189,15 @@ export function eventBookingConfirmationHtml(opts: {
   return emailWrapper(`
     <h1 style="color: #ff2d78; font-size: 1.5rem; margin-bottom: 16px;">${ov.email_tpl_event_heading || "Event Booking Confirmed!"}</h1>
     <p style="color: #333; font-size: 1rem; line-height: 1.6;">
-      Hi ${opts.name},
+      Hi ${escapeHtml(opts.name)},
     </p>
     <p style="color: #333; font-size: 1rem; line-height: 1.6;">
-      ${ov.email_tpl_event_body || `Your booking for <strong>${opts.eventTitle}</strong> at The Slime Studio is confirmed! We can't wait to see you.`}
+      ${ov.email_tpl_event_body || `Your booking for <strong>${escapeHtml(opts.eventTitle)}</strong> at The Slime Studio is confirmed! We can't wait to see you.`}
     </p>
     <div style="background: #fdeef7; border-radius: 12px; padding: 16px; margin: 16px 0;">
-      <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Event:</strong> ${opts.eventTitle}</p>
+      <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Event:</strong> ${escapeHtml(opts.eventTitle)}</p>
       <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Date:</strong> ${dateStr}</p>
-      <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Time:</strong> ${opts.startTime}</p>
+      <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Time:</strong> ${escapeHtml(opts.startTime)}</p>
       <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Duration:</strong> ${opts.durationMinutes} minutes</p>
       <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>${opts.pricingModel === "per_person" ? "People" : "Tickets"}:</strong> ${opts.quantity}</p>
       <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Total:</strong> &pound;${opts.totalPrice.toFixed(2)}</p>
@@ -264,11 +264,11 @@ export async function sendEventBookingEmails(opts: {
       html: emailWrapper(`
         <h1 style="color: #ff2d78; font-size: 1.5rem; margin-bottom: 16px;">New Event Booking</h1>
         <div style="background: #fdeef7; border-radius: 12px; padding: 16px; margin: 16px 0;">
-          <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Event:</strong> ${opts.eventTitle}</p>
-          <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Date:</strong> ${opts.date}</p>
-          <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Time:</strong> ${opts.startTime}</p>
-          <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Customer:</strong> ${opts.name}</p>
-          <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Email:</strong> ${opts.email}</p>
+          <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Event:</strong> ${escapeHtml(opts.eventTitle)}</p>
+          <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Date:</strong> ${escapeHtml(opts.date)}</p>
+          <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Time:</strong> ${escapeHtml(opts.startTime)}</p>
+          <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Customer:</strong> ${escapeHtml(opts.name)}</p>
+          <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Email:</strong> ${escapeHtml(opts.email)}</p>
           <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>${opts.pricingModel === "per_person" ? "People" : "Tickets"}:</strong> ${opts.quantity}</p>
           <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Total:</strong> &pound;${opts.totalPrice.toFixed(2)}</p>
           ${opts.adSource ? `<p style="margin: 8px 0 4px; color: #1877f2; font-size: 0.9rem;"><strong>📣 Source:</strong> ${adSourceLabel(opts.adSource)}</p>` : ""}
@@ -294,7 +294,7 @@ export function orderConfirmationHtml(opts: {
 }, ov: Record<string, string> = {}): string {
   const itemsHtml = opts.items.map((item) => `
     <tr>
-      <td style="padding: 8px 0; color: #333; font-size: 0.9rem;">${item.name} × ${item.quantity}</td>
+      <td style="padding: 8px 0; color: #333; font-size: 0.9rem;">${escapeHtml(item.name)} × ${item.quantity}</td>
       <td style="padding: 8px 0; color: #333; font-size: 0.9rem; text-align: right;">&pound;${(item.price * item.quantity).toFixed(2)}</td>
     </tr>
   `).join("");
@@ -302,13 +302,13 @@ export function orderConfirmationHtml(opts: {
   return emailWrapper(`
     <h1 style="color: #ff2d78; font-size: 1.5rem; margin-bottom: 16px;">${ov.email_tpl_order_heading || "Order Confirmed!"}</h1>
     <p style="color: #333; font-size: 1rem; line-height: 1.6;">
-      Hi ${opts.name},
+      Hi ${escapeHtml(opts.name)},
     </p>
     <p style="color: #333; font-size: 1rem; line-height: 1.6;">
       ${ov.email_tpl_order_body || "Thank you for your order from The Slime Studio!"}
     </p>
     <div style="background: #fdeef7; border-radius: 12px; padding: 16px; margin: 16px 0;">
-      <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Order:</strong> ${opts.orderNumber}</p>
+      <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Order:</strong> ${escapeHtml(opts.orderNumber)}</p>
       <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Delivery:</strong> ${opts.shippingMethod === "collection" ? "Collection from studio" : "Delivery"}</p>
     </div>
     <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">

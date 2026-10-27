@@ -146,7 +146,7 @@ export default function RootLayout({
               description:
                 "Hands-on slime-making sessions for children and families in Holt, Norfolk. Book a workshop, shop DIY kits, handmade slimes and accessories.",
               url: "https://theslimestudio.co.uk",
-              telephone: "",
+              hasMap: "https://www.google.com/maps/dir/?api=1&destination=The%20Slime%20Studio%2C%20Unit%20A%2C%20Feathers%20Yard%2C%20Holt%2C%20NR25%206BF",
               priceRange: "££",
               address: {
                 "@type": "PostalAddress",

@@ -120,6 +120,15 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // If this was a 2-hour booking, its auto-created `_slot2` placeholder row
+  // would otherwise block the next hour forever.
+  if (b.stripe_session_id) {
+    await supabaseAdmin
+      .from("bookings")
+      .delete()
+      .eq("stripe_session_id", `${b.stripe_session_id}_slot2`);
+  }
+
   // Send cancellation email
   if (b.email && (await emailEnabled("cancellation"))) {
     try {

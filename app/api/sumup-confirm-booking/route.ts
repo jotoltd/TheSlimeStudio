@@ -133,8 +133,9 @@ export async function POST(req: NextRequest) {
       phone: body.phone || null,
       date: body.date || "",
       timeSlot: body.timeSlot || "",
-      people: body.people || 1,
-      totalPrice: body.totalPrice ?? verification.amount ?? 0,
+      people: Math.min(Math.max(1, Math.floor(Number(body.people)) || 1), 50),
+      // SumUp's verified amount wins over anything the client claims it paid.
+      totalPrice: verification.amount ?? body.totalPrice ?? 0,
       isParty: false,
       discountCode: body.discountCode || null,
       gclid: body.gclid || null,
