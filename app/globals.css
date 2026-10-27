@@ -413,9 +413,10 @@ html[data-theme="halloween"] .bg-sky-blue-light.text-ink {
   color: rgb(var(--c-on-accent));
 }
 
-/* Readability floor for micro-text on phones: the smallest rem sizes used
-   across the site are raised so nothing renders below ~12px. Unlayered so it
-   wins over Tailwind's utilities layer (same trick as the theme remaps). */
+/* Readability floor for small text on phones: rem sizes across the site are
+   raised so nothing renders below ~12px and card body copy lands ~15-17px.
+   Unlayered so it wins over Tailwind's utilities layer (same trick as the
+   theme remaps). */
 @media (max-width: 767px) {
   .text-\[0\.55rem\],
   .text-\[0\.6rem\] {
@@ -428,6 +429,22 @@ html[data-theme="halloween"] .bg-sky-blue-light.text-ink {
   .text-\[0\.7rem\],
   .text-\[0\.72rem\] {
     font-size: 0.78rem;
+  }
+  .text-\[0\.75rem\],
+  .text-\[0\.78rem\] {
+    font-size: 0.85rem;
+  }
+  .text-\[0\.8rem\],
+  .text-\[0\.82rem\] {
+    font-size: 0.9rem;
+  }
+  .text-\[0\.85rem\],
+  .text-\[0\.88rem\] {
+    font-size: 0.95rem;
+  }
+  .text-\[0\.9rem\],
+  .text-\[0\.92rem\] {
+    font-size: 1rem;
   }
   /* iOS Safari zooms the page when an input under 16px is focused — floor
      form fields at the root size to prevent it. */
