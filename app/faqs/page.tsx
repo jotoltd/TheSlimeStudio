@@ -18,6 +18,7 @@ const defaultFaqs = [
   { q: "Can I bring more than one person?", a: "Yes. When booking, simply select the number of slime makers attending." },
   { q: "Do you offer birthday parties?", a: "Yes! We offer private Slime Studio parties for up to 15 slime makers, depending on age. Visit our Parties page for full details and prices." },
   { q: "Where are you?", a: "The Slime Studio, Unit A, Feathers Yard, Holt, NR25 6BF." },
+  { q: "Where can I park?", a: "The nearest car park is at Budgens — a 30-second walk from the studio. An alternative car park is at Albert Street, about a 5-minute walk away." },
   { q: "What are your opening hours?", a: "Term time: Saturday and Sunday 10am–4pm. School holidays: Monday–Saturday 10am–4pm (Sunday closed)." },
 ];
 
