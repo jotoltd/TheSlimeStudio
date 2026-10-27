@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 import Image from "next/image";
 import { preload } from "react-dom";
@@ -7,10 +5,14 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import RefCapture from "@/components/RefCapture";
 import { STUDIO_MAPS_URL, PARKING_NOTE } from "@/lib/supabase";
-import { useContent } from "@/lib/useContent";
+import { getSiteContent } from "@/lib/site-content";
 
-export default function HomePage() {
-  const { content: c } = useContent();
+// Re-validate every minute so dashboard content edits appear quickly while
+// the HTML still ships fully rendered (no client fetch-and-swap reflow).
+export const revalidate = 60;
+
+export default async function HomePage() {
+  const c = await getSiteContent();
   // Hero backdrop is a CSS background rather than <Image fill>: as an LCP
   // candidate the absolute-positioned image kept re-stamping its paint time
   // every time the header reflowed (font swaps, content fetches, hydration),
