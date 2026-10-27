@@ -34,8 +34,8 @@ export default function Footer() {
   return (
     <footer className="text-ink pt-[60px] pb-[30px] bg-cream">
       <div className="container">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[2fr_1fr_1fr_1fr] gap-6 md:gap-10 pb-8 md:pb-12 border-b border-ink/15">
-          <div>
+        <div className="grid grid-cols-2 md:grid-cols-[2fr_1fr_1fr_1fr] gap-6 md:gap-10 pb-8 md:pb-12 border-b border-ink/15">
+          <div className="col-span-2 md:col-span-1">
             <div className="flex items-center gap-2.5 mb-4">
               <Image
                 src="/images/header_logo.png"
@@ -74,7 +74,7 @@ export default function Footer() {
             </ul>
           </div>
 
-          <div>
+          <div className="col-span-2 md:col-span-1">
             <h4 className="font-display text-[1rem] mb-4 text-ink">Find Us</h4>
             <ul className="space-y-2.5">
               <li className="text-[0.9rem] text-ink-soft">{c.contact_address}</li>
