@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase";
+import { supabaseAdmin, isSlotPlaceholder } from "@/lib/supabase";
 import { verifyToken } from "@/lib/auth";
 import { googleAdsQuery, googleAdsConfig, googleAdsReady } from "@/lib/google-ads";
 import { META_AD_URL_TAGS, metaPost, metaRead } from "@/lib/meta-ads";
-import { classifyBookingSource, bookingSourceLabel, type BookingSource } from "@/lib/ad-tracking";
+import { classifyBookingSource, bookingSourceLabel, bookingSourceDetail, type BookingSource } from "@/lib/ad-tracking";
 
 export const runtime = "nodejs";
 
@@ -13,6 +13,8 @@ type InsightRow = {
   spend?: string;
   impressions?: string;
   clicks?: string;
+  campaign_id?: string;
+  campaign_name?: string;
 };
 
 type MetaTargeting = {
@@ -161,14 +163,15 @@ export async function GET(req: NextRequest) {
   // Meta: one insights row for spend/clicks + the objects needed for the
   // manage list. Only queried when the token is configured — the booking
   // attribution below works either way.
-  const [month, manageCampaigns, manageAdsets, adCreatives] = metaToken
+  const [month, metaCampaignStats, manageCampaigns, manageAdsets, adCreatives] = metaToken
     ? await Promise.all([
         safe(metaGet(metaToken, `${accountId}/insights`, { fields: "spend,impressions,clicks", time_range: JSON.stringify({ since, until }) }) as Promise<InsightRow[]>),
+        safe(metaGet(metaToken, `${accountId}/insights`, { level: "campaign", fields: "campaign_id,campaign_name,spend,impressions,clicks", time_range: JSON.stringify({ since, until }) }) as Promise<InsightRow[]>),
         safe(metaGet(metaToken, `${accountId}/campaigns`, { fields: "name,status,effective_status,daily_budget" }) as Promise<MetaCampaign[]>),
         safe(metaGet(metaToken, `${accountId}/adsets`, { fields: "name,status,effective_status,daily_budget,campaign{name},targeting,optimization_goal,promoted_object" }) as Promise<MetaAdset[]>),
         safe(metaGet(metaToken, `${accountId}/ads`, { fields: "name,status,effective_status,campaign{name},adset{name},creative{url_tags,object_story_spec,asset_feed_spec}" }) as Promise<MetaAd[]>),
       ])
-    : [[], [], [], []] as [InsightRow[], MetaCampaign[], MetaAdset[], MetaAd[]];
+    : [[], [], [], [], []] as [InsightRow[], InsightRow[], MetaCampaign[], MetaAdset[], MetaAd[]];
 
   const meta = metaToken
     ? {
@@ -186,7 +189,7 @@ export async function GET(req: NextRequest) {
     (gadsConnected ? googleAdsQuery(q) : Promise.resolve([])).catch((e) => { gadsApiError = e.message; return [] as Record<string, unknown>[]; });
   const [gadsDaily, gadsCampaigns] = await Promise.all([
     gadsQuery(`SELECT segments.date, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions FROM campaign WHERE segments.date BETWEEN '${since}' AND '${until}'`),
-    gadsQuery(`SELECT campaign.name, campaign.status, campaign_budget.amount_micros FROM campaign WHERE segments.date BETWEEN '${since}' AND '${until}'`),
+    gadsQuery(`SELECT campaign.name, campaign.status, campaign_budget.amount_micros, metrics.cost_micros, metrics.clicks, metrics.impressions, metrics.conversions FROM campaign WHERE segments.date BETWEEN '${since}' AND '${until}'`),
   ]);
   const gadsMicros = (v: unknown) => Number(v || 0) / 1_000_000;
   const google = {
@@ -200,6 +203,9 @@ export async function GET(req: NextRequest) {
       name: r.campaign?.name || "Unknown",
       status: r.campaign?.status || "",
       dailyBudget: r.campaignBudget?.amountMicros ? gadsMicros(r.campaignBudget.amountMicros) : null,
+      spend: gadsMicros(r.metrics?.costMicros),
+      clicks: Number(r.metrics?.clicks || 0),
+      conversions: Number(r.metrics?.conversions || 0),
     })),
   };
 
@@ -210,7 +216,7 @@ export async function GET(req: NextRequest) {
   const [{ data: bookings }, { data: eventBookings }, { data: giftCards }] = await Promise.all([
     supabaseAdmin
       .from("bookings")
-      .select("id, name, email, date, total_price, payment_status, notes, created_at")
+      .select("id, name, email, date, people, is_party, total_price, payment_status, notes, stripe_session_id, created_at")
       .gte("created_at", `${since}T00:00:00Z`)
       .lte("created_at", `${until}T23:59:59Z`),
     supabaseAdmin
@@ -233,13 +239,19 @@ export async function GET(req: NextRequest) {
     status: string;
     kind: "Session" | "Event" | "Gift card";
     date: string | null;
+    qty: number;
+    party: boolean;
     at: string;
     source: BookingSource;
     label: string;
+    campaign: string | null;
+    adName: string | null;
   };
 
+  // `_slot2` rows are the auto-blocked second hour of 2-hour bookings — not
+  // real sales, so they never reach the list or the source totals.
   const items: Item[] = [
-    ...(bookings || []).map((b) => ({
+    ...(bookings || []).filter((b) => !isSlotPlaceholder(b)).map((b) => ({
       id: b.id,
       name: b.name,
       email: b.email,
@@ -247,9 +259,13 @@ export async function GET(req: NextRequest) {
       status: b.payment_status,
       kind: "Session" as const,
       date: b.date,
+      qty: b.people || 1,
+      party: !!b.is_party,
       at: b.created_at,
       source: classifyBookingSource(b.notes),
       label: bookingSourceLabel(b.notes),
+      campaign: bookingSourceDetail(b.notes).campaign,
+      adName: bookingSourceDetail(b.notes).ad,
     })),
     ...(eventBookings || []).map((b) => ({
       id: b.id,
@@ -259,9 +275,13 @@ export async function GET(req: NextRequest) {
       status: b.payment_status,
       kind: "Event" as const,
       date: null,
+      qty: b.quantity || 1,
+      party: false,
       at: b.created_at,
       source: classifyBookingSource(b.notes),
       label: bookingSourceLabel(b.notes),
+      campaign: bookingSourceDetail(b.notes).campaign,
+      adName: bookingSourceDetail(b.notes).ad,
     })),
     ...(giftCards || []).map((g) => ({
       id: g.id,
@@ -272,9 +292,13 @@ export async function GET(req: NextRequest) {
       status: g.status === "pending" ? "pending" : g.status === "cancelled" ? "cancelled" : "paid",
       kind: "Gift card" as const,
       date: null,
+      qty: 1,
+      party: false,
       at: g.created_at,
       source: classifyBookingSource(g.ad_source),
       label: bookingSourceLabel(g.ad_source),
+      campaign: bookingSourceDetail(g.ad_source).campaign,
+      adName: bookingSourceDetail(g.ad_source).ad,
     })),
   ].sort((a, b) => (b.at || "").localeCompare(a.at || ""));
 
@@ -290,6 +314,57 @@ export async function GET(req: NextRequest) {
     sources[i.source].bookings += 1;
     sources[i.source].revenue += i.amount;
   }
+
+  // Per-campaign view: platform-reported spend/clicks joined by name with the
+  // campaign name each tracked sale carries in its [Ad: utm:.../campaign] tag.
+  // Meta campaign names join exactly (utm_campaign = {{campaign.name}}).
+  // Google bookings only carry a gclid — no campaign name — so Google rows
+  // rely on Google's own reported conversions.
+  type CampaignRow = {
+    source: "meta" | "google";
+    name: string;
+    status: string | null;
+    spend: number | null;
+    clicks: number | null;
+    platformConversions: number | null;
+    sales: number;
+    revenue: number;
+  };
+  const campaignMap = new Map<string, CampaignRow>();
+  const campRow = (source: "meta" | "google", name: string): CampaignRow => {
+    const key = `${source}|${name.toLowerCase()}`;
+    let r = campaignMap.get(key);
+    if (!r) {
+      r = { source, name, status: null, spend: null, clicks: null, platformConversions: null, sales: 0, revenue: 0 };
+      campaignMap.set(key, r);
+    }
+    return r;
+  };
+  const metaStatus = new Map(manageCampaigns.map((c) => [(c.name || "").toLowerCase(), c.effective_status || c.status || null]));
+  metaCampaignStats.forEach((r) => {
+    const name = r.campaign_name || "";
+    if (!name) return;
+    const e = campRow("meta", name);
+    e.spend = (e.spend || 0) + Number(r.spend || 0);
+    e.clicks = (e.clicks || 0) + Number(r.clicks || 0);
+    e.status = metaStatus.get(name.toLowerCase()) || e.status;
+  });
+  google.campaigns.forEach((c) => {
+    const e = campRow("google", c.name);
+    e.spend = (e.spend || 0) + c.spend;
+    e.clicks = (e.clicks || 0) + c.clicks;
+    e.platformConversions = (e.platformConversions || 0) + c.conversions;
+    e.status = c.status || e.status;
+  });
+  for (const i of items) {
+    if (i.status !== "paid" || (i.source !== "meta" && i.source !== "google") || !i.campaign) continue;
+    const e = campRow(i.source, i.campaign);
+    e.sales += 1;
+    e.revenue += i.amount;
+  }
+  const campaigns = Array.from(campaignMap.values())
+    .sort((a, b) => b.revenue - a.revenue || (b.spend || 0) - (a.spend || 0))
+    .slice(0, 20);
 
   return NextResponse.json({
     configured: true,
@@ -317,6 +392,7 @@ export async function GET(req: NextRequest) {
       })),
     },
     sources,
+    campaigns,
     // Ad Management only reports paid-channel sales — organic items still
     // count in `sources` above (for the organic footnote) but aren't listed.
     items: items.filter((i) => i.source !== "organic").slice(0, 100),

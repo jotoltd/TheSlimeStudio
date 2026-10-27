@@ -64,6 +64,14 @@ export function paymentMethodFor(ref?: string | null): PaymentMethod {
   return "unknown";
 }
 
+// True for the auto-created second row of a 2-hour booking — it only exists to
+// hold capacity in the next slot, so it must never count toward people totals
+// or the daily cap. Identified by the `_slot2` payment-ref suffix the admin
+// route assigns, or the note it stamps on the row.
+export function isSlotPlaceholder(b: { stripe_session_id?: string | null; notes?: string | null }) {
+  return !!b.stripe_session_id?.endsWith("_slot2") || !!b.notes?.startsWith("[Blocked for 2-hour");
+}
+
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   sumup: "SumUp",
   stripe: "Stripe",
@@ -152,6 +160,15 @@ export type SiteSettings = {
 export const TIME_SLOTS = ["10:00", "11:00", "12:00", "13:00", "14:00", "15:00"];
 export const SLOT_CAPACITY = 10;
 export const MAX_DAILY_BOOKINGS = 5;
+
+export const STUDIO_ADDRESS = "Unit A, Feathers Yard, Holt, NR25 6BF";
+// Opens Google Maps directions with the studio pre-filled as the destination —
+// on phones it hands straight off to the Maps app.
+export const STUDIO_MAPS_URL = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+  `The Slime Studio, ${STUDIO_ADDRESS}`
+)}`;
+export const PARKING_NOTE =
+  "Nearest car park: Budgens — a 30-second walk from the studio. Alternative: Albert Street car park, about a 5-minute walk.";
 
 export type LoyaltyCard = {
   id: string;

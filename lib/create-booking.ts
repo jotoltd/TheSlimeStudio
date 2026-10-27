@@ -95,8 +95,10 @@ export async function createPaidBooking(details: BookingDetails): Promise<Create
     return { created: false, bookingId: existing[0].id, overCapacity: false };
   }
 
-  // Capacity is informational only — we never refuse a booking that has been paid for.
-  const overCapacity = await isOverCapacity(date, timeSlot, people);
+  // Capacity is informational only — we never refuse a booking that has been
+  // paid for. Parties are exempt from slot/daily caps (private hire), so they
+  // are never flagged.
+  const overCapacity = isParty ? false : await isOverCapacity(date, timeSlot, people);
 
   const { data, error } = await supabaseAdmin
     .from("bookings")
@@ -183,7 +185,9 @@ async function isOverCapacity(date: string, timeSlot: string, people: number): P
       .from("bookings")
       .select("people")
       .eq("date", date)
-      .eq("payment_status", "paid");
+      .eq("payment_status", "paid")
+      .eq("is_party", false)
+      .not("stripe_session_id", "like", "%_slot2");
     const dailyUsed = (dailyBookings || []).reduce((sum: number, b: { people: number }) => sum + b.people, 0);
     return dailyUsed + people > maxDaily;
   } catch {

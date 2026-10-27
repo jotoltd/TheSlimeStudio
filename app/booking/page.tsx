@@ -6,7 +6,7 @@ import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Calendar from "@/components/Calendar";
-import { supabase, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, PRICE_PER_PERSON, MAX_DAILY_BOOKINGS as DEFAULT_MAX } from "@/lib/supabase";
+import { supabase, isSlotPlaceholder, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, PRICE_PER_PERSON, MAX_DAILY_BOOKINGS as DEFAULT_MAX, STUDIO_MAPS_URL, PARKING_NOTE } from "@/lib/supabase";
 import type { BookingSettings, OpeningHour, DateOverride } from "@/lib/supabase";
 import { useContent } from "@/lib/useContent";
 import { trackPurchase, trackInitiateCheckout, getMetaCookies, getAdSource, setAdSource, getGclid } from "@/lib/ad-tracking";
@@ -619,14 +619,17 @@ function BookingPageInner() {
       setTermsPreAgreed(true);
     }
 
-    // Check total bookings for this date (daily cap, excluding parties) — only paid bookings count
+    // Check total bookings for this date (daily cap, excluding parties and the
+    // auto-blocked second-hour rows of 2-hour bookings) — only paid bookings count
     const { data: dailyBookings } = await supabase
       .from("bookings")
-      .select("people")
+      .select("people, stripe_session_id, notes")
       .eq("date", date)
       .eq("payment_status", "paid")
       .eq("is_party", false);
-    const dailyUsed = (dailyBookings || []).reduce((sum: number, b: { people: number }) => sum + b.people, 0);
+    const dailyUsed = (dailyBookings || [])
+      .filter((b: { people: number; stripe_session_id?: string; notes?: string }) => !isSlotPlaceholder(b))
+      .reduce((sum: number, b: { people: number }) => sum + b.people, 0);
     if (dailyUsed + people > maxDaily) {
       setStatus("error");
       setErrorMsg(`Sorry, this date is fully booked. Please choose another date.`);
@@ -758,10 +761,16 @@ function BookingPageInner() {
           <p className={`${isAdLanding ? "text-[1rem]" : "text-[0.95rem]"} md:text-[1.1rem] text-ink/80 max-w-[560px] mx-auto`}>
             {c.booking_info}
           </p>
-          <div className="mt-4 inline-flex items-center gap-2 bg-white/50 rounded-full px-4 py-2 text-[0.85rem] text-ink">
+          <a
+            href={STUDIO_MAPS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 inline-flex items-center gap-2 bg-white/50 rounded-full px-4 py-2 text-[0.85rem] text-ink hover:bg-white/80 transition-colors"
+          >
             <span>📍</span>
             <span className="font-medium">Unit A, Feathers Yard, Holt, NR25 6BF</span>
-          </div>
+            <span className="font-semibold text-hot-pink">Get Directions →</span>
+          </a>
           <div className="mt-2 inline-flex items-center gap-2 bg-white/50 rounded-full px-4 py-2 text-[0.85rem] text-ink">
             <span>🚶</span>
             <span className="font-medium">{c.booking_walkins}</span>
@@ -833,12 +842,21 @@ function BookingPageInner() {
                 </div>
               </div>
 
-              {/* Address */}
+              {/* Address + parking */}
               <div className="mt-4 bg-sky-blue-light/10 rounded-xl px-5 py-4 flex items-start gap-3">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-ink-soft flex-shrink-0 mt-0.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
-                <div>
+                <div className="flex-1">
                   <div className="text-[0.85rem] font-medium text-ink">Unit A, Feathers Yard, Holt, NR25 6BF</div>
                   <div className="text-[0.8rem] text-ink-soft mt-0.5">Please arrive 5 minutes before your session</div>
+                  <div className="text-[0.8rem] text-ink-soft mt-1">🅿️ {PARKING_NOTE}</div>
+                  <a
+                    href={STUDIO_MAPS_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-primary inline-block mt-3 !px-5 !py-2 !text-[0.8rem]"
+                  >
+                    Get Directions
+                  </a>
                 </div>
               </div>
 
@@ -1591,7 +1609,11 @@ function BookingPageInner() {
                 </div>
                 <div className="flex gap-3">
                   <span className="text-[1.1rem] flex-shrink-0">📍</span>
-                  <p>We&apos;re at <strong className="text-ink">Unit A, Feathers Yard, Holt, NR25 6BF</strong>. Walk-ins are welcome too, subject to availability.</p>
+                  <p>We&apos;re at <strong className="text-ink">Unit A, Feathers Yard, Holt, NR25 6BF</strong> — <a href={STUDIO_MAPS_URL} target="_blank" rel="noopener noreferrer" className="text-hot-pink font-medium underline underline-offset-2">get directions</a>. Walk-ins are welcome too, subject to availability.</p>
+                </div>
+                <div className="flex gap-3">
+                  <span className="text-[1.1rem] flex-shrink-0">🅿️</span>
+                  <p>{PARKING_NOTE}</p>
                 </div>
               </div>
             )}
@@ -1606,7 +1628,9 @@ function BookingPageInner() {
               <h2 className="font-display text-[1.4rem] md:text-[2.2rem] mb-3">{c.cta_title}</h2>
               <p className="text-[0.95rem] md:text-[1.05rem] mb-6 opacity-90 max-w-md mx-auto">{c.cta_text}</p>
               <a href="#book" className="inline-block bg-white text-ink font-semibold rounded-full px-8 py-3.5 hover:scale-[1.03] transition-transform">Book Your Slot</a>
-              <p className="mt-6 text-[0.8rem] opacity-80">📍 Unit A, Feathers Yard, Holt, NR25 6BF</p>
+              <p className="mt-6 text-[0.8rem] opacity-80">
+                📍 <a href={STUDIO_MAPS_URL} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">Unit A, Feathers Yard, Holt, NR25 6BF</a>
+              </p>
             </div>
           </div>
         </section>

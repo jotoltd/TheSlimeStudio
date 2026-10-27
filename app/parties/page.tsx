@@ -6,7 +6,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Heart } from "@/components/Heart";
 import { InstagramIcon } from "@/components/SocialLinks";
-import { supabase } from "@/lib/supabase";
+import { supabase, STUDIO_MAPS_URL } from "@/lib/supabase";
 import { useContent } from "@/lib/useContent";
 
 const INCLUDED = [
@@ -99,10 +99,16 @@ export default function PartiesPage() {
           <p className="font-display text-[1.05rem] mb-4 text-hot-pink">
             {c.parties_tagline}
           </p>
-          <div className="inline-flex items-center gap-2 bg-white/50 rounded-full px-4 py-2 text-[0.85rem] text-ink">
+          <a
+            href={STUDIO_MAPS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 bg-white/50 rounded-full px-4 py-2 text-[0.85rem] text-ink hover:bg-white/80 transition-colors"
+          >
             <span>📍</span>
             <span className="font-medium">{c.contact_address}</span>
-          </div>
+            <span className="font-semibold text-hot-pink">Get Directions →</span>
+          </a>
         </div>
       </section>
 

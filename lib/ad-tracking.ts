@@ -209,15 +209,25 @@ function safeDecode(s: string): string {
   }
 }
 
+// Campaign and ad names carried in the tracked-link tag, e.g.
+// "utm:facebook:paid/Summer Promo > Slime video" — written by Meta's url_tags
+// {{campaign.name}} / {{ad.name}} placeholders or a manual tracking link's
+// "/campaign > ad" syntax.
+export function bookingSourceDetail(notes: string | null | undefined): { campaign: string | null; ad: string | null } {
+  const inner = (notes || "").replace(/\s*\[gclid:[^\]]*\]/gi, "").replace(/^\[ad:\s*/i, "").replace(/\]\s*$/, "");
+  const utm = inner.match(/utm:([a-z0-9]+)(?::[a-z0-9_-]+)?(?:\/([^>,]+?))?(?:\s*>\s*([^,\]]+))?(?=[,\]]|$)/i);
+  const clean = (s?: string) => (s ? safeDecode(s.trim()).replace(/\+/g, " ") : null);
+  return { campaign: clean(utm?.[2]), ad: clean(utm?.[3]) };
+}
+
 // Human-readable badge text, e.g. "Meta Ad · Spring Promo · Book Now".
 export function bookingSourceLabel(notes: string | null | undefined): string {
   const src = classifyBookingSource(notes);
   if (src === "organic") return "Organic";
   const inner = (notes || "").replace(/\s*\[gclid:[^\]]*\]/gi, "").replace(/^\[ad:\s*/i, "").replace(/\]\s*$/, "");
   const utm = inner.match(/utm:([a-z0-9]+)(?::[a-z0-9_-]+)?(?:\/([^>,]+?))?(?:\s*>\s*([^,\]]+))?(?=[,\]]|$)/i);
-  const detail = utm
-    ? [utm[2], utm[3]].filter((p): p is string => !!p).map((p) => safeDecode(p.trim()).replace(/\+/g, " ")).join(" · ")
-    : "";
+  const { campaign, ad } = bookingSourceDetail(notes);
+  const detail = [campaign, ad].filter(Boolean).join(" · ");
   const linkNames: Record<string, string> = { ig: "Instagram", instagram: "Instagram", fb: "Facebook", facebook: "Facebook", meta: "Meta", "ad-landing": "Ad page" };
   const base =
     src === "meta" ? "Meta Ad" :

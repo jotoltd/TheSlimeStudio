@@ -52,12 +52,17 @@ export async function POST(req: NextRequest) {
     }, { status: 409 });
   }
 
-  // Check daily cap (only paid bookings count) — but allow override for party bookings
+  // Check daily cap — matches the public checkout rule: only paid, non-party
+  // bookings count (a party is private hire, not part of the public quota),
+  // and `_slot2` rows are the auto-blocked second hour of a 2-hour booking,
+  // not extra people. Party bookings may override the cap.
   const { data: dailyBookings } = await supabaseAdmin
     .from("bookings")
     .select("people")
     .eq("date", date)
-    .eq("payment_status", "paid");
+    .eq("payment_status", "paid")
+    .eq("is_party", false)
+    .not("stripe_session_id", "like", "%_slot2");
 
   const dailyUsed = (dailyBookings || []).reduce((sum: number, b: { people: number }) => sum + b.people, 0);
   const dailyRemaining = maxDaily - dailyUsed;

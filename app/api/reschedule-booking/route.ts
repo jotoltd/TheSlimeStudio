@@ -62,9 +62,12 @@ export async function POST(req: NextRequest) {
     .neq("id", bookingId);
   const slotUsed = (sameSlot || []).reduce((s, b) => s + b.people, 0);
 
+  // Daily cap follows the public checkout rule: only real, non-party attendees
+  // count — `_slot2` rows are auto-blocked second hours, not extra people.
   const { data: sameDay } = await supabaseAdmin
     .from("bookings").select("people")
-    .eq("date", newDate).eq("payment_status", "paid")
+    .eq("date", newDate).eq("payment_status", "paid").eq("is_party", false)
+    .not("stripe_session_id", "like", "%_slot2")
     .neq("id", bookingId);
   const dayUsed = (sameDay || []).reduce((s, b) => s + b.people, 0);
 
@@ -74,7 +77,7 @@ export async function POST(req: NextRequest) {
       { status: 409 }
     );
   }
-  if (dayUsed + newPeople > dailyCap) {
+  if (!booking.is_party && dayUsed + newPeople > dailyCap) {
     return NextResponse.json(
       { error: `Daily capacity reached — ${dailyCap - dayUsed} spot(s) left on that date` },
       { status: 409 }

@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import SocialLinks from "@/components/SocialLinks";
-import { supabase } from "@/lib/supabase";
+import { supabase, STUDIO_MAPS_URL } from "@/lib/supabase";
 import { useContent } from "@/lib/useContent";
 
 export default function Footer() {
@@ -77,6 +77,7 @@ export default function Footer() {
             <h4 className="font-display text-[1rem] mb-4 text-ink">Find Us</h4>
             <ul className="space-y-2.5">
               <li className="text-[0.9rem] text-ink-soft">{c.contact_address}</li>
+              <li><a href={STUDIO_MAPS_URL} target="_blank" rel="noopener noreferrer" className="text-[0.9rem] hover:text-ink transition-colors">Get Directions</a></li>
               <li><a href={`mailto:${c.contact_email}`} className="text-[0.9rem] hover:text-ink transition-colors">{c.contact_email}</a></li>
             </ul>
           </div>

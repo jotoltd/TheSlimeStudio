@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { supabase, type Booking, type BookingSettings, paymentMethodFor, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, MAX_DAILY_BOOKINGS as DEFAULT_MAX } from "@/lib/supabase";
+import { supabase, type Booking, type BookingSettings, paymentMethodFor, isSlotPlaceholder, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, MAX_DAILY_BOOKINGS as DEFAULT_MAX } from "@/lib/supabase";
 import PageHeader from "@/components/PageHeader";
 import PaymentMethodBadge from "@/components/PaymentMethodBadge";
 import Pagination from "@/components/Pagination";
@@ -330,13 +330,15 @@ export default function BookingsAdminPage() {
   }
 
   async function loadEditAvailability(forDate: string, excludeId: string) {
-    const { data } = await supabase.from("bookings").select("id, time_slot, people").eq("date", forDate).eq("payment_status", "paid");
+    const { data } = await supabase.from("bookings").select("id, time_slot, people, is_party, stripe_session_id, notes").eq("date", forDate).eq("payment_status", "paid");
     const used: Record<string, number> = {};
     let dailyTotal = 0;
-    (data || []).forEach((b: { id: string; time_slot: string; people: number }) => {
+    (data || []).forEach((b: { id: string; time_slot: string; people: number; is_party: boolean; stripe_session_id?: string; notes?: string }) => {
       if (b.id === excludeId) return;
       used[b.time_slot] = (used[b.time_slot] || 0) + b.people;
-      dailyTotal += b.people;
+      // Daily usage mirrors the checkout rule: parties and auto-blocked second
+      // hours don't consume the public daily quota.
+      if (!b.is_party && !isSlotPlaceholder(b)) dailyTotal += b.people;
     });
     setEditSlotAvailability(used);
     setEditDailyUsed(dailyTotal);
@@ -382,12 +384,12 @@ export default function BookingsAdminPage() {
   }
 
   async function loadAddAvailability(forDate: string) {
-    const { data } = await supabase.from("bookings").select("time_slot, people").eq("date", forDate).eq("payment_status", "paid");
+    const { data } = await supabase.from("bookings").select("time_slot, people, is_party, stripe_session_id, notes").eq("date", forDate).eq("payment_status", "paid");
     const used: Record<string, number> = {};
     let dailyTotal = 0;
-    (data || []).forEach((b: { time_slot: string; people: number }) => {
+    (data || []).forEach((b: { time_slot: string; people: number; is_party: boolean; stripe_session_id?: string; notes?: string }) => {
       used[b.time_slot] = (used[b.time_slot] || 0) + b.people;
-      dailyTotal += b.people;
+      if (!b.is_party && !isSlotPlaceholder(b)) dailyTotal += b.people;
     });
     setAddSlotAvailability(used);
     setAddDailyUsed(dailyTotal);
@@ -507,11 +509,12 @@ export default function BookingsAdminPage() {
 
   const todayStr = new Date().toISOString().split("T")[0];
   const todaysBookings = bookings.filter((b) => b.date === todayStr && b.payment_status !== "refunded").sort((a, b) => a.time_slot.localeCompare(b.time_slot));
+  const todaysPeople = todaysBookings.filter((b) => !isSlotPlaceholder(b)).reduce((s, b) => s + b.people, 0);
 
   const bookingsByDate: Record<string, Booking[]> = {};
   filteredBookings.forEach((b) => { const d = b.date; if (!bookingsByDate[d]) bookingsByDate[d] = []; bookingsByDate[d].push(b); });
   const selectedDateBookings = selectedDate ? (bookingsByDate[selectedDate] || []) : [];
-  const totalPeople = filteredBookings.reduce((sum, b) => sum + b.people, 0);
+  const totalPeople = filteredBookings.filter((b) => !isSlotPlaceholder(b)).reduce((sum, b) => sum + b.people, 0);
   const totalRevenue = filteredBookings.filter((b) => b.payment_status === "paid").reduce((sum, b) => sum + Number(b.total_price), 0);
 
   const sortedBookings = [...filteredBookings].sort((a, b) => {
@@ -635,7 +638,7 @@ export default function BookingsAdminPage() {
         <div className="bg-white rounded-[20px] p-5 md:p-6 shadow-sm mb-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-display text-[1.1rem]">Today&apos;s Bookings ({todaysBookings.length})</h2>
-            <span className="text-[0.85rem] text-ink-soft">{todaysBookings.reduce((s, b) => s + b.people, 0)} people total</span>
+            <span className="text-[0.85rem] text-ink-soft">{todaysPeople} people total</span>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {todaysBookings.map((b) => (

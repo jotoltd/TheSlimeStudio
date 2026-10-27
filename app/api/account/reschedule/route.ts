@@ -89,12 +89,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Check daily cap at the new date
+  // Check daily cap at the new date — same rule as checkout: only paid,
+  // non-party bookings count, and `_slot2` placeholder rows aren't people.
   const { data: dailyBookings } = await supabaseAdmin
     .from("bookings")
     .select("people")
     .eq("date", newDate)
     .eq("payment_status", "paid")
+    .eq("is_party", false)
+    .not("stripe_session_id", "like", "%_slot2")
     .neq("id", bookingId);
 
   const dailyUsed = (dailyBookings || []).reduce((sum: number, b: { people: number }) => sum + b.people, 0);

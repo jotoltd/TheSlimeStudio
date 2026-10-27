@@ -5,7 +5,7 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Heart } from "@/components/Heart";
-import { supabase } from "@/lib/supabase";
+import { supabase, STUDIO_MAPS_URL } from "@/lib/supabase";
 import { useContent } from "@/lib/useContent";
 
 export default function ContactPage() {
@@ -30,6 +30,12 @@ export default function ContactPage() {
       icon: "✉️",
       title: "Email",
       lines: [c.contact_email],
+    },
+    {
+      bg: "bg-[#e8a13a]",
+      icon: "🅿️",
+      title: "Parking",
+      lines: ["Budgens — 30-second walk", "Albert Street — ~5-minute walk"],
     },
   ];
 
@@ -142,6 +148,15 @@ export default function ContactPage() {
                 </div>
               </div>
             ))}
+
+            <a
+              href={STUDIO_MAPS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-primary inline-block mt-2"
+            >
+              Get Directions
+            </a>
           </div>
         </div>
       </section>

@@ -107,7 +107,8 @@ export async function POST(req: NextRequest) {
     .select("people")
     .eq("date", date)
     .eq("payment_status", "paid")
-    .eq("is_party", false);
+    .eq("is_party", false)
+    .not("stripe_session_id", "like", "%_slot2");
   const dailyUsed = (dailyBookings || []).reduce((sum: number, b: { people: number }) => sum + b.people, 0);
   if (dailyUsed + people > maxDaily) {
     return NextResponse.json({ error: "This date is fully booked." }, { status: 409 });

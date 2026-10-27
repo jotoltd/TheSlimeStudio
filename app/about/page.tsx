@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { STUDIO_MAPS_URL } from "@/lib/supabase";
 import { useContent } from "@/lib/useContent";
 
 const carouselImages = [
@@ -121,10 +122,16 @@ export default function AboutPage() {
           <p className="text-[0.95rem] md:text-[1.05rem] text-ink/80 mb-4 leading-relaxed">
             {c.about_text}
           </p>
-          <div className="inline-flex items-center gap-2 bg-white/50 rounded-full px-4 py-2 text-[0.85rem] text-ink mb-10 md:mb-14">
+          <a
+            href={STUDIO_MAPS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 bg-white/50 rounded-full px-4 py-2 text-[0.85rem] text-ink mb-10 md:mb-14 hover:bg-white/80 transition-colors"
+          >
             <span>📍</span>
             <span className="font-medium">{c.contact_address}</span>
-          </div>
+            <span className="font-semibold text-hot-pink">Get Directions →</span>
+          </a>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 md:gap-8 mb-10 md:mb-16 text-left sm:text-center">
             {features.map((f) => (

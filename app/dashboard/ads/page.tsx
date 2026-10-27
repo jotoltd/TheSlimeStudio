@@ -12,9 +12,24 @@ type Item = {
   status: string;
   kind: "Session" | "Event" | "Gift card";
   date: string | null;
+  qty: number;
+  party: boolean;
   at: string;
   source: SourceKey;
   label: string;
+  campaign: string | null;
+  adName: string | null;
+};
+
+type CampaignRow = {
+  source: "meta" | "google";
+  name: string;
+  status: string | null;
+  spend: number | null;
+  clicks: number | null;
+  platformConversions: number | null;
+  sales: number;
+  revenue: number;
 };
 
 type ManagedEntity = {
@@ -44,10 +59,11 @@ type Data = {
     impressions: number;
     clicks: number;
     conversions: number;
-    campaigns: { name: string; status: string; dailyBudget: number | null }[];
+    campaigns: { name: string; status: string; dailyBudget: number | null; spend: number; clicks: number; conversions: number }[];
   };
   manage: { campaigns: ManagedEntity[]; adsets: ManagedEntity[]; ads: ManagedEntity[] };
   sources: Record<SourceKey, { bookings: number; revenue: number }>;
+  campaigns: CampaignRow[];
   totalPaid: { bookings: number; revenue: number };
   items: Item[];
   range: { key: string; since: string; until: string };
@@ -187,6 +203,10 @@ export default function AdsPage() {
   const adRevenue = (data?.sources.meta.revenue || 0) + (data?.sources.google.revenue || 0);
   const roas = spend > 0 ? adRevenue / spend : null;
   const costPerBooking = adBookings > 0 ? spend / adBookings : null;
+  const clicks = (data?.meta?.clicks || 0) + (data?.google?.connected ? data.google.clicks : 0);
+  const costPerClick = clicks > 0 ? spend / clicks : null;
+  const clickToSale = clicks > 0 ? adBookings / clicks : null;
+  const avgSale = adBookings > 0 ? adRevenue / adBookings : null;
   const anyLive =
     [...(data?.manage?.campaigns || []), ...(data?.manage?.adsets || [])].some((e) => e.effectiveStatus === "ACTIVE") ||
     (data?.google?.campaigns || []).some((c) => c.status === "ENABLED");
@@ -274,6 +294,22 @@ export default function AdsPage() {
                 <div className="text-[0.7rem] uppercase tracking-wider text-white/80">Cost per booking</div>
                 <div className="font-display text-[1.5rem]">{costPerBooking ? fmt(costPerBooking) : "—"}</div>
               </div>
+              <div>
+                <div className="text-[0.7rem] uppercase tracking-wider text-white/80">Ad clicks</div>
+                <div className="font-display text-[1.5rem]">{clicks || "—"}</div>
+              </div>
+              <div>
+                <div className="text-[0.7rem] uppercase tracking-wider text-white/80" title="Paid bookings traced to ads ÷ ad clicks">Click → sale</div>
+                <div className="font-display text-[1.5rem]">{clickToSale ? `${(clickToSale * 100).toFixed(1)}%` : "—"}</div>
+              </div>
+              <div>
+                <div className="text-[0.7rem] uppercase tracking-wider text-white/80">Cost per click</div>
+                <div className="font-display text-[1.5rem]">{costPerClick ? fmt(costPerClick) : "—"}</div>
+              </div>
+              <div>
+                <div className="text-[0.7rem] uppercase tracking-wider text-white/80">Avg sale</div>
+                <div className="font-display text-[1.5rem]">{avgSale ? fmt(avgSale) : "—"}</div>
+              </div>
             </div>
             <div className="text-white/60 text-[0.7rem] mt-4">Bookings only count here when the customer clicked a real Meta or Google ad — email links and shares don&apos;t.</div>
           </div>
@@ -311,7 +347,50 @@ export default function AdsPage() {
                 </div>
               );
             })()}
+            {data.sources.organic.bookings > 0 && (
+              <p className="text-[0.75rem] text-ink-soft mt-5 pt-4 border-t border-ink/[0.06]">
+                Plus <strong>{data.sources.organic.bookings}</strong> sale{data.sources.organic.bookings === 1 ? "" : "s"} · {fmt(data.sources.organic.revenue)} with no link to an ad or tracked link (direct, walk-ins, repeat customers).
+              </p>
+            )}
           </div>
+
+          {/* Which campaigns are working */}
+          {(data.campaigns || []).length > 0 && (
+            <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm mb-8">
+              <h2 className="font-display text-[1.1rem] mb-1">Which campaigns are working</h2>
+              <p className="text-[0.75rem] text-ink-soft mb-5">
+                Spend and clicks come from Meta/Google; sales and revenue come from our own booking tags.
+                Google bookings only carry a click id, so Google shows its own reported conversions.
+              </p>
+              <div className="space-y-2.5">
+                {data.campaigns.map((c) => (
+                  <div key={`${c.source}-${c.name}`} className="flex items-center justify-between gap-3 py-2 border-b border-ink/[0.06] last:border-0 flex-wrap">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-[0.9rem] truncate">{c.name}</span>
+                        <span className={`text-[0.6rem] px-1.5 py-0.5 rounded-full font-medium ${c.source === "meta" ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-800"}`}>
+                          {c.source === "meta" ? "Meta" : "Google"}
+                        </span>
+                        {c.status === "ENABLED" || c.status === "ACTIVE" ? (
+                          <span className="text-[0.6rem] px-1.5 py-0.5 rounded-full font-medium bg-green-100 text-green-700">Live</span>
+                        ) : null}
+                      </div>
+                      <div className="text-[0.75rem] text-ink-soft">
+                        {[c.spend != null ? `${fmt(c.spend)} spent` : null,
+                          c.clicks != null ? `${c.clicks} click${c.clicks === 1 ? "" : "s"}` : null,
+                          c.platformConversions ? `${c.platformConversions} reported conversion${c.platformConversions === 1 ? "" : "s"}` : null,
+                        ].filter(Boolean).join(" · ")}
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <div className="font-display text-[0.95rem]">{fmt(c.revenue)}</div>
+                      <div className="text-[0.7rem] text-ink-soft">{c.sales} tracked sale{c.sales === 1 ? "" : "s"}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Manage ads */}
           {(data.manage.campaigns.length > 0 || data.manage.adsets.length > 0 || data.google.campaigns.length > 0) && (
@@ -474,11 +553,15 @@ export default function AdsPage() {
                       <div className="min-w-0">
                         <span className="font-medium text-[0.9rem]">{b.name}</span>
                         {b.kind !== "Session" && <span className="ml-2 text-[0.6rem] bg-bright-lavender/20 text-ink px-1.5 py-0.5 rounded-full font-medium">{b.kind}</span>}
+                        {b.party && <span className="ml-2 text-[0.6rem] bg-bright-lavender/20 text-ink px-1.5 py-0.5 rounded-full font-medium">Party</span>}
                         <span className={`ml-2 text-[0.6rem] px-1.5 py-0.5 rounded-full font-medium ${src?.badge || "bg-ink/[0.08] text-ink"}`} title={b.label}>
                           {b.label}
                         </span>
                         <div className="text-[0.75rem] text-ink-soft">
                           {b.email} · booked {new Date(b.at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                          {b.date && <> · for {new Date(b.date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}</>}
+                          {b.kind === "Session" && <> · {b.qty} {b.qty === 1 ? "person" : "people"}</>}
+                          {b.kind === "Event" && <> · {b.qty} ticket{b.qty === 1 ? "" : "s"}</>}
                         </div>
                       </div>
                       <div className="text-right flex-shrink-0">

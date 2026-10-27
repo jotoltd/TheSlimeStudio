@@ -5,6 +5,7 @@ import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import RefCapture from "@/components/RefCapture";
+import { STUDIO_MAPS_URL, PARKING_NOTE } from "@/lib/supabase";
 import { useContent } from "@/lib/useContent";
 
 export default function HomePage() {
@@ -73,9 +74,18 @@ export default function HomePage() {
           <p className="text-[1.1rem] text-ink-soft">
             {c.intro_text}
           </p>
-          <div className="mt-5 inline-flex items-center gap-2 bg-white/70 rounded-full px-5 py-2.5 text-[0.9rem] text-ink">
-            <span className="text-base">📍</span>
-            <span className="font-medium">{c.contact_address}</span>
+          <div className="mt-5 flex flex-col items-center gap-2">
+            <a
+              href={STUDIO_MAPS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-white/70 rounded-full px-5 py-2.5 text-[0.9rem] text-ink hover:bg-white transition-colors"
+            >
+              <span className="text-base">📍</span>
+              <span className="font-medium">{c.contact_address}</span>
+              <span className="font-semibold text-hot-pink">Get Directions →</span>
+            </a>
+            <p className="text-[0.8rem] text-ink-soft max-w-md">🅿️ {PARKING_NOTE}</p>
           </div>
         </div>
       </section>

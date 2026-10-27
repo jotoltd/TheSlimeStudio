@@ -1,5 +1,5 @@
 import { Resend } from "resend";
-import { supabaseAdmin } from "@/lib/supabase";
+import { supabaseAdmin, STUDIO_ADDRESS, STUDIO_MAPS_URL, PARKING_NOTE } from "@/lib/supabase";
 
 let _resend: Resend | null = null;
 
@@ -129,6 +129,12 @@ export function bookingConfirmationHtml(opts: {
       <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Total:</strong> &pound;${opts.totalPrice.toFixed(2)}</p>
       ${opts.isParty ? '<p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Type:</strong> Birthday Party (1.5 hours)</p>' : '<p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Type:</strong> Standard Session (1 hour)</p>'}
     </div>
+    <div style="background: #fdeef7; border-radius: 12px; padding: 16px; margin: 16px 0;">
+      <p style="margin: 0 0 4px; color: #333; font-size: 0.9rem;"><strong>Getting here</strong></p>
+      <p style="margin: 4px 0; color: #333; font-size: 0.9rem;">${STUDIO_ADDRESS}</p>
+      <p style="margin: 4px 0; color: #333; font-size: 0.9rem;">${PARKING_NOTE}</p>
+      <a href="${STUDIO_MAPS_URL}" style="display: inline-block; background: #ff2d78; color: #fff; text-decoration: none; border-radius: 999px; padding: 10px 20px; font-size: 0.9rem; margin-top: 8px;">Get Directions</a>
+    </div>
     <p style="color: #333; font-size: 1rem; line-height: 1.6;">
       ${ov.email_tpl_booking_note || (opts.isParty
         ? "Please arrive 10 minutes early so we can get everyone set up. Each child will make their own slime to take home!"
@@ -195,6 +201,12 @@ export function eventBookingConfirmationHtml(opts: {
       <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Duration:</strong> ${opts.durationMinutes} minutes</p>
       <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>${opts.pricingModel === "per_person" ? "People" : "Tickets"}:</strong> ${opts.quantity}</p>
       <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Total:</strong> &pound;${opts.totalPrice.toFixed(2)}</p>
+    </div>
+    <div style="background: #fdeef7; border-radius: 12px; padding: 16px; margin: 16px 0;">
+      <p style="margin: 0 0 4px; color: #333; font-size: 0.9rem;"><strong>Getting here</strong></p>
+      <p style="margin: 4px 0; color: #333; font-size: 0.9rem;">${STUDIO_ADDRESS}</p>
+      <p style="margin: 4px 0; color: #333; font-size: 0.9rem;">${PARKING_NOTE}</p>
+      <a href="${STUDIO_MAPS_URL}" style="display: inline-block; background: #ff2d78; color: #fff; text-decoration: none; border-radius: 999px; padding: 10px 20px; font-size: 0.9rem; margin-top: 8px;">Get Directions</a>
     </div>
     <p style="color: #333; font-size: 1rem; line-height: 1.6;">
       ${ov.email_tpl_event_note || "Please arrive 5 minutes before the event starts. Everything you need is provided!"}
