@@ -41,7 +41,9 @@
   html {
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
-    font-size: 16px;
+    /* Mobile base is a touch larger than the old 16px so the small rem-based
+       text used across the site stays readable on phones. */
+    font-size: 17.5px;
     overflow-x: hidden;
   }
 
@@ -409,6 +411,34 @@ html[data-theme="halloween"] .hover\:bg-\[\#4cc5db\]:hover { background-color: #
 html[data-theme="halloween"] .bg-sky-blue-light .text-ink,
 html[data-theme="halloween"] .bg-sky-blue-light.text-ink {
   color: rgb(var(--c-on-accent));
+}
+
+/* Readability floor for micro-text on phones: the smallest rem sizes used
+   across the site are raised so nothing renders below ~12px. Unlayered so it
+   wins over Tailwind's utilities layer (same trick as the theme remaps). */
+@media (max-width: 767px) {
+  .text-\[0\.55rem\],
+  .text-\[0\.6rem\] {
+    font-size: 0.68rem;
+  }
+  .text-\[0\.65rem\],
+  .text-\[0\.68rem\] {
+    font-size: 0.72rem;
+  }
+  .text-\[0\.7rem\],
+  .text-\[0\.72rem\] {
+    font-size: 0.78rem;
+  }
+  /* iOS Safari zooms the page when an input under 16px is focused — floor
+     form fields at the root size to prevent it. */
+  input.text-sm,
+  select.text-sm,
+  textarea.text-sm,
+  input.text-xs,
+  select.text-xs,
+  textarea.text-xs {
+    font-size: 1rem;
+  }
 }
 
 /* Themed surfaces (used instead of inline styles so themes can recolour) */

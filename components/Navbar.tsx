@@ -176,16 +176,16 @@ export default function Navbar() {
       </div>
 
       {open && (
-        <ul className="navbar-bg md:hidden px-6 pb-4 flex flex-col gap-1">
+        <ul className="navbar-bg md:hidden px-6 pb-4 flex flex-col gap-1.5 max-h-[calc(100dvh-4rem)] overflow-y-auto">
           {navLinks.map((link) => (
             <li key={link.href}>
               <Link
                 href={link.href}
                 onClick={() => setOpen(false)}
-                className={`block py-2 font-display text-[1.1rem] px-4 rounded-full transition-all ${
+                className={`block py-3 font-display text-[1.25rem] px-4 rounded-full transition-all ${
                   pathname === link.href
                     ? "bg-ink/10 text-ink font-semibold"
-                    : "text-ink/70 hover:bg-ink/8"
+                    : "text-ink/80 hover:bg-ink/8"
                 }`}
               >
                 {link.label}
@@ -196,10 +196,10 @@ export default function Navbar() {
             <Link
               href={customerName ? "/account" : "/account/login"}
               onClick={() => setOpen(false)}
-              className={`block py-2 font-display text-[1.1rem] px-4 rounded-full transition-all ${
+              className={`block py-3 font-display text-[1.25rem] px-4 rounded-full transition-all ${
                 pathname === "/account" || pathname === "/account/login"
                   ? "bg-ink/10 text-ink font-semibold"
-                  : "text-ink/70 hover:bg-ink/8"
+                  : "text-ink/80 hover:bg-ink/8"
               }`}
             >
               {customerName ? `Account (${customerName.split(" ")[0]})` : "Sign In"}
@@ -209,7 +209,7 @@ export default function Navbar() {
             <li>
               <button
                 onClick={() => { setOpen(false); handleLogout(); }}
-                className="block w-full text-left py-2 font-display text-[1.1rem] px-4 rounded-full transition-all text-ink/70 hover:bg-ink/8 hover:text-hot-pink"
+                className="block w-full text-left py-3 font-display text-[1.25rem] px-4 rounded-full transition-all text-ink/80 hover:bg-ink/8 hover:text-hot-pink"
               >
                 Sign Out
               </button>
