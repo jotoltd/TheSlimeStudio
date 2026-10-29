@@ -3,6 +3,7 @@ import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { verifyToken } from "@/lib/auth";
 import { getResend, EMAIL_FROM, cancellationHtml, logEmail, emailEnabled, emailTemplates } from "@/lib/email";
 import { getStripeAsync } from "@/lib/stripe";
+import { sendPushToCustomer } from "@/lib/apns";
 
 export const runtime = "nodejs";
 
@@ -127,6 +128,36 @@ export async function POST(req: NextRequest) {
       .from("bookings")
       .delete()
       .eq("stripe_session_id", `${b.stripe_session_id}_slot2`);
+  }
+
+  // Cancellation push — best-effort, mirrors the confirmation push: looks the
+  // customer up by email so it reaches their devices whatever path the
+  // booking was made on.
+  if (b.email) {
+    try {
+      const { data: customer } = await supabaseAdmin
+        .from("customers")
+        .select("id")
+        .eq("email", b.email.toLowerCase())
+        .maybeSingle();
+      if (customer) {
+        const when = b.date
+          ? `${new Date(`${b.date}T00:00:00`).toLocaleDateString("en-GB", {
+              weekday: "short",
+              day: "numeric",
+              month: "short",
+            })} at ${b.time_slot}`
+          : "";
+        const tail = refundResult.refunded ? " Your refund is on its way." : isSumUp ? " We'll sort your refund manually." : "";
+        await sendPushToCustomer(customer.id, {
+          title: "Booking cancelled",
+          body: `Your session${when ? ` on ${when}` : ""} has been cancelled.${tail}`,
+          data: { kind: "cancellation", link: "account" },
+        });
+      }
+    } catch (e) {
+      console.error("Cancellation push failed:", e);
+    }
   }
 
   // Send cancellation email
