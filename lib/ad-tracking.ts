@@ -176,7 +176,7 @@ export function trackPurchase(value: number, currency = "GBP", transactionId?: s
 // Only Meta and Google are real paid channels — email campaign links and other
 // shared tracking links land in their own buckets so they don't inflate ad
 // numbers or hide inside "organic".
-export type BookingSource = "meta" | "google" | "email" | "other" | "organic";
+export type BookingSource = "meta" | "google" | "email" | "app" | "other" | "organic";
 
 export function classifyBookingSource(notes: string | null | undefined): BookingSource {
   const n = (notes || "").toLowerCase();
@@ -184,6 +184,8 @@ export function classifyBookingSource(notes: string | null | undefined): Booking
   // [Ad: gate so "[gclid:x]"-only notes still count as ad bookings.
   if (n.includes("[gclid:")) return "google";
   if (!n.includes("[ad:")) return "organic";
+  // The iOS app writes "[Ad: iOS App]" on bookings and gift-card purchases.
+  if (n.includes("ios app")) return "app";
   if (n.includes("utm:email")) return "email";
   // "Google Ad" is only written for gclid clicks; a utm:google tag needs a
   // medium or campaign too, otherwise it's an organic Google/Profile link.
@@ -232,6 +234,7 @@ export function bookingSourceLabel(notes: string | null | undefined): string {
   const base =
     src === "meta" ? "Meta Ad" :
     src === "google" ? "Google Ad" :
+    src === "app" ? "iOS App" :
     src === "email" ? "Email" :
     inner.toLowerCase().includes("facebook/instagram") ? "Facebook/Instagram" :
     utm?.[1] ? `${linkNames[utm[1].toLowerCase()] || utm[1].charAt(0).toUpperCase() + utm[1].slice(1)} link` : "Tracked link";

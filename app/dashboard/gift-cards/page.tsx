@@ -50,6 +50,7 @@ const AD_COLORS: Record<string, string> = {
   Google: "bg-green-100 text-green-700",
   TikTok: "bg-ink/10 text-ink",
   Snapchat: "bg-yellow-100 text-yellow-800",
+  "iOS App": "bg-pink-100 text-pink-700",
 };
 
 function parseAdSource(notes: string | null | undefined): { label: string; platform: string; detail: string } | null {
@@ -61,8 +62,9 @@ function parseAdSource(notes: string | null | undefined): { label: string; platf
   const platform = utmSource
     ? (AD_PLATFORMS[utmSource] || utmSource)
     : parts.some((p) => p === "Google Ad") ? "Google"
-    : parts.some((p) => p.includes("Facebook/Instagram")) ? "Meta" : "Unknown";
-  return { label: platform.toLowerCase() === "email" ? "Email" : `${platform} Ad`, platform, detail: inner };
+    : parts.some((p) => p.includes("Facebook/Instagram")) ? "Meta"
+    : parts.some((p) => /^ios app$/i.test(p)) ? "iOS App" : "Unknown";
+  return { label: platform === "iOS App" ? "iOS App" : platform.toLowerCase() === "email" ? "Email" : `${platform} Ad`, platform, detail: inner };
 }
 
 function AdSourceBadge({ notes }: { notes: string | null | undefined }) {

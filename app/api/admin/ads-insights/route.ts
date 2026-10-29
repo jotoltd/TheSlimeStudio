@@ -306,6 +306,7 @@ export async function GET(req: NextRequest) {
     meta: { bookings: 0, revenue: 0 },
     google: { bookings: 0, revenue: 0 },
     email: { bookings: 0, revenue: 0 },
+    app: { bookings: 0, revenue: 0 },
     other: { bookings: 0, revenue: 0 },
     organic: { bookings: 0, revenue: 0 },
   };

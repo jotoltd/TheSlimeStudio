@@ -138,7 +138,10 @@ export function gclidFromNotes(notes: string | null | undefined): string | null 
 
 // adSource is client-controlled — only accept the "[Ad: ...]" shape the tracker
 // writes and cap it so it can't blow up notes or Stripe metadata consumers.
+// "ios-app" is the legacy tag from early app builds — normalise it to the
+// standard "[Ad: iOS App]" note so it renders and classifies like the others.
 export function sanitizeAdSource(value: unknown): string | null {
+  if (value === "ios-app") return "[Ad: iOS App]";
   return typeof value === "string" && value.startsWith("[Ad:") ? value.slice(0, 500) : null;
 }
 

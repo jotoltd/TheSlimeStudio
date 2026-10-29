@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-type SourceKey = "meta" | "google" | "email" | "other" | "organic";
+type SourceKey = "meta" | "google" | "email" | "app" | "other" | "organic";
 
 type Item = {
   id: string;
@@ -119,6 +119,7 @@ const SOURCES: { key: SourceKey; label: string; dot: string; badge: string; isAd
   { key: "meta", label: "Meta ads (Facebook & Instagram)", dot: "bg-blue-500", badge: "bg-blue-100 text-blue-700", isAd: true },
   { key: "google", label: "Google ads", dot: "bg-amber-500", badge: "bg-amber-100 text-amber-800", isAd: true },
   { key: "email", label: "Email campaigns", dot: "bg-purple-400", badge: "bg-purple-100 text-purple-700" },
+  { key: "app", label: "iOS app", dot: "bg-hot-pink", badge: "bg-pink-100 text-pink-700" },
   { key: "other", label: "Other tracked links", dot: "bg-ink/30", badge: "bg-ink/[0.08] text-ink" },
   { key: "organic", label: "Organic / walk-ins", dot: "bg-green-500", badge: "bg-green-100 text-green-700" },
 ];
