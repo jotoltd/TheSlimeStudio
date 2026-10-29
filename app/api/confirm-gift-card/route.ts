@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripeAsync } from "@/lib/stripe";
 import { activateGiftCard } from "@/lib/gift-cards";
-import { sendPushToCustomer } from "@/lib/apns";
+import { sendPushToCustomerOrDevice } from "@/lib/apns";
 import { supabaseAdmin } from "@/lib/supabase";
 
 export const runtime = "nodejs";
@@ -35,22 +35,22 @@ export async function POST(req: NextRequest) {
   try {
     const { data: card } = await supabaseAdmin
       .from("gift_cards")
-      .select("purchaser_email, initial_value")
+      .select("purchaser_email, initial_value, device_token")
       .eq("code", intent.metadata.gift_card_code)
       .single();
-    if (card?.purchaser_email) {
-      const { data: customer } = await supabaseAdmin
-        .from("customers")
-        .select("id")
-        .eq("email", String(card.purchaser_email).toLowerCase())
-        .maybeSingle();
-      if (customer) {
-        await sendPushToCustomer(customer.id, {
-          title: "Gift card on its way",
-          body: `Your £${Number(card.initial_value).toFixed(0)} gift card ${intent.metadata.gift_card_code} is active — check your email.`,
-          data: { kind: "gift_card", code: intent.metadata.gift_card_code, link: "giftcards" },
-        });
-      }
+    if (card?.purchaser_email || card?.device_token) {
+      const { data: customer } = card?.purchaser_email
+        ? await supabaseAdmin
+            .from("customers")
+            .select("id")
+            .eq("email", String(card.purchaser_email).toLowerCase())
+            .maybeSingle()
+        : { data: null };
+      await sendPushToCustomerOrDevice(customer?.id, card?.device_token || intent.metadata.deviceToken, {
+        title: "Gift card on its way",
+        body: `Your £${Number(card?.initial_value || 0).toFixed(0)} gift card ${intent.metadata.gift_card_code} is active — check your email.`,
+        data: { kind: "gift_card", code: intent.metadata.gift_card_code, link: "giftcards" },
+      });
     }
   } catch (e) {
     console.error("Gift card push failed:", e);

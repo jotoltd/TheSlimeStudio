@@ -8,6 +8,7 @@ import { getResend, EMAIL_FROM, bookingConfirmationHtml, logEmail, emailEnabled,
 import { sendCapiEvent, metaContextFromRequest } from "@/lib/capi";
 import { withGclidTag, uploadClickConversion, sanitizeGclid, sanitizeAdSource } from "@/lib/google-ads";
 import { computeBookingPrice } from "@/lib/booking-price";
+import { sanitizePushToken, sendPushToCustomerOrDevice } from "@/lib/apns";
 
 export const runtime = "nodejs";
 
@@ -157,6 +158,7 @@ export async function POST(req: NextRequest) {
         discount_code: price.discountCode,
         discount_amount: price.discountAmount,
         notes: withGclidTag(sanitizeAdSource(body.adSource), body.gclid),
+        device_token: sanitizePushToken(body.deviceToken),
       })
       .select("id")
       .single();
@@ -241,6 +243,28 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Confirmation push — reaches the buying device directly and any devices
+    // linked to the customer's account.
+    try {
+      const { data: customer } = await supabaseAdmin
+        .from("customers")
+        .select("id")
+        .eq("email", email)
+        .maybeSingle();
+      const when = `${new Date(`${date}T00:00:00`).toLocaleDateString("en-GB", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+      })} at ${timeSlot}`;
+      await sendPushToCustomerOrDevice(customer?.id, body.deviceToken, {
+        title: "You're booked in!",
+        body: `${people} slime maker${people > 1 ? "s" : ""} — ${when}. See you at the studio!`,
+        data: { kind: "booking", bookingId: String(booking?.id), link: "account" },
+      });
+    } catch (e) {
+      console.error("Free booking push failed:", e);
+    }
+
     return NextResponse.json({ free: true, bookingId: booking?.id });
   }
 
@@ -266,6 +290,7 @@ export async function POST(req: NextRequest) {
         giftCardAmount: String(price.giftCardCover),
         adSource: sanitizeAdSource(body.adSource) || "",
         gclid: (sanitizeGclid(body.gclid) || "").slice(0, 255),
+        deviceToken: sanitizePushToken(body.deviceToken) || "",
         // Meta click context — lets the Conversions API Purchase event match
         // back to the ad click even when the browser pixel was blocked.
         fbp: (body.fbp || "").slice(0, 400),

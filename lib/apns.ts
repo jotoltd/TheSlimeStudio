@@ -120,3 +120,31 @@ export async function sendPushToCustomer(customerId: string, payload: PushPayloa
   const results = await Promise.all(tokens.map((t) => sendPush(t, payload)));
   return results.filter((r) => r.ok).length;
 }
+
+// APNs device tokens are 32 bytes rendered as 64 lowercase hex chars — the
+// app posts them with bookings/purchases so pushes reach guests too.
+export function sanitizePushToken(value: unknown): string | null {
+  return typeof value === "string" && /^[a-f0-9]{64}$/i.test(value) ? value : null;
+}
+
+// Push to a registered customer's devices AND/OR a raw device token that came
+// in with a booking/gift-card request — deduped so a linked device never
+// gets the same push twice.
+export async function sendPushToCustomerOrDevice(
+  customerId: string | null | undefined,
+  deviceToken: unknown,
+  payload: PushPayload,
+): Promise<number> {
+  const tokens = new Set<string>();
+  if (customerId) {
+    const { data } = await supabaseAdmin
+      .from("push_tokens")
+      .select("token")
+      .eq("customer_id", customerId);
+    for (const r of data || []) tokens.add((r as { token: string }).token);
+  }
+  const dt = sanitizePushToken(deviceToken);
+  if (dt) tokens.add(dt);
+  const results = await Promise.all(Array.from(tokens).map((t) => sendPush(t, payload)));
+  return results.filter((r) => r.ok).length;
+}

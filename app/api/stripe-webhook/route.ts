@@ -287,6 +287,7 @@ export async function POST(req: NextRequest) {
             discountCode?: string;
             adSource?: string;
             gclid?: string;
+            deviceToken?: string;
             fbp?: string;
             fbc?: string;
             cip?: string;
@@ -338,6 +339,7 @@ export async function POST(req: NextRequest) {
             discountCode: md.discountCode || null,
             adSource: md.adSource || null,
             gclid: md.gclid || null,
+            deviceToken: md.deviceToken || null,
           });
           if (result.created) {
             console.warn(`[stripe-webhook] Recovered booking ${result.bookingId} for ${intent.id} — client never confirmed it.`);

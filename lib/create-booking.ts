@@ -1,6 +1,7 @@
 import { supabaseAdmin, STAMPS_PER_REWARD } from "@/lib/supabase";
 import { generateRewardCode, redeemRewardCode } from "@/lib/loyalty-rewards";
 import { withGclidTag, uploadClickConversion, sanitizeAdSource } from "@/lib/google-ads";
+import { sanitizePushToken } from "@/lib/apns";
 import {
   getResend,
   EMAIL_FROM,
@@ -26,6 +27,7 @@ export type BookingDetails = {
   discountCode?: string | null;
   adSource?: string | null;
   gclid?: string | null;
+  deviceToken?: string | null;
 };
 
 export type CreateBookingResult = {
@@ -82,7 +84,7 @@ export async function expireStalePendingGiftCards() {
 export async function createPaidBooking(details: BookingDetails): Promise<CreateBookingResult> {
   const {
     paymentRef, name, email, phone, date, timeSlot,
-    people, totalPrice, isParty, discountCode, adSource, gclid,
+    people, totalPrice, isParty, discountCode, adSource, gclid, deviceToken,
   } = details;
 
   // Idempotency: has this payment already produced a booking?
@@ -116,6 +118,7 @@ export async function createPaidBooking(details: BookingDetails): Promise<Create
       stripe_session_id: paymentRef,
       discount_code: discountCode || null,
       notes: withGclidTag(sanitizeAdSource(adSource), gclid),
+      device_token: sanitizePushToken(deviceToken),
       admin_notes: overCapacity
         ? "⚠️ OVER CAPACITY — payment was taken after the slot filled up. Review and contact the customer."
         : "",

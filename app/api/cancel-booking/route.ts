@@ -3,7 +3,7 @@ import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { verifyToken } from "@/lib/auth";
 import { getResend, EMAIL_FROM, cancellationHtml, logEmail, emailEnabled, emailTemplates } from "@/lib/email";
 import { getStripeAsync } from "@/lib/stripe";
-import { sendPushToCustomer } from "@/lib/apns";
+import { sendPushToCustomerOrDevice } from "@/lib/apns";
 
 export const runtime = "nodejs";
 
@@ -140,21 +140,22 @@ export async function POST(req: NextRequest) {
         .select("id")
         .eq("email", b.email.toLowerCase())
         .maybeSingle();
-      if (customer) {
-        const when = b.date
-          ? `${new Date(`${b.date}T00:00:00`).toLocaleDateString("en-GB", {
-              weekday: "short",
-              day: "numeric",
-              month: "short",
-            })} at ${b.time_slot}`
-          : "";
-        const tail = refundResult.refunded ? " Your refund is on its way." : isSumUp ? " We'll sort your refund manually." : "";
-        await sendPushToCustomer(customer.id, {
-          title: "Booking cancelled",
-          body: `Your session${when ? ` on ${when}` : ""} has been cancelled.${tail}`,
-          data: { kind: "cancellation", link: "account" },
-        });
-      }
+      const when = b.date
+        ? `${new Date(`${b.date}T00:00:00`).toLocaleDateString("en-GB", {
+            weekday: "short",
+            day: "numeric",
+            month: "short",
+          })} at ${b.time_slot}`
+        : "";
+      const tail = refundResult.refunded ? " Your refund is on its way." : isSumUp ? " We'll sort your refund manually." : "";
+      // Reaches the device that made the booking (guests too) plus every
+      // device linked to the customer account.
+      const deviceToken = (booking as { device_token?: string }).device_token;
+      await sendPushToCustomerOrDevice(customer?.id, deviceToken, {
+        title: "Booking cancelled",
+        body: `Your session${when ? ` on ${when}` : ""} has been cancelled.${tail}`,
+        data: { kind: "cancellation", link: "account" },
+      });
     } catch (e) {
       console.error("Cancellation push failed:", e);
     }

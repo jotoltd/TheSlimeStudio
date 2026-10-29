@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getStripeAsync, getStripeModeAsync } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase";
 import { withGclidTag, sanitizeAdSource } from "@/lib/google-ads";
+import { sanitizePushToken } from "@/lib/apns";
 
 export const runtime = "nodejs";
 
@@ -68,14 +69,16 @@ export async function POST(req: NextRequest) {
   const expiryDate = new Date();
   expiryDate.setMonth(expiryDate.getMonth() + 3);
 
-  // Insert with ad_source; retry without it if the column hasn't been added yet
+  // Insert with ad_source + device_token; retry without either if a column
+  // hasn't been added yet so an older schema never blocks the purchase.
   const insertCard = async (record: Record<string, unknown>) => {
     const withSource = {
       ...record,
       ad_source: withGclidTag(sanitizeAdSource(adSource), body.gclid),
+      device_token: sanitizePushToken(body.deviceToken),
     };
     const { error } = await supabaseAdmin.from("gift_cards").insert(withSource);
-    if (error && String(error.message).includes("ad_source")) {
+    if (error && (String(error.message).includes("ad_source") || String(error.message).includes("device_token"))) {
       const { error: retry } = await supabaseAdmin.from("gift_cards").insert(record);
       return retry;
     }
@@ -237,6 +240,7 @@ export async function POST(req: NextRequest) {
           type: "gift_card",
           gift_card_code: code,
           stripeMode: mode,
+          deviceToken: sanitizePushToken(body.deviceToken) || "",
         },
       });
 
