@@ -35,11 +35,20 @@ function timeAgo(iso: string) {
   return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 
+type BroadcastRecord = { title: string; body: string; sent: number; at: string };
+
 export default function NotificationsPage() {
   const [items, setItems] = useState<Notification[]>([]);
   const [lastSeen, setLastSeen] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+
+  const [pushTitle, setPushTitle] = useState("");
+  const [pushBody, setPushBody] = useState("");
+  const [devices, setDevices] = useState<number | null>(null);
+  const [history, setHistory] = useState<BroadcastRecord[]>([]);
+  const [sending, setSending] = useState(false);
+  const [sendResult, setSendResult] = useState<{ ok: boolean; text: string } | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/notifications")
@@ -53,7 +62,40 @@ export default function NotificationsPage() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
+
+    fetch("/api/admin/push-broadcast")
+      .then((r) => r.json())
+      .then((d) => {
+        setDevices(typeof d.devices === "number" ? d.devices : null);
+        setHistory(d.history || []);
+      })
+      .catch(() => {});
   }, []);
+
+  async function sendBroadcast() {
+    setSending(true);
+    setSendResult(null);
+    try {
+      const res = await fetch("/api/admin/push-broadcast", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: pushTitle, body: pushBody }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSendResult({ ok: false, text: data.error || "Send failed" });
+      } else {
+        setSendResult({ ok: true, text: `Sent to ${data.sent} device${data.sent === 1 ? "" : "s"}${data.failed ? ` · ${data.failed} failed` : ""}` });
+        setPushTitle("");
+        setPushBody("");
+        setHistory((h) => [{ title: pushTitle, body: pushBody, sent: data.sent, at: new Date().toISOString() }, ...h].slice(0, 10));
+      }
+    } catch {
+      setSendResult({ ok: false, text: "Send failed" });
+    } finally {
+      setSending(false);
+    }
+  }
 
   async function dismiss(id: string, e: React.MouseEvent) {
     e.preventDefault();
@@ -94,6 +136,65 @@ export default function NotificationsPage() {
           >
             Mark all read
           </button>
+        )}
+      </div>
+
+      <div className="bg-white rounded-[20px] shadow-sm p-5 mb-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-full bg-[#ff2d78]/10 grid place-items-center text-[1.05rem]">📣</div>
+          <div>
+            <h2 className="font-semibold text-ink text-[0.95rem]">Broadcast a push</h2>
+            <p className="text-[0.78rem] text-ink-soft">
+              {devices === null
+                ? "Checking registered devices…"
+                : devices === 0
+                  ? "No devices registered yet — they appear once customers install the app"
+                  : `Goes to every customer with the app — ${devices} device${devices === 1 ? "" : "s"} registered`}
+            </p>
+          </div>
+        </div>
+        <input
+          value={pushTitle}
+          onChange={(e) => setPushTitle(e.target.value)}
+          maxLength={60}
+          placeholder="Title — e.g. Half-term slime week!"
+          className="w-full rounded-xl border border-ink/10 bg-cream/50 px-4 py-2.5 text-[0.88rem] text-ink placeholder:text-ink-soft/60 outline-none focus:border-[#ff2d78]/50 focus:bg-white transition-colors mb-2"
+        />
+        <textarea
+          value={pushBody}
+          onChange={(e) => setPushBody(e.target.value)}
+          maxLength={180}
+          rows={2}
+          placeholder="Message — e.g. Extra sessions just opened this Saturday, book now ✨"
+          className="w-full rounded-xl border border-ink/10 bg-cream/50 px-4 py-2.5 text-[0.88rem] text-ink placeholder:text-ink-soft/60 outline-none focus:border-[#ff2d78]/50 focus:bg-white transition-colors resize-none mb-3"
+        />
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[0.72rem] text-ink-soft">{pushBody.length}/180</span>
+          <div className="flex items-center gap-3">
+            {sendResult && (
+              <span className={`text-[0.8rem] ${sendResult.ok ? "text-emerald-600" : "text-red-500"}`}>
+                {sendResult.text}
+              </span>
+            )}
+            <button
+              onClick={sendBroadcast}
+              disabled={sending || !pushTitle.trim() || !pushBody.trim() || !devices}
+              className="px-5 py-2.5 rounded-full bg-[#ff2d78] text-white text-[0.85rem] font-medium hover:-translate-y-0.5 hover:shadow-md transition-all disabled:opacity-40 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+            >
+              {sending ? "Sending…" : "Send push"}
+            </button>
+          </div>
+        </div>
+        {history.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-ink/[0.06]">
+            <div className="text-[0.72rem] font-medium text-ink-soft uppercase tracking-wide mb-2">Recent broadcasts</div>
+            {history.slice(0, 3).map((h, i) => (
+              <div key={i} className="flex items-baseline justify-between gap-3 text-[0.8rem] py-1">
+                <span className="text-ink/80 truncate">{h.title} — {h.body}</span>
+                <span className="text-ink-soft shrink-0">{h.sent} sent</span>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
