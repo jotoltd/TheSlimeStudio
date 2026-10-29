@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripeAsync } from "@/lib/stripe";
 import { activateGiftCard } from "@/lib/gift-cards";
+import { sendPushToCustomer } from "@/lib/apns";
+import { supabaseAdmin } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 
@@ -28,5 +30,31 @@ export async function POST(req: NextRequest) {
   }
 
   await activateGiftCard(intent.metadata.gift_card_code, intent.metadata.gift_card_code);
+
+  // Confirmation push to the purchaser — best-effort.
+  try {
+    const { data: card } = await supabaseAdmin
+      .from("gift_cards")
+      .select("purchaser_email, initial_value")
+      .eq("code", intent.metadata.gift_card_code)
+      .single();
+    if (card?.purchaser_email) {
+      const { data: customer } = await supabaseAdmin
+        .from("customers")
+        .select("id")
+        .eq("email", String(card.purchaser_email).toLowerCase())
+        .maybeSingle();
+      if (customer) {
+        await sendPushToCustomer(customer.id, {
+          title: "Gift card on its way",
+          body: `Your £${Number(card.initial_value).toFixed(0)} gift card ${intent.metadata.gift_card_code} is active — check your email.`,
+          data: { kind: "gift_card", code: intent.metadata.gift_card_code },
+        });
+      }
+    }
+  } catch (e) {
+    console.error("Gift card push failed:", e);
+  }
+
   return NextResponse.json({ ok: true, code: intent.metadata.gift_card_code });
 }

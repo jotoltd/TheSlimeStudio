@@ -4,6 +4,7 @@ import { createPaidBooking } from "@/lib/create-booking";
 import { redeemGiftCard } from "@/lib/gift-cards";
 import { supabaseAdmin } from "@/lib/supabase";
 import { sendCapiEvent, metaContextFromRequest } from "@/lib/capi";
+import { sendPushToCustomer } from "@/lib/apns";
 
 export const runtime = "nodejs";
 
@@ -119,6 +120,31 @@ export async function POST(req: NextRequest) {
       console.error("Failed to redeem gift card:", e);
       // Don't fail the booking if gift card redemption fails
     }
+  }
+
+  // Booking confirmation push — best-effort; a failure never blocks the
+  // booking response. Looks the customer up by email so it works even when
+  // the booking wasn't stamped with a customer_id.
+  try {
+    const { data: customer } = await supabaseAdmin
+      .from("customers")
+      .select("id")
+      .eq("email", String(email).toLowerCase())
+      .maybeSingle();
+    if (customer) {
+      const when = `${new Date(`${date}T00:00:00`).toLocaleDateString("en-GB", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+      })} at ${timeSlot}`;
+      await sendPushToCustomer(customer.id, {
+        title: "You're booked in!",
+        body: `${people} slime maker${people > 1 ? "s" : ""} — ${when}. See you at the studio!`,
+        data: { kind: "booking", bookingId: String(result.bookingId) },
+      });
+    }
+  } catch (e) {
+    console.error("Booking push failed:", e);
   }
 
   return NextResponse.json({
