@@ -1,4 +1,61 @@
 import { supabaseAdmin } from "@/lib/supabase";
+import { sendGiftCardEmail } from "@/lib/email";
+import { gclidFromNotes, uploadClickConversion } from "@/lib/google-ads";
+
+/**
+ * Flips a pending gift card to active. Only the call that wins the
+ * pending → active transition sends the gift-card email, so it is safe to
+ * call from both the Stripe webhook and the client confirm endpoint —
+ * the email goes out exactly once.
+ */
+export async function activateGiftCard(code: string, orderId: string) {
+  const { data: activated } = await supabaseAdmin
+    .from("gift_cards")
+    .update({ status: "active" })
+    .eq("code", code)
+    .eq("status", "pending")
+    .select("id");
+
+  if (activated && activated.length > 0) {
+    try {
+      const { data: gc } = await supabaseAdmin
+        .from("gift_cards")
+        .select("code, balance, initial_value, expiry_date, purchaser_name, purchaser_email, recipient_name, recipient_email, message")
+        .eq("code", code)
+        .single();
+      if (gc) {
+        await sendGiftCardEmail({
+          code: gc.code,
+          amount: Number(gc.initial_value ?? gc.balance) || 0,
+          expiryDate: gc.expiry_date,
+          purchaserName: gc.purchaser_name || "there",
+          purchaserEmail: gc.purchaser_email,
+          recipientName: gc.recipient_name,
+          recipientEmail: gc.recipient_email,
+          message: gc.message,
+        });
+      }
+    } catch (e) {
+      console.error("Failed to send gift card email:", e);
+    }
+  }
+
+  // Google Ads offline conversion — the card's ad_source carries the
+  // gclid; orderId matches the browser tag's transaction_id (card code).
+  const { data: card } = await supabaseAdmin
+    .from("gift_cards")
+    .select("ad_source, initial_value, balance")
+    .eq("code", code)
+    .single();
+  const cardGclid = gclidFromNotes(card?.ad_source);
+  if (cardGclid && card) {
+    await uploadClickConversion({
+      gclid: cardGclid,
+      value: Number(card.initial_value ?? card.balance) || 0,
+      orderId,
+    }).catch(() => {});
+  }
+}
 
 export type RedeemResult =
   | { success: true; remainingBalance: number; redeemedAmount: number }

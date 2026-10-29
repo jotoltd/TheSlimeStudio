@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripeAsync, getStripeModeAsync, getStripeKeysForMode } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase";
-import { sendOrderConfirmationEmail, sendGiftCardEmail } from "@/lib/email";
+import { sendOrderConfirmationEmail } from "@/lib/email";
 import { createPaidBooking, awardReferrerReward } from "@/lib/create-booking";
-import { redeemGiftCard } from "@/lib/gift-cards";
+import { redeemGiftCard, activateGiftCard } from "@/lib/gift-cards";
 import { sendCapiEvent } from "@/lib/capi";
 import { gclidFromNotes, uploadClickConversion, sanitizeGclid } from "@/lib/google-ads";
 
@@ -120,55 +120,10 @@ export async function POST(req: NextRequest) {
 
         // Gift card purchase — activate the pending card on payment
         if (session.metadata?.type === "gift_card" && session.metadata?.gift_card_code) {
-          const { data: activated } = await supabaseAdmin
-            .from("gift_cards")
-            .update({ status: "active" })
-            .eq("code", session.metadata.gift_card_code)
-            .eq("status", "pending")
-            .select("id");
-
           // Only the request that flips pending → active sends the email, so
           // it goes out exactly once whether the webhook or the success page
           // confirms payment first.
-          if (activated && activated.length > 0) {
-            try {
-              const { data: gc } = await supabaseAdmin
-                .from("gift_cards")
-                .select("code, balance, initial_value, expiry_date, purchaser_name, purchaser_email, recipient_name, recipient_email, message")
-                .eq("code", session.metadata.gift_card_code)
-                .single();
-              if (gc) {
-                await sendGiftCardEmail({
-                  code: gc.code,
-                  amount: Number(gc.initial_value ?? gc.balance) || 0,
-                  expiryDate: gc.expiry_date,
-                  purchaserName: gc.purchaser_name || "there",
-                  purchaserEmail: gc.purchaser_email,
-                  recipientName: gc.recipient_name,
-                  recipientEmail: gc.recipient_email,
-                  message: gc.message,
-                });
-              }
-            } catch (e) {
-              console.error("Failed to send gift card email:", e);
-            }
-          }
-
-          // Google Ads offline conversion — the card's ad_source carries the
-          // gclid; orderId matches the browser tag's transaction_id (card code).
-          const { data: card } = await supabaseAdmin
-            .from("gift_cards")
-            .select("ad_source, initial_value, balance")
-            .eq("code", session.metadata.gift_card_code)
-            .single();
-          const cardGclid = gclidFromNotes(card?.ad_source);
-          if (cardGclid && card) {
-            await uploadClickConversion({
-              gclid: cardGclid,
-              value: Number(card.initial_value ?? card.balance) || 0,
-              orderId: session.metadata.gift_card_code,
-            }).catch(() => {});
-          }
+          await activateGiftCard(session.metadata.gift_card_code, session.metadata.gift_card_code);
         }
 
         if (session.metadata?.bookingId && session.metadata?.type !== "subscription") {
@@ -336,10 +291,20 @@ export async function POST(req: NextRequest) {
             fbc?: string;
             cip?: string;
             cua?: string;
+            gift_card_code?: string;
           };
         };
 
         if (intent.metadata?.type === "subscription") break;
+
+        // In-app gift card purchase (PaymentSheet) — same activation as the
+        // hosted checkout flow; also confirmed client-side via
+        // /api/confirm-gift-card, and only the pending → active transition
+        // sends the email so a double-fire is harmless.
+        if (intent.metadata?.type === "gift_card" && intent.metadata?.gift_card_code) {
+          await activateGiftCard(intent.metadata.gift_card_code, intent.metadata.gift_card_code);
+          break;
+        }
 
         // If bookingId exists, update it (old checkout session flow)
         if (intent.metadata?.bookingId) {

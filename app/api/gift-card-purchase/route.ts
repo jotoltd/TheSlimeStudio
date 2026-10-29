@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getStripeAsync } from "@/lib/stripe";
+import { getStripeAsync, getStripeModeAsync } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase";
 import { withGclidTag, sanitizeAdSource } from "@/lib/google-ads";
 
@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     recipientName?: string;
     recipientEmail?: string;
     message?: string;
-    paymentMethod: "stripe" | "sumup";
+    paymentMethod: "stripe" | "sumup" | "intent";
     customerId?: string;
     adSource?: string;
   };
@@ -213,6 +213,57 @@ export async function POST(req: NextRequest) {
     } catch (err) {
       console.error("SumUp gift card checkout error:", err);
       return NextResponse.json({ error: "Failed to create SumUp checkout" }, { status: 500 });
+    }
+  }
+
+  // Native in-app payment (iOS PaymentSheet) — returns a PaymentIntent
+  // client secret instead of a hosted checkout URL. The pending card is
+  // activated by the stripe webhook or /api/confirm-gift-card.
+  if (paymentMethod === "intent") {
+    const stripe = await getStripeAsync();
+    if (!stripe) {
+      return NextResponse.json({ error: "Stripe is not configured" }, { status: 500 });
+    }
+    const mode = await getStripeModeAsync();
+
+    try {
+      const intent = await stripe.paymentIntents.create({
+        amount: Math.round(amount * 100),
+        currency: "gbp",
+        automatic_payment_methods: { enabled: true },
+        receipt_email: purchaserEmail,
+        description: `Gift Card — £${amount.toFixed(2)} — ${code}`,
+        metadata: {
+          type: "gift_card",
+          gift_card_code: code,
+          stripeMode: mode,
+        },
+      });
+
+      const insertError = await insertCard({
+        code,
+        balance: amount,
+        initial_value: amount,
+        purchaser_email: purchaserEmail,
+        purchaser_name: purchaserName,
+        recipient_email: recipientEmail || null,
+        recipient_name: recipientName || null,
+        message: message || null,
+        status: "pending",
+        expiry_date: expiryDate.toISOString(),
+        payment_reference: intent.id,
+        customer_id: customerId || null,
+      });
+
+      if (insertError) {
+        console.error("Failed to create gift card record:", insertError);
+        return NextResponse.json({ error: "Failed to create gift card" }, { status: 500 });
+      }
+
+      return NextResponse.json({ clientSecret: intent.client_secret, paymentIntentId: intent.id, code, mode });
+    } catch (err) {
+      console.error("Gift card intent error:", err);
+      return NextResponse.json({ error: "Failed to create payment" }, { status: 500 });
     }
   }
 
