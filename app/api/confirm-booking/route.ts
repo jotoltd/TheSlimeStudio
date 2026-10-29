@@ -140,7 +140,7 @@ export async function POST(req: NextRequest) {
       await sendPushToCustomer(customer.id, {
         title: "You're booked in!",
         body: `${people} slime maker${people > 1 ? "s" : ""} — ${when}. See you at the studio!`,
-        data: { kind: "booking", bookingId: String(result.bookingId) },
+        data: { kind: "booking", bookingId: String(result.bookingId), link: "account" },
       });
     }
   } catch (e) {

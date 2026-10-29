@@ -33,7 +33,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   if (!authed(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  let body: { title?: string; body?: string };
+  let body: { title?: string; body?: string; link?: string };
   try {
     body = await req.json();
   } catch {
@@ -46,6 +46,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Title and message are required" }, { status: 400 });
   }
 
+  const LINKS = ["book", "events", "giftcards", "account"] as const;
+  const link = LINKS.includes(body.link as (typeof LINKS)[number]) ? body.link! : "book";
+
   const { data: tokens } = await supabaseAdmin.from("push_tokens").select("token");
   const list = (tokens || []).map((r: { token: string }) => r.token);
   if (!list.length) {
@@ -53,7 +56,7 @@ export async function POST(req: Request) {
   }
 
   const results = await Promise.allSettled(
-    list.map((t) => sendPush(t, { title, body: message, data: { kind: "broadcast" } }))
+    list.map((t) => sendPush(t, { title, body: message, data: { kind: "broadcast", link } }))
   );
   const sent = results.filter((r) => r.status === "fulfilled" && r.value.ok).length;
   const failed = list.length - sent;

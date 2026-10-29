@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
         await sendPushToCustomer(customer.id, {
           title: "Gift card on its way",
           body: `Your £${Number(card.initial_value).toFixed(0)} gift card ${intent.metadata.gift_card_code} is active — check your email.`,
-          data: { kind: "gift_card", code: intent.metadata.gift_card_code },
+          data: { kind: "gift_card", code: intent.metadata.gift_card_code, link: "giftcards" },
         });
       }
     }

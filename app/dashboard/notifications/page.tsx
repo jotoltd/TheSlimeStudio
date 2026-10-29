@@ -45,6 +45,7 @@ export default function NotificationsPage() {
 
   const [pushTitle, setPushTitle] = useState("");
   const [pushBody, setPushBody] = useState("");
+  const [pushLink, setPushLink] = useState("book");
   const [devices, setDevices] = useState<number | null>(null);
   const [history, setHistory] = useState<BroadcastRecord[]>([]);
   const [sending, setSending] = useState(false);
@@ -79,7 +80,7 @@ export default function NotificationsPage() {
       const res = await fetch("/api/admin/push-broadcast", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: pushTitle, body: pushBody }),
+        body: JSON.stringify({ title: pushTitle, body: pushBody, link: pushLink }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -168,8 +169,21 @@ export default function NotificationsPage() {
           placeholder="Message — e.g. Extra sessions just opened this Saturday, book now ✨"
           className="w-full rounded-xl border border-ink/10 bg-cream/50 px-4 py-2.5 text-[0.88rem] text-ink placeholder:text-ink-soft/60 outline-none focus:border-[#ff2d78]/50 focus:bg-white transition-colors resize-none mb-3"
         />
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-[0.72rem] text-ink-soft">{pushBody.length}/180</span>
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <label className="flex items-center gap-2 text-[0.8rem] text-ink-soft">
+            Opens
+            <select
+              value={pushLink}
+              onChange={(e) => setPushLink(e.target.value)}
+              className="rounded-lg border border-ink/10 bg-cream/50 px-2.5 py-1.5 text-[0.8rem] text-ink outline-none focus:border-[#ff2d78]/50"
+            >
+              <option value="book">Book tab</option>
+              <option value="events">Events</option>
+              <option value="giftcards">Gift cards</option>
+              <option value="account">Account</option>
+            </select>
+            <span className="text-[0.7rem]">{pushBody.length}/180</span>
+          </label>
           <div className="flex items-center gap-3">
             {sendResult && (
               <span className={`text-[0.8rem] ${sendResult.ok ? "text-emerald-600" : "text-red-500"}`}>
