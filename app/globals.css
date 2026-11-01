@@ -373,7 +373,11 @@ html[data-theme="halloween"] body {
   background-image:
     radial-gradient(1100px 550px at 85% -10%, rgba(168, 85, 247, 0.16), transparent 60%),
     radial-gradient(900px 500px at 8% 110%, rgba(255, 122, 26, 0.10), transparent 60%);
-  background-attachment: fixed;
+}
+/* iOS/touch browsers don't support background-attachment: fixed — on pinch
+   zoom it repaints wrong and the background can vanish. Desktop only. */
+@media (hover: hover) and (min-width: 768px) {
+  html[data-theme="halloween"] body { background-attachment: fixed; }
 }
 
 html[data-theme="halloween"] ::selection {
