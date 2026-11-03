@@ -726,19 +726,11 @@ html[data-theme="lab"] .md\:rounded-xl {
   border-radius: 6px;
 }
 
-/* Hero: default centres the whole thing — lab goes left-aligned and wider,
-   which changes the page shape more than any recolour can. */
-html[data-theme="lab"] header.text-center { text-align: left; }
-html[data-theme="lab"] header .max-w-lg {
-  max-width: 640px;
-  margin-left: 0;
-}
-html[data-theme="lab"] header .max-w-lg .mx-auto { margin-left: 0; }
+/* Hero stays centred (the round logo needs it) but the logo tile squares
+   off to match the lab aesthetic. */
 html[data-theme="lab"] header .max-w-lg img {
-  margin-left: 0;
   border-radius: 12px;
 }
-html[data-theme="lab"] header .justify-center { justify-content: flex-start; }
 
 /* Section headings get a lab-specimen plate feel: uppercase, tracked out,
    with an acid-green underline accent. */
