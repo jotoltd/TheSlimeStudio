@@ -10,7 +10,7 @@ import { supabase, STUDIO_MAPS_URL } from "@/lib/supabase";
 import { useContent } from "@/lib/useContent";
 
 const INCLUDED = [
-  { img: "/images/slime_mixing.jpg.jpeg", label: "90 Minutes Private Studio Time" },
+  { img: "/images/slime_mixing.jpg.jpeg", label: "Private Studio Hire" },
   { img: "/images/slime_studio_pink_slime_pot.jpg.jpeg", label: "Choose Your Slime" },
   { img: "/images/slime_studio_slime_toppings.jpg.jpeg", label: "Pick Your Colour & Scent" },
   { img: "/images/foam_beads.jpg.jpeg", label: "Add Charms & Decorations" },
@@ -19,22 +19,12 @@ const INCLUDED = [
   { img: "/images/purple_finished_slime.jpg.jpeg", label: "Take Your Slime Home" },
 ];
 
-const EXAMPLES = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
-
 export default function PartiesPage() {
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const { content: c } = useContent();
 
-  const BASE_PRICE = parseFloat(c.parties_base_price) || 100;
-  const BASE_CHILDREN = parseInt(c.parties_base_children) || 5;
-  const ADDITIONAL_CHILD_PRICE = parseFloat(c.parties_additional_child_price) || 15;
   const MAX_CHILDREN = parseInt(c.parties_max_children) || 15;
-
-  function partyTotal(count: number) {
-    if (count <= BASE_CHILDREN) return BASE_PRICE;
-    return BASE_PRICE + (count - BASE_CHILDREN) * ADDITIONAL_CHILD_PRICE;
-  }
 
   async function handleEnquiry(e: React.FormEvent) {
     e.preventDefault();
@@ -124,55 +114,15 @@ export default function PartiesPage() {
             Exclusive hire of the studio, just for you!
           </p>
 
-          {/* Three headline boxes — mirrors the poster */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-5 mb-6">
-            <div className="bg-white rounded-2xl p-7 text-center shadow-sm border-2 border-pink-soft/30">
-              <div className="inline-block rounded-full px-4 py-1 mb-3 text-[0.7rem] font-semibold uppercase tracking-wider text-on-accent bg-hot-pink">
-                Party Package
-              </div>
-              <div className="font-display text-[2.4rem] leading-none mb-2 text-hot-pink">£100</div>
-              <div className="text-[0.85rem] text-ink-soft leading-snug">
-                Includes up to<br />
-                <span className="font-semibold text-ink">{BASE_CHILDREN} children</span>
-              </div>
+          {/* Single headline price — detailed pricing confirmed on enquiry */}
+          <div className="max-w-md mx-auto bg-white rounded-2xl p-8 text-center shadow-sm border-2 border-pink-soft/30 mb-6">
+            <div className="inline-block rounded-full px-4 py-1 mb-3 text-[0.7rem] font-semibold uppercase tracking-wider text-on-accent bg-hot-pink">
+              Party Package
             </div>
-
-            <div className="bg-white rounded-2xl p-7 text-center shadow-sm border-2 border-sky-blue-light/40">
-              <div className="inline-block rounded-full px-4 py-1 mb-3 text-[0.7rem] font-semibold uppercase tracking-wider text-white bg-[#2ba7c4]">
-                Each Additional Child
-              </div>
-              <div className="font-display text-[2.4rem] leading-none mb-2 text-[#2ba7c4]">£{ADDITIONAL_CHILD_PRICE.toFixed(2)}</div>
-              <div className="text-[0.85rem] text-ink-soft leading-snug">
-                Per child<br />
-                <span className="font-semibold text-ink">Maximum {MAX_CHILDREN} children</span>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl p-7 text-center shadow-sm border-2 border-[#8b5fbf]/30">
-              <div className="mb-3 text-2xl">🕐</div>
-              <div className="font-display text-[2.4rem] leading-none mb-2 text-[#8b5fbf]">90 Mins</div>
-              <div className="text-[0.85rem] text-ink-soft leading-snug">
-                Private<br />
-                <span className="font-semibold text-ink">studio time</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Worked examples so the pricing is crystal clear */}
-          <div className="bg-white rounded-2xl p-6 md:p-7 shadow-sm mb-5">
-            <h3 className="font-display text-[1rem] text-center mb-1 text-ink">What You&apos;ll Pay</h3>
-            <p className="text-center text-[0.8rem] text-ink-soft mb-5">
-              £100 covers up to {BASE_CHILDREN} children, then just £{ADDITIONAL_CHILD_PRICE.toFixed(2)} for each additional child.
-            </p>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-              {EXAMPLES.map((count) => (
-                <div key={count} className="bg-soft-pink rounded-xl px-3 py-4 text-center">
-                  <div className="text-[0.78rem] text-ink-soft uppercase tracking-wider mb-1">
-                    {count} {count === 1 ? "child" : "children"}
-                  </div>
-                  <div className="font-display text-[1.25rem] text-ink">£{partyTotal(count).toFixed(2)}</div>
-                </div>
-              ))}
+            <div className="font-display text-[2.4rem] leading-none mb-2 text-hot-pink">from £150</div>
+            <div className="text-[0.85rem] text-ink-soft leading-snug">
+              Exclusive hire of the studio<br />
+              <span className="font-semibold text-ink">up to {MAX_CHILDREN} slime makers</span>
             </div>
           </div>
 
@@ -309,7 +259,7 @@ export default function PartiesPage() {
                   className="w-full px-4 py-3 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-hot-pink"
                 />
                 <p className="text-[0.78rem] text-ink-soft mt-2">
-                  £{BASE_PRICE} for up to {BASE_CHILDREN} children, then £{ADDITIONAL_CHILD_PRICE.toFixed(2)} per extra child (max {MAX_CHILDREN}).
+                  Parties start from £150 — we&apos;ll confirm pricing for your group size when you enquire.
                 </p>
               </div>
 

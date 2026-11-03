@@ -29,7 +29,7 @@ export const CONTENT_DEFAULTS: Record<string, string> = {
   cta_title: "Ready to Get Squishing?",
   cta_text: "Spots fill up fast — secure your slime-making slot today. Sessions run hourly, 1–10 people, £15 per person.",
   parties_hero_title: "Make Their Celebration Extra Slimy!",
-  parties_hero_text: "Celebrate at The Slime Studio with 90 minutes of exclusive use of the studio. Every guest gets to choose their type of slime, add their own colour and scent, decorate it with charms and take their creation home. Your party also includes balloons and a birthday banner, slime bubble-making fun, and the option to bring your own birthday cake and party food.",
+  parties_hero_text: "Celebrate at The Slime Studio with exclusive use of the studio. Every guest gets to choose their type of slime, add their own colour and scent, decorate it with charms and take their creation home. Your party also includes balloons and a birthday banner, slime bubble-making fun, and the option to bring your own birthday cake and party food.",
   parties_tagline: "Fun, creative and just the right amount of messy!",
   parties_base_price: "100",
   parties_base_children: "6",
