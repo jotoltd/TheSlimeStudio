@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { supabase, type SiteSettings, type SiteTheme } from "@/lib/supabase";
 import HalloweenDecor from "@/components/HalloweenDecor";
 
+const SEASONAL: SiteTheme[] = ["halloween", "lab"];
+
 function useCountdown(target: Date) {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
@@ -50,9 +52,9 @@ export default function MaintenanceGate({ children }: { children: React.ReactNod
     try {
       const cached = localStorage.getItem("siteTheme");
       const cachedEnd = localStorage.getItem("siteThemeEnd");
-      if (cached === "halloween" || cached === "default") {
+      if (cached === "default" || SEASONAL.includes(cached as SiteTheme)) {
         const expired = cached !== "default" && cachedEnd && new Date(cachedEnd).getTime() < Date.now();
-        const t = expired ? "default" : cached;
+        const t = expired ? "default" : (cached as SiteTheme);
         document.documentElement.dataset.theme = t;
         setTheme(t);
       }
@@ -72,17 +74,17 @@ export default function MaintenanceGate({ children }: { children: React.ReactNod
         const s = data as SiteSettings;
         setInMaintenance(s.maintenance_mode);
         setLaunchDate(new Date(s.launch_date));
-        // ?theme=halloween|default previews a theme without saving it
-        const preview = new URLSearchParams(window.location.search).get("theme");
+        // ?theme=halloween|lab|default previews a theme without saving it
+        const preview = new URLSearchParams(window.location.search).get("theme") as SiteTheme | null;
         // A scheduled theme auto-reverts to default once theme_end_date passes —
         // no write needed, the effective theme is computed on every load.
         const scheduledExpired =
           s.theme && s.theme !== "default" && s.theme_end_date &&
           new Date(s.theme_end_date).getTime() < Date.now();
         const t: SiteTheme =
-          preview === "halloween" || preview === "default"
+          preview === "default" || (preview && SEASONAL.includes(preview))
             ? preview
-            : s.theme === "halloween" && !scheduledExpired ? "halloween" : "default";
+            : s.theme && SEASONAL.includes(s.theme) && !scheduledExpired ? s.theme : "default";
         setTheme(t);
         document.documentElement.dataset.theme = t;
         try {

@@ -128,9 +128,10 @@ export default function InlinePayment({
 
   // MaintenanceGate sets data-theme before children mount; match the Payment
   // Element (an iframe we can't restyle) to the active site theme.
-  const spooky =
-    typeof document !== "undefined" &&
-    document.documentElement.dataset.theme === "halloween";
+  const themeAttr =
+    typeof document !== "undefined" ? document.documentElement.dataset.theme ?? "" : "";
+  const dark = themeAttr === "halloween" || themeAttr === "lab";
+  const accent = themeAttr === "halloween" ? "#ff7a1a" : themeAttr === "lab" ? "#4ade80" : "#64d8ec";
 
   useEffect(() => {
     if (publishableKey) {
@@ -150,9 +151,9 @@ export default function InlinePayment({
       options={{
         clientSecret,
         appearance: {
-          theme: spooky ? "night" : "stripe",
+          theme: dark ? "night" : "stripe",
           variables: {
-            colorPrimary: spooky ? "#ff7a1a" : "#64d8ec",
+            colorPrimary: accent,
             borderRadius: "12px",
           },
         },

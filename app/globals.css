@@ -630,3 +630,229 @@ html[data-theme="halloween"] summary:focus-visible {
     animation: none;
   }
 }
+
+/* ==================== Slime Lab theme ==================== */
+/* html[data-theme="lab"] — dark, edgy laboratory look. Same remap approach as
+   the Halloween block: tokens redefined at :root level, then utility remaps
+   for things that bypass the tokens. Public site only. */
+html[data-theme="lab"] {
+  --c-aquamarine: 74 222 128;      /* slime green */
+  --c-sky-blue-light: 34 211 238;  /* electric cyan */
+  --c-bright-lavender: 163 230 53; /* acid lime */
+  --c-blush-pop: 110 231 183;
+  --c-canary-yellow: 250 204 21;   /* hazard yellow */
+  --c-peach: 74 222 128;
+  --c-ink: 235 244 238;            /* lab white */
+  --c-ink-soft: 148 175 158;       /* muted sage */
+  --c-cream: 13 18 22;             /* charcoal */
+  --c-body-bg: 13 18 22;
+  --c-body-text: 224 236 227;
+  --c-card: 22 30 35;
+  --c-on-accent: 8 16 10;          /* dark — text sitting on green accents */
+  --c-hot-pink: 74 222 128;        /* slime green takes the primary accent slot */
+  --c-magenta: 132 204 22;         /* lime for text accents */
+  --c-pink-soft: 34 211 238;
+  --c-soft-pink: 18 26 30;
+  --hero-grad: linear-gradient(135deg, rgba(10, 15, 18, 0.96) 0%, rgba(18, 35, 27, 0.92) 55%, rgba(22, 48, 40, 0.88) 100%);
+  --hero-overlay: linear-gradient(135deg, rgba(13, 18, 22, 0.9) 0%, rgba(18, 35, 27, 0.8) 100%);
+  --shadow-sm: 0 4px 14px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.6);
+}
+
+html[data-theme="lab"] body {
+  background-color: rgb(var(--c-body-bg));
+  color: rgb(var(--c-body-text));
+  background-image:
+    radial-gradient(1100px 550px at 90% -10%, rgba(74, 222, 128, 0.12), transparent 60%),
+    radial-gradient(900px 500px at 5% 110%, rgba(34, 211, 238, 0.08), transparent 60%);
+}
+/* iOS/touch browsers don't support background-attachment: fixed — desktop only. */
+@media (hover: hover) and (min-width: 768px) {
+  html[data-theme="lab"] body { background-attachment: fixed; }
+}
+
+html[data-theme="lab"] ::selection {
+  background: rgba(74, 222, 128, 0.4);
+  color: #fff;
+}
+
+/* Cards & surfaces */
+html[data-theme="lab"] .bg-white { background-color: rgb(var(--c-card)); }
+html[data-theme="lab"] .bg-white\/70 { background-color: rgb(var(--c-card) / 0.72); }
+html[data-theme="lab"] .bg-white\/60 { background-color: rgb(var(--c-card) / 0.62); }
+html[data-theme="lab"] .bg-white\/50 { background-color: rgb(var(--c-card) / 0.55); }
+html[data-theme="lab"] .bg-white\/40 { background-color: rgb(var(--c-card) / 0.45); }
+html[data-theme="lab"] .bg-white\/80 { background-color: rgb(var(--c-card) / 0.8); }
+html[data-theme="lab"] .bg-white\/90 { background-color: rgb(var(--c-card) / 0.9); }
+html[data-theme="lab"] .hover\:bg-white:hover { background-color: rgb(var(--c-card)); }
+html[data-theme="lab"] .via-white {
+  --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--c-card) / 1) var(--tw-gradient-via-position), var(--tw-gradient-to);
+}
+/* Ink is light under this theme, so scrims that use bg-ink for a dark dim
+   would come out light — pin them to black instead. */
+html[data-theme="lab"] .bg-ink\/80 { background-color: rgb(0 0 0 / 0.8); }
+html[data-theme="lab"] .bg-ink\/40 { background-color: rgb(0 0 0 / 0.45); }
+
+/* Remaining arbitrary-value accents that aren't theme tokens */
+html[data-theme="lab"] .bg-\[\#2ba7c4\] { background-color: #0e7490; }
+html[data-theme="lab"] .text-\[\#2ba7c4\] { color: #22d3ee; }
+html[data-theme="lab"] .text-\[\#8b5fbf\] { color: #4ade80; }
+html[data-theme="lab"] .hover\:bg-\[\#4cc5db\]:hover { background-color: #06b6d4; }
+
+/* sky-blue-light becomes electric cyan — ink flips to lab-white which is
+   unreadable on it, so accent surfaces need the dark on-accent colour. */
+html[data-theme="lab"] .bg-sky-blue-light .text-ink,
+html[data-theme="lab"] .bg-sky-blue-light.text-ink {
+  color: rgb(var(--c-on-accent));
+}
+
+/* -------------------- Layout switch-up -------------------- */
+
+/* Sharp lab corners: the default theme is all soft pill shapes — this theme
+   squares everything off. Sits unlayered so it wins over Tailwind utilities. */
+html[data-theme="lab"] .rounded-\[16px\],
+html[data-theme="lab"] .rounded-\[20px\],
+html[data-theme="lab"] .rounded-\[24px\],
+html[data-theme="lab"] .rounded-\[32px\],
+html[data-theme="lab"] .md\:rounded-\[20px\],
+html[data-theme="lab"] .md\:rounded-\[32px\],
+html[data-theme="lab"] .rounded-2xl,
+html[data-theme="lab"] .rounded-3xl,
+html[data-theme="lab"] .md\:rounded-2xl,
+html[data-theme="lab"] .md\:rounded-3xl,
+html[data-theme="lab"] .rounded-xl,
+html[data-theme="lab"] .md\:rounded-xl {
+  border-radius: 6px;
+}
+
+/* Hero: default centres the whole thing — lab goes left-aligned and wider,
+   which changes the page shape more than any recolour can. */
+html[data-theme="lab"] header.text-center { text-align: left; }
+html[data-theme="lab"] header .max-w-lg {
+  max-width: 640px;
+  margin-left: 0;
+}
+html[data-theme="lab"] header .max-w-lg .mx-auto { margin-left: 0; }
+html[data-theme="lab"] header .max-w-lg img {
+  margin-left: 0;
+  border-radius: 12px;
+}
+html[data-theme="lab"] header .justify-center { justify-content: flex-start; }
+
+/* Section headings get a lab-specimen plate feel: uppercase, tracked out,
+   with an acid-green underline accent. */
+html[data-theme="lab"] .section .text-center h2,
+html[data-theme="lab"] .text-center h2.font-display {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+html[data-theme="lab"] .section .text-center h2::after,
+html[data-theme="lab"] section:not(.text-center) h2.font-display::after {
+  content: "";
+  display: block;
+  width: 64px;
+  height: 4px;
+  margin: 14px auto 0;
+  background: linear-gradient(90deg, #4ade80, #22d3ee);
+  border-radius: 2px;
+}
+html[data-theme="lab"] section:not(.text-center) h2.font-display::after {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+/* Cards get a green edge instead of the soft pastel shadow. */
+html[data-theme="lab"] .shadow-sm,
+html[data-theme="lab"] .shadow-md,
+html[data-theme="lab"] .shadow-lg {
+  border: 1px solid rgba(74, 222, 128, 0.14);
+}
+
+/* Buttons */
+html[data-theme="lab"] .btn-primary {
+  background: linear-gradient(135deg, #4ade80, #22c55e);
+  color: #08160a;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  box-shadow: 0 8px 24px rgba(74, 222, 128, 0.35);
+}
+html[data-theme="lab"] .btn-primary:hover {
+  background: linear-gradient(135deg, #6ee7a0, #4ade80);
+  box-shadow: 0 14px 36px rgba(74, 222, 128, 0.5);
+}
+html[data-theme="lab"] .btn-secondary {
+  background: linear-gradient(135deg, #22d3ee, #0891b2);
+  color: #04181c;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  box-shadow: 0 8px 24px rgba(34, 211, 238, 0.3);
+}
+html[data-theme="lab"] .btn-secondary:hover {
+  background: linear-gradient(135deg, #67e8f9, #22d3ee);
+  box-shadow: 0 14px 36px rgba(34, 211, 238, 0.45);
+}
+html[data-theme="lab"] .btn-ghost {
+  color: rgb(var(--c-body-text));
+  border-color: rgba(235, 244, 238, 0.25);
+  border-radius: 6px;
+}
+html[data-theme="lab"] .btn-ghost:hover {
+  background: rgba(235, 244, 238, 0.08);
+  border-color: rgba(235, 244, 238, 0.45);
+}
+html[data-theme="lab"] .eyebrow {
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.12);
+  border-radius: 4px;
+}
+
+/* Pulsing "Book Now" glow → slime-green edition */
+html[data-theme="lab"] .btn-book-now { animation-name: bookNowPulseLab; }
+html[data-theme="lab"] .btn-book-now::before {
+  border-radius: 9px;
+  background: linear-gradient(135deg, #4ade80, #22d3ee, #4ade80);
+  background-size: 200% 200%;
+}
+@keyframes bookNowPulseLab {
+  0%, 100% {
+    box-shadow: 0 8px 24px rgba(74, 222, 128, 0.35), 0 0 0 0 rgba(74, 222, 128, 0.5);
+    transform: scale(1) skewX(0deg);
+  }
+  30% {
+    box-shadow: 0 12px 32px rgba(74, 222, 128, 0.45), 0 0 0 12px rgba(74, 222, 128, 0);
+    transform: scale(1.05) skewX(0deg);
+  }
+  50% {
+    box-shadow: 0 10px 28px rgba(74, 222, 128, 0.4), 0 0 0 6px rgba(34, 211, 238, 0);
+    transform: scale(1.02) skewX(-1deg);
+  }
+  70% {
+    box-shadow: 0 12px 32px rgba(74, 222, 128, 0.45), 0 0 0 12px rgba(74, 222, 128, 0);
+    transform: scale(1.05) skewX(0deg);
+  }
+}
+
+/* Chunky display font — loaded via next/font in the root layout */
+html[data-theme="lab"] .font-display,
+html[data-theme="lab"] h1,
+html[data-theme="lab"] h2,
+html[data-theme="lab"] h3,
+html[data-theme="lab"] h4 {
+  font-family: var(--font-titan), "Avenir", "Avenir Next", var(--font-poppins), system-ui, sans-serif;
+  letter-spacing: 0.02em;
+  font-weight: 400;
+}
+
+html[data-theme="lab"] a:focus-visible,
+html[data-theme="lab"] button:focus-visible,
+html[data-theme="lab"] input:focus-visible,
+html[data-theme="lab"] textarea:focus-visible,
+html[data-theme="lab"] select:focus-visible,
+html[data-theme="lab"] summary:focus-visible {
+  outline-color: #4ade80;
+}
+
+html[data-theme="lab"] .navbar-bg { background: var(--hero-grad); }

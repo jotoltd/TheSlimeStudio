@@ -84,7 +84,7 @@ export default function SettingsPage() {
       setGoogleAdsEnabled(!!s.google_ads_enabled);
       setSnapchatPixelId(s.snapchat_pixel_id || "");
       setSnapchatPixelEnabled(!!s.snapchat_pixel_enabled);
-      setTheme(s.theme === "halloween" ? "halloween" : "default");
+      setTheme(s.theme === "halloween" || s.theme === "lab" ? s.theme : "default");
     }
 
     try {
@@ -207,7 +207,7 @@ export default function SettingsPage() {
       setTheme(previous);
       setThemeMsg("Failed to save: " + error.message);
     } else {
-      setThemeMsg(newTheme === "halloween" ? "🎃 Halloween theme is live!" : "Theme saved.");
+      setThemeMsg(newTheme === "halloween" ? "🎃 Halloween theme is live!" : newTheme === "lab" ? "🧪 Slime Lab theme is live!" : "Theme saved.");
     }
   }
 
@@ -393,7 +393,7 @@ export default function SettingsPage() {
             <p className="text-[0.85rem] text-ink-soft mb-4">
               Applies to the public website instantly — the dashboard always stays on the default look.
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-xl">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-3xl">
               {([
                 {
                   key: "default" as SiteTheme,
@@ -408,6 +408,13 @@ export default function SettingsPage() {
                   name: "Halloween",
                   desc: "Spooky dark mode — pumpkins, bats & cobwebs",
                   swatch: "linear-gradient(135deg, #14092a 0%, #4a1d52 55%, #ff7300 140%)",
+                },
+                {
+                  key: "lab" as SiteTheme,
+                  icon: "🧪",
+                  name: "Slime Lab",
+                  desc: "Dark & edgy — slime green, sharp corners, lab vibes",
+                  swatch: "linear-gradient(135deg, #0d1216 0%, #12231b 55%, #4ade80 140%)",
                 },
               ]).map((t) => (
                 <button

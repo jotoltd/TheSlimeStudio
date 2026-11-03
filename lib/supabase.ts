@@ -131,7 +131,7 @@ export type Admin = {
   created_at: string;
 };
 
-export type SiteTheme = "default" | "halloween";
+export type SiteTheme = "default" | "halloween" | "lab";
 
 export type SiteSettings = {
   id: number;
