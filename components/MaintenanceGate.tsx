@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { supabase, type SiteSettings, type SiteTheme } from "@/lib/supabase";
 import HalloweenDecor from "@/components/HalloweenDecor";
 
-const SEASONAL: SiteTheme[] = ["halloween", "lab"];
+const SEASONAL: SiteTheme[] = ["halloween", "lab", "comic", "mono", "xmas"];
 
 function useCountdown(target: Date) {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });

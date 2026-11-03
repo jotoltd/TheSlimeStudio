@@ -130,8 +130,11 @@ export default function InlinePayment({
   // Element (an iframe we can't restyle) to the active site theme.
   const themeAttr =
     typeof document !== "undefined" ? document.documentElement.dataset.theme ?? "" : "";
-  const dark = themeAttr === "halloween" || themeAttr === "lab";
-  const accent = themeAttr === "halloween" ? "#ff7a1a" : themeAttr === "lab" ? "#4ade80" : "#64d8ec";
+  const dark = themeAttr === "halloween" || themeAttr === "lab" || themeAttr === "xmas";
+  const accent =
+    themeAttr === "halloween" ? "#ff7a1a" :
+    themeAttr === "lab" ? "#4ade80" :
+    themeAttr === "xmas" ? "#dc2626" : "#64d8ec";
 
   useEffect(() => {
     if (publishableKey) {

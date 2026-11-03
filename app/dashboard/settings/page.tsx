@@ -3,6 +3,51 @@
 import { useEffect, useState } from "react";
 import { supabase, type BookingSettings, type SiteSettings, type SiteTheme, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, MAX_DAILY_BOOKINGS as DEFAULT_MAX, STAMPS_PER_REWARD as DEFAULT_STAMPS } from "@/lib/supabase";
 
+const THEME_OPTIONS: { key: SiteTheme; icon: string; name: string; desc: string; swatch: string }[] = [
+  {
+    key: "default",
+    icon: "🫧",
+    name: "Slime Studio",
+    desc: "The classic pastel look",
+    swatch: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)",
+  },
+  {
+    key: "lab",
+    icon: "🧪",
+    name: "Slime Lab",
+    desc: "Dark & edgy — green/cyan, sharp corners",
+    swatch: "linear-gradient(135deg, #0d1216 0%, #12231b 55%, #4ade80 140%)",
+  },
+  {
+    key: "comic",
+    icon: "💥",
+    name: "Comic Pop",
+    desc: "Bold & bright — thick outlines, tilted cards, comic font",
+    swatch: "linear-gradient(135deg, #ffd23f 0%, #ff5d1f 70%, #111 130%)",
+  },
+  {
+    key: "mono",
+    icon: "◼️",
+    name: "Mono Studio",
+    desc: "Minimal — black & white, split hero, no rounded corners",
+    swatch: "linear-gradient(135deg, #ffffff 0%, #d4d4d4 55%, #111 140%)",
+  },
+  {
+    key: "xmas",
+    icon: "🎄",
+    name: "Christmas",
+    desc: "Festive — pine green, santa red, gold accents",
+    swatch: "linear-gradient(135deg, #0f2419 0%, #1a4d2e 50%, #dc2626 130%)",
+  },
+  {
+    key: "halloween",
+    icon: "🎃",
+    name: "Halloween",
+    desc: "Spooky dark mode — pumpkins, bats & cobwebs",
+    swatch: "linear-gradient(135deg, #14092a 0%, #4a1d52 55%, #ff7300 140%)",
+  },
+];
+
 export default function SettingsPage() {
   const [tab, setTab] = useState<"site" | "bookings" | "payments" | "loyalty" | "ads" | "admins">("site");
 
@@ -84,7 +129,7 @@ export default function SettingsPage() {
       setGoogleAdsEnabled(!!s.google_ads_enabled);
       setSnapchatPixelId(s.snapchat_pixel_id || "");
       setSnapchatPixelEnabled(!!s.snapchat_pixel_enabled);
-      setTheme(s.theme === "halloween" || s.theme === "lab" ? s.theme : "default");
+      setTheme(s.theme && THEME_OPTIONS.some((t) => t.key === s.theme) ? s.theme : "default");
     }
 
     try {
@@ -207,7 +252,8 @@ export default function SettingsPage() {
       setTheme(previous);
       setThemeMsg("Failed to save: " + error.message);
     } else {
-      setThemeMsg(newTheme === "halloween" ? "🎃 Halloween theme is live!" : newTheme === "lab" ? "🧪 Slime Lab theme is live!" : "Theme saved.");
+      const label = THEME_OPTIONS.find((t) => t.key === newTheme);
+      setThemeMsg(label ? `${label.icon} ${label.name} theme is live!` : "Theme saved.");
     }
   }
 
@@ -393,30 +439,8 @@ export default function SettingsPage() {
             <p className="text-[0.85rem] text-ink-soft mb-4">
               Applies to the public website instantly — the dashboard always stays on the default look.
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-3xl">
-              {([
-                {
-                  key: "default" as SiteTheme,
-                  icon: "🫧",
-                  name: "Slime Studio",
-                  desc: "The classic pastel look",
-                  swatch: "linear-gradient(135deg, #abf7dc 0%, #ffc4fb 100%)",
-                },
-                {
-                  key: "halloween" as SiteTheme,
-                  icon: "🎃",
-                  name: "Halloween",
-                  desc: "Spooky dark mode — pumpkins, bats & cobwebs",
-                  swatch: "linear-gradient(135deg, #14092a 0%, #4a1d52 55%, #ff7300 140%)",
-                },
-                {
-                  key: "lab" as SiteTheme,
-                  icon: "🧪",
-                  name: "Slime Lab",
-                  desc: "Dark & edgy — slime green, sharp corners, lab vibes",
-                  swatch: "linear-gradient(135deg, #0d1216 0%, #12231b 55%, #4ade80 140%)",
-                },
-              ]).map((t) => (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-w-3xl">
+              {THEME_OPTIONS.map((t) => (
                 <button
                   key={t.key}
                   type="button"

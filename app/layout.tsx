@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import { unstable_cache } from "next/cache";
-import { Poppins, Creepster, Titan_One } from "next/font/google";
+import { Poppins, Creepster, Titan_One, Bungee, Mountains_of_Christmas } from "next/font/google";
 import "./globals.css";
 import { supabaseAdmin, type SiteTheme } from "@/lib/supabase";
 import MaintenanceGate from "@/components/MaintenanceGate";
@@ -31,7 +31,7 @@ const getSiteTheme = unstable_cache(
       const expired =
         t && t !== "default" && data?.theme_end_date &&
         new Date(data.theme_end_date).getTime() < Date.now();
-      return !expired && (t === "halloween" || t === "lab") ? t : "default";
+      return !expired && t && SEASONAL_THEMES.includes(t) ? t : "default";
     } catch {
       return "default";
     }
@@ -62,6 +62,24 @@ const titanOne = Titan_One({
   variable: "--font-titan",
   display: "swap",
 });
+
+// Display font used by the Comic Pop theme (html[data-theme="comic"]).
+const bungee = Bungee({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-bungee",
+  display: "swap",
+});
+
+// Display font used by the Christmas theme (html[data-theme="xmas"]).
+const xmas = Mountains_of_Christmas({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-xmas",
+  display: "swap",
+});
+
+const SEASONAL_THEMES: SiteTheme[] = ["halloween", "lab", "comic", "mono", "xmas"];
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -138,7 +156,7 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className={`${poppins.variable} ${creepster.variable} ${titanOne.variable}`}
+      className={`${poppins.variable} ${creepster.variable} ${titanOne.variable} ${bungee.variable} ${xmas.variable}`}
       data-theme={siteTheme === "default" ? undefined : siteTheme}
       suppressHydrationWarning
     >
@@ -153,7 +171,7 @@ export default async function RootLayout({
             maintenance-mode decision. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var KN=["halloween","lab"];var p=location.pathname;if(/^\\/(admin|api|dashboard)/.test(p)){delete document.documentElement.dataset.theme}else{var t=localStorage.getItem("siteTheme"),e=localStorage.getItem("siteThemeEnd");if(KN.indexOf(t)>-1||t==="default"){if(t!=="default"&&e&&new Date(e).getTime()<Date.now())t="default";document.documentElement.dataset.theme=t}window.__siteSettings=fetch(${JSON.stringify(process.env.NEXT_PUBLIC_SUPABASE_URL || "")}+"/rest/v1/site_settings?select=maintenance_mode,theme,theme_end_date,launch_date&id=eq.1",{headers:{apikey:${JSON.stringify(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "")},authorization:"Bearer "+${JSON.stringify(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "")}}}).then(function(r){return r.json()}).then(function(rows){var s=rows&&rows[0];var exp=s&&s.theme_end_date&&new Date(s.theme_end_date).getTime()<Date.now();var preview=new URLSearchParams(location.search).get("theme");if(!preview){if(s&&KN.indexOf(s.theme)>-1&&!exp){document.documentElement.dataset.theme=s.theme}else if(KN.indexOf(document.documentElement.dataset.theme)>-1){delete document.documentElement.dataset.theme}}return s||null}).catch(function(){return null})}}catch(e){}`,
+            __html: `try{var KN=["halloween","lab","comic","mono","xmas"];var p=location.pathname;if(/^\\/(admin|api|dashboard)/.test(p)){delete document.documentElement.dataset.theme}else{var t=localStorage.getItem("siteTheme"),e=localStorage.getItem("siteThemeEnd");if(KN.indexOf(t)>-1||t==="default"){if(t!=="default"&&e&&new Date(e).getTime()<Date.now())t="default";document.documentElement.dataset.theme=t}window.__siteSettings=fetch(${JSON.stringify(process.env.NEXT_PUBLIC_SUPABASE_URL || "")}+"/rest/v1/site_settings?select=maintenance_mode,theme,theme_end_date,launch_date&id=eq.1",{headers:{apikey:${JSON.stringify(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "")},authorization:"Bearer "+${JSON.stringify(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "")}}}).then(function(r){return r.json()}).then(function(rows){var s=rows&&rows[0];var exp=s&&s.theme_end_date&&new Date(s.theme_end_date).getTime()<Date.now();var preview=new URLSearchParams(location.search).get("theme");if(!preview){if(s&&KN.indexOf(s.theme)>-1&&!exp){document.documentElement.dataset.theme=s.theme}else if(KN.indexOf(document.documentElement.dataset.theme)>-1){delete document.documentElement.dataset.theme}}return s||null}).catch(function(){return null})}}catch(e){}`,
           }}
         />
 

@@ -848,3 +848,530 @@ html[data-theme="lab"] summary:focus-visible {
 }
 
 html[data-theme="lab"] .navbar-bg { background: var(--hero-grad); }
+
+/* ==================== Comic Pop theme ==================== */
+/* html[data-theme="comic"] — bright neo-brutalist comic-book look: cream
+   paper background, thick black outlines, hard offset shadows, tilted
+   cards. Light theme (dark ink), so no bg-white remap needed. */
+html[data-theme="comic"] {
+  --c-aquamarine: 255 210 63;      /* bold yellow */
+  --c-sky-blue-light: 0 194 203;   /* comic cyan */
+  --c-bright-lavender: 155 93 229; /* comic purple */
+  --c-blush-pop: 255 111 145;
+  --c-canary-yellow: 255 210 63;
+  --c-peach: 255 93 31;            /* hot orange */
+  --c-ink: 17 17 17;               /* ink black */
+  --c-ink-soft: 96 84 64;
+  --c-cream: 255 244 214;          /* paper cream */
+  --c-body-bg: 255 244 214;
+  --c-body-text: 17 17 17;
+  --c-card: 255 255 255;
+  --c-on-accent: 17 17 17;         /* dark text on yellow/cyan accents */
+  --c-hot-pink: 255 93 31;         /* hot orange primary */
+  --c-magenta: 155 93 229;
+  --c-pink-soft: 255 210 63;
+  --c-soft-pink: 255 230 180;
+  --hero-grad: linear-gradient(135deg, #ffe98f 0%, #ffc4dc 100%);
+  --hero-overlay: linear-gradient(135deg, rgba(255, 240, 179, 0.88) 0%, rgba(255, 209, 227, 0.82) 100%);
+  --shadow-sm: 4px 4px 0 #111111;
+  --shadow-md: 6px 6px 0 #111111;
+  --shadow-lg: 8px 8px 0 #111111;
+}
+
+html[data-theme="comic"] body {
+  background-color: rgb(var(--c-body-bg));
+  color: rgb(var(--c-body-text));
+  background-image: radial-gradient(rgba(17, 17, 17, 0.05) 1.2px, transparent 1.2px);
+  background-size: 22px 22px;
+}
+
+html[data-theme="comic"] ::selection {
+  background: rgba(255, 210, 63, 0.8);
+  color: #111;
+}
+
+/* ---- Comic layout: everything outlined + offset-shadowed + tilted ---- */
+html[data-theme="comic"] .bg-white,
+html[data-theme="comic"] .bg-white\/70,
+html[data-theme="comic"] .bg-white\/60 {
+  border: 3px solid #111;
+}
+html[data-theme="comic"] .shadow-sm,
+html[data-theme="comic"] .shadow-md,
+html[data-theme="comic"] .shadow-lg {
+  border: 3px solid #111;
+  box-shadow: 6px 6px 0 #111;
+}
+html[data-theme="comic"] .hover\:shadow-lg:hover,
+html[data-theme="comic"] .hover\:-translate-y-1\.5:hover {
+  transform: translate(-2px, -2px) !important;
+  box-shadow: 9px 9px 0 #111 !important;
+}
+
+/* Sticker-tilt: alternate cards rotate slightly — instantly different feel */
+html[data-theme="comic"] .grid .reveal:nth-child(odd) { transform: rotate(-1.2deg); }
+html[data-theme="comic"] .grid .reveal:nth-child(even) { transform: rotate(1.2deg); }
+
+/* The round logo becomes a rotated sticker tile */
+html[data-theme="comic"] header .max-w-lg img {
+  border-radius: 14px;
+  border: 4px solid #111;
+  box-shadow: 7px 7px 0 #111;
+  transform: rotate(-3deg);
+}
+
+/* Section headings get a comic banner plate */
+html[data-theme="comic"] h2.font-display,
+html[data-theme="comic"] .font-display {
+  font-family: var(--font-bungee), "Avenir", "Avenir Next", var(--font-poppins), system-ui, sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+html[data-theme="comic"] .section .text-center h2 {
+  display: inline-block;
+  background: #ffd23f;
+  border: 3px solid #111;
+  box-shadow: 5px 5px 0 #111;
+  padding: 8px 22px;
+  transform: rotate(-1deg);
+}
+
+/* Buttons: rectangles with a push-in offset shadow */
+html[data-theme="comic"] .btn-primary {
+  background: #ff5d1f;
+  color: #fff;
+  border: 3px solid #111;
+  border-radius: 8px;
+  text-transform: uppercase;
+  box-shadow: 5px 5px 0 #111;
+}
+html[data-theme="comic"] .btn-primary:hover {
+  background: #ff7a3d;
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 #111;
+}
+html[data-theme="comic"] .btn-secondary {
+  background: #00c2cb;
+  color: #111;
+  border: 3px solid #111;
+  border-radius: 8px;
+  text-transform: uppercase;
+  box-shadow: 5px 5px 0 #111;
+}
+html[data-theme="comic"] .btn-secondary:hover {
+  background: #1ad8e0;
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 #111;
+}
+html[data-theme="comic"] .btn-ghost {
+  color: #111;
+  border: 3px solid #111;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 4px 4px 0 #111;
+}
+html[data-theme="comic"] .btn-ghost:hover {
+  background: #fff7e0;
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 #111;
+}
+html[data-theme="comic"] .eyebrow {
+  color: #111;
+  background: #ffd23f;
+  border: 2px solid #111;
+  border-radius: 6px;
+  box-shadow: 3px 3px 0 #111;
+  transform: rotate(-1deg);
+}
+
+/* Book Now keeps its attention pull but as a wobble instead of a glow */
+html[data-theme="comic"] .btn-book-now { animation-name: bookNowWobble; }
+html[data-theme="comic"] .btn-book-now::before { display: none; }
+html[data-theme="comic"] .btn-book-now:hover { animation: none; transform: translate(2px, 2px) rotate(-1deg); box-shadow: 2px 2px 0 #111; }
+@keyframes bookNowWobble {
+  0%, 100% { transform: rotate(-1deg) scale(1); }
+  25% { transform: rotate(1.5deg) scale(1.04); }
+  50% { transform: rotate(-1.5deg) scale(1.04); }
+  75% { transform: rotate(1deg) scale(1); }
+}
+
+html[data-theme="comic"] a:focus-visible,
+html[data-theme="comic"] button:focus-visible,
+html[data-theme="comic"] input:focus-visible,
+html[data-theme="comic"] textarea:focus-visible,
+html[data-theme="comic"] select:focus-visible,
+html[data-theme="comic"] summary:focus-visible {
+  outline-color: #ff5d1f;
+}
+
+html[data-theme="comic"] .navbar-bg { background: #ffd23f; border-bottom: 3px solid #111; }
+html[data-theme="comic"] .cta-gradient { background: linear-gradient(135deg, #ff5d1f, #9b5de5); }
+
+/* ==================== Mono Studio theme ==================== */
+/* html[data-theme="mono"] — gallery-minimal: black & white only, zero
+   rounded corners, hairline borders, split hero (logo left / copy right
+   on desktop), wide-tracked uppercase type. */
+html[data-theme="mono"] {
+  --c-aquamarine: 17 17 17;        /* black */
+  --c-sky-blue-light: 17 17 17;    /* black — CTA band goes full black */
+  --c-bright-lavender: 115 115 115;
+  --c-blush-pop: 140 140 140;
+  --c-canary-yellow: 68 68 68;
+  --c-peach: 68 68 68;
+  --c-ink: 17 17 17;
+  --c-ink-soft: 115 115 115;
+  --c-cream: 250 250 250;
+  --c-body-bg: 250 250 250;
+  --c-body-text: 17 17 17;
+  --c-card: 255 255 255;
+  --c-on-accent: 255 255 255;      /* white text on black accents */
+  --c-hot-pink: 17 17 17;          /* black primary */
+  --c-magenta: 68 68 68;
+  --c-pink-soft: 140 140 140;
+  --c-soft-pink: 243 243 243;
+  --hero-grad: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+  --hero-overlay: linear-gradient(135deg, rgba(250, 250, 250, 0.92) 0%, rgba(232, 232, 232, 0.85) 100%);
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+}
+
+html[data-theme="mono"] body {
+  background-color: rgb(var(--c-body-bg));
+  color: rgb(var(--c-body-text));
+}
+
+html[data-theme="mono"] ::selection {
+  background: #111;
+  color: #fff;
+}
+
+/* ---- Mono layout: kill every radius + every shadow ---- */
+html[data-theme="mono"] .rounded-\[16px\],
+html[data-theme="mono"] .rounded-\[20px\],
+html[data-theme="mono"] .rounded-\[24px\],
+html[data-theme="mono"] .rounded-\[32px\],
+html[data-theme="mono"] .md\:rounded-\[20px\],
+html[data-theme="mono"] .md\:rounded-\[32px\],
+html[data-theme="mono"] .rounded-2xl,
+html[data-theme="mono"] .rounded-3xl,
+html[data-theme="mono"] .md\:rounded-2xl,
+html[data-theme="mono"] .md\:rounded-3xl,
+html[data-theme="mono"] .rounded-xl,
+html[data-theme="mono"] .md\:rounded-xl,
+html[data-theme="mono"] .rounded-lg,
+html[data-theme="mono"] .rounded,
+html[data-theme="mono"] .rounded-full {
+  border-radius: 0;
+}
+html[data-theme="mono"] .shadow-sm,
+html[data-theme="mono"] .shadow-md,
+html[data-theme="mono"] .shadow-lg {
+  box-shadow: none;
+  border: 1px solid #e0e0e0;
+}
+html[data-theme="mono"] .bg-white,
+html[data-theme="mono"] .bg-white\/70,
+html[data-theme="mono"] .bg-white\/60 {
+  border: 1px solid #e0e0e0;
+}
+
+/* Split hero: logo column left, headline/copy/CTA right on desktop —
+   the most structurally different layout of the set. */
+@media (min-width: 768px) {
+  html[data-theme="mono"] header .max-w-lg {
+    max-width: 56rem;
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    column-gap: 3.5rem;
+    align-items: center;
+    text-align: left;
+  }
+  html[data-theme="mono"] header .max-w-lg img {
+    grid-row: 1 / span 3;
+    width: 240px;
+    margin: 0;
+    border-radius: 0;
+    box-shadow: none;
+    border: 1px solid #e0e0e0;
+  }
+  html[data-theme="mono"] header .max-w-lg .justify-center { justify-content: flex-start; }
+  html[data-theme="mono"] header .max-w-lg p.mx-auto { margin-left: 0; }
+}
+html[data-theme="mono"] header .max-w-lg img {
+  border-radius: 0;
+  box-shadow: none;
+  border: 1px solid #e0e0e0;
+}
+
+/* Gallery type: light weight, big tracking, hairline rule under sections */
+html[data-theme="mono"] .font-display,
+html[data-theme="mono"] h1,
+html[data-theme="mono"] h2,
+html[data-theme="mono"] h3,
+html[data-theme="mono"] h4 {
+  font-family: "Avenir", "Avenir Next", var(--font-poppins), system-ui, sans-serif;
+  font-weight: 300;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+html[data-theme="mono"] .section .text-center h2::after {
+  content: "";
+  display: block;
+  width: 40px;
+  height: 1px;
+  margin: 18px auto 0;
+  background: #111;
+}
+
+/* Buttons: flat black rectangles */
+html[data-theme="mono"] .btn-primary {
+  background: #111;
+  color: #fff;
+  border-radius: 0;
+  border: 1px solid #111;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-weight: 500;
+  box-shadow: none;
+}
+html[data-theme="mono"] .btn-primary:hover {
+  background: #333;
+  transform: none;
+  box-shadow: none;
+}
+html[data-theme="mono"] .btn-secondary {
+  background: transparent;
+  color: #111;
+  border: 1px solid #111;
+  border-radius: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  box-shadow: none;
+}
+html[data-theme="mono"] .btn-secondary:hover {
+  background: #111;
+  color: #fff;
+  transform: none;
+  box-shadow: none;
+}
+html[data-theme="mono"] .btn-ghost {
+  color: #111;
+  border: 1px solid #111;
+  border-radius: 0;
+  background: transparent;
+}
+html[data-theme="mono"] .btn-ghost:hover {
+  background: #f0f0f0;
+  transform: none;
+}
+html[data-theme="mono"] .eyebrow {
+  color: #111;
+  background: transparent;
+  border: 1px solid #111;
+  border-radius: 0;
+  letter-spacing: 0.3em;
+}
+
+/* Book Now: quiet attention — underline sweep instead of the glow pulse */
+html[data-theme="mono"] .btn-book-now { animation: none; }
+html[data-theme="mono"] .btn-book-now::before {
+  background: #111;
+  border-radius: 0;
+  opacity: 0;
+}
+html[data-theme="mono"] .btn-book-now:hover { animation: none; }
+
+html[data-theme="mono"] a:focus-visible,
+html[data-theme="mono"] button:focus-visible,
+html[data-theme="mono"] input:focus-visible,
+html[data-theme="mono"] textarea:focus-visible,
+html[data-theme="mono"] select:focus-visible,
+html[data-theme="mono"] summary:focus-visible {
+  outline-color: #111;
+}
+
+html[data-theme="mono"] .navbar-bg { background: #fff; border-bottom: 1px solid #111; }
+html[data-theme="mono"] .cta-gradient { background: #111; }
+/* black CTA band (bg-sky-blue-light → black) needs white copy */
+html[data-theme="mono"] .bg-sky-blue-light .text-ink,
+html[data-theme="mono"] .bg-sky-blue-light.text-ink {
+  color: rgb(var(--c-on-accent));
+}
+
+/* ==================== Christmas theme ==================== */
+/* html[data-theme="xmas"] — deep pine green, santa red, gold trim,
+   snow-speckle background, festive script display font. Dark theme —
+   gets the same surface remaps as halloween/lab. */
+html[data-theme="xmas"] {
+  --c-aquamarine: 26 77 46;        /* holly green */
+  --c-sky-blue-light: 190 30 40;   /* santa red */
+  --c-bright-lavender: 250 204 21; /* gold */
+  --c-blush-pop: 248 113 113;
+  --c-canary-yellow: 250 204 21;
+  --c-peach: 190 30 40;
+  --c-ink: 245 240 230;            /* warm white */
+  --c-ink-soft: 163 190 168;       /* sage */
+  --c-cream: 15 32 24;             /* deep pine */
+  --c-body-bg: 15 32 24;
+  --c-body-text: 235 242 235;
+  --c-card: 26 48 36;
+  --c-on-accent: 255 255 255;      /* white on red accents */
+  --c-hot-pink: 220 38 38;         /* santa red primary */
+  --c-magenta: 248 113 113;
+  --c-pink-soft: 250 204 21;
+  --c-soft-pink: 20 40 28;
+  --hero-grad: linear-gradient(135deg, rgba(13, 30, 21, 0.96) 0%, rgba(26, 60, 40, 0.92) 55%, rgba(70, 25, 25, 0.9) 100%);
+  --hero-overlay: linear-gradient(135deg, rgba(15, 32, 24, 0.9) 0%, rgba(26, 60, 40, 0.8) 100%);
+  --shadow-sm: 0 4px 14px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.6);
+}
+
+html[data-theme="xmas"] body {
+  background-color: rgb(var(--c-body-bg));
+  color: rgb(var(--c-body-text));
+  /* Snow speckle: two dot layers at different sizes/densities */
+  background-image:
+    radial-gradient(rgba(255, 255, 255, 0.22) 1.1px, transparent 1.1px),
+    radial-gradient(rgba(255, 255, 255, 0.13) 1.6px, transparent 1.6px);
+  background-size: 90px 90px, 140px 140px;
+  background-position: 0 0, 45px 60px;
+}
+@media (hover: hover) and (min-width: 768px) {
+  html[data-theme="xmas"] body { background-attachment: fixed; }
+}
+
+html[data-theme="xmas"] ::selection {
+  background: rgba(250, 204, 21, 0.4);
+  color: #fff;
+}
+
+html[data-theme="xmas"] .bg-white { background-color: rgb(var(--c-card)); }
+html[data-theme="xmas"] .bg-white\/70 { background-color: rgb(var(--c-card) / 0.72); }
+html[data-theme="xmas"] .bg-white\/60 { background-color: rgb(var(--c-card) / 0.62); }
+html[data-theme="xmas"] .bg-white\/50 { background-color: rgb(var(--c-card) / 0.55); }
+html[data-theme="xmas"] .bg-white\/40 { background-color: rgb(var(--c-card) / 0.45); }
+html[data-theme="xmas"] .bg-white\/80 { background-color: rgb(var(--c-card) / 0.8); }
+html[data-theme="xmas"] .bg-white\/90 { background-color: rgb(var(--c-card) / 0.9); }
+html[data-theme="xmas"] .hover\:bg-white:hover { background-color: rgb(var(--c-card)); }
+html[data-theme="xmas"] .via-white {
+  --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--c-card) / 1) var(--tw-gradient-via-position), var(--tw-gradient-to);
+}
+html[data-theme="xmas"] .bg-ink\/80 { background-color: rgb(0 0 0 / 0.8); }
+html[data-theme="xmas"] .bg-ink\/40 { background-color: rgb(0 0 0 / 0.45); }
+html[data-theme="xmas"] .bg-\[\#2ba7c4\] { background-color: #166534; }
+html[data-theme="xmas"] .text-\[\#2ba7c4\] { color: #4ade80; }
+html[data-theme="xmas"] .text-\[\#8b5fbf\] { color: #facc15; }
+html[data-theme="xmas"] .hover\:bg-\[\#4cc5db\]:hover { background-color: #16a34a; }
+html[data-theme="xmas"] .bg-sky-blue-light .text-ink,
+html[data-theme="xmas"] .bg-sky-blue-light.text-ink {
+  color: rgb(var(--c-on-accent));
+}
+
+/* Cards get a thin gold edge */
+html[data-theme="xmas"] .shadow-sm,
+html[data-theme="xmas"] .shadow-md,
+html[data-theme="xmas"] .shadow-lg {
+  border: 1px solid rgba(250, 204, 21, 0.18);
+}
+
+/* Festive script display font */
+html[data-theme="xmas"] .font-display,
+html[data-theme="xmas"] h1,
+html[data-theme="xmas"] h2,
+html[data-theme="xmas"] h3,
+html[data-theme="xmas"] h4 {
+  font-family: var(--font-xmas), "Avenir", "Avenir Next", var(--font-poppins), system-ui, sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+/* Section headings get a holly divider */
+html[data-theme="xmas"] .section .text-center h2::after,
+html[data-theme="xmas"] .text-center h2.font-display::after {
+  content: "✦  ✦  ✦";
+  display: block;
+  margin: 10px auto 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.5em;
+  color: #facc15;
+}
+
+/* Logo tile gets a gold frame */
+html[data-theme="xmas"] header .max-w-lg img {
+  border: 3px solid rgba(250, 204, 21, 0.55);
+  box-shadow: 0 10px 40px rgba(250, 204, 21, 0.15);
+}
+
+/* Buttons */
+html[data-theme="xmas"] .btn-primary {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(220, 38, 38, 0.4);
+}
+html[data-theme="xmas"] .btn-primary:hover {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  box-shadow: 0 14px 36px rgba(220, 38, 38, 0.55);
+}
+html[data-theme="xmas"] .btn-secondary {
+  background: linear-gradient(135deg, #16a34a, #15803d);
+  box-shadow: 0 8px 24px rgba(22, 163, 74, 0.35);
+}
+html[data-theme="xmas"] .btn-secondary:hover {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  box-shadow: 0 14px 36px rgba(22, 163, 74, 0.5);
+}
+html[data-theme="xmas"] .btn-ghost {
+  color: rgb(var(--c-body-text));
+  border-color: rgba(245, 240, 230, 0.3);
+}
+html[data-theme="xmas"] .btn-ghost:hover {
+  background: rgba(245, 240, 230, 0.08);
+  border-color: rgba(245, 240, 230, 0.5);
+}
+html[data-theme="xmas"] .eyebrow {
+  color: #facc15;
+  background: rgba(250, 204, 21, 0.12);
+}
+
+/* Book Now → cranberry-gold pulse */
+html[data-theme="xmas"] .btn-book-now { animation-name: bookNowPulseXmas; }
+html[data-theme="xmas"] .btn-book-now::before {
+  background: linear-gradient(135deg, #dc2626, #facc15, #dc2626);
+  background-size: 200% 200%;
+}
+@keyframes bookNowPulseXmas {
+  0%, 100% {
+    box-shadow: 0 8px 24px rgba(220, 38, 38, 0.4), 0 0 0 0 rgba(220, 38, 38, 0.5);
+    transform: scale(1) skewX(0deg);
+  }
+  30% {
+    box-shadow: 0 12px 32px rgba(220, 38, 38, 0.5), 0 0 0 12px rgba(220, 38, 38, 0);
+    transform: scale(1.05) skewX(0deg);
+  }
+  50% {
+    box-shadow: 0 10px 28px rgba(220, 38, 38, 0.45), 0 0 0 6px rgba(250, 204, 21, 0);
+    transform: scale(1.02) skewX(-1deg);
+  }
+  70% {
+    box-shadow: 0 12px 32px rgba(220, 38, 38, 0.5), 0 0 0 12px rgba(220, 38, 38, 0);
+    transform: scale(1.05) skewX(0deg);
+  }
+}
+
+html[data-theme="xmas"] a:focus-visible,
+html[data-theme="xmas"] button:focus-visible,
+html[data-theme="xmas"] input:focus-visible,
+html[data-theme="xmas"] textarea:focus-visible,
+html[data-theme="xmas"] select:focus-visible,
+html[data-theme="xmas"] summary:focus-visible {
+  outline-color: #dc2626;
+}
+
+/* Candy-stripe trim on the navbar */
+html[data-theme="xmas"] .navbar-bg {
+  background: var(--hero-grad);
+  border-bottom: 3px solid;
+  border-image: repeating-linear-gradient(90deg, #dc2626 0 24px, #f5f0e6 24px 48px) 3;
+}
+html[data-theme="xmas"] .cta-gradient { background: linear-gradient(135deg, #b91c1c, #166534); }
