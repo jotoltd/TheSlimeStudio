@@ -6,6 +6,33 @@ import { supabase, type SiteSettings, type SiteTheme } from "@/lib/supabase";
 import HalloweenDecor from "@/components/HalloweenDecor";
 
 const SEASONAL: SiteTheme[] = ["halloween", "lab", "comic", "mono", "xmas"];
+const THEME_AB_KEY = "siteThemeAB";
+
+// A/B assignment is per-visitor and client-side — public pages are
+// ISR-cached so SSR can't vary the theme per person. A visitor keeps their
+// variant until the admin changes the pool (a changed pool re-rolls so the
+// new theme gets traffic). Returns null when A/B isn't a valid pool.
+function resolveAbVariant(variants: SiteTheme[]): SiteTheme | null {
+  const pool = variants.filter((v) => v === "default" || SEASONAL.includes(v));
+  if (pool.length < 2) return null;
+  try {
+    const raw = localStorage.getItem(THEME_AB_KEY);
+    if (raw) {
+      const o = JSON.parse(raw) as { v?: string[]; t?: string };
+      if (
+        o?.t && Array.isArray(o?.v) &&
+        (pool as string[]).includes(o.t) &&
+        o.v.length === pool.length &&
+        o.v.every((x) => (pool as string[]).includes(x))
+      ) {
+        return o.t as SiteTheme;
+      }
+    }
+  } catch {}
+  const t = pool[Math.floor(Math.random() * pool.length)];
+  try { localStorage.setItem(THEME_AB_KEY, JSON.stringify({ v: pool, t })); } catch {}
+  return t;
+}
 
 function useCountdown(target: Date) {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
@@ -81,10 +108,17 @@ export default function MaintenanceGate({ children }: { children: React.ReactNod
         const scheduledExpired =
           s.theme && s.theme !== "default" && s.theme_end_date &&
           new Date(s.theme_end_date).getTime() < Date.now();
+        // A/B testing overrides the single theme — the assigned variant wins.
+        const abVariant = s.theme_ab_enabled && s.theme_ab_variants
+          ? resolveAbVariant(s.theme_ab_variants)
+          : null;
+        if (!abVariant) {
+          try { localStorage.removeItem(THEME_AB_KEY); } catch {}
+        }
         const t: SiteTheme =
           preview === "default" || (preview && SEASONAL.includes(preview))
             ? preview
-            : s.theme && SEASONAL.includes(s.theme) && !scheduledExpired ? s.theme : "default";
+            : abVariant ?? (s.theme && SEASONAL.includes(s.theme) && !scheduledExpired ? s.theme : "default");
         setTheme(t);
         document.documentElement.dataset.theme = t;
         try {

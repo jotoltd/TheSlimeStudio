@@ -63,6 +63,7 @@ type Data = {
   };
   manage: { campaigns: ManagedEntity[]; adsets: ManagedEntity[]; ads: ManagedEntity[] };
   sources: Record<SourceKey, { bookings: number; revenue: number }>;
+  themes?: Record<string, { bookings: number; revenue: number }>;
   campaigns: CampaignRow[];
   totalPaid: { bookings: number; revenue: number };
   items: Item[];
@@ -354,6 +355,36 @@ export default function AdsPage() {
               </p>
             )}
           </div>
+
+          {/* Theme A/B results */}
+          {data.themes && Object.keys(data.themes).length > 0 && (
+            <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm mb-8">
+              <h2 className="font-display text-[1.1rem] mb-1">Theme A/B results</h2>
+              <p className="text-[0.75rem] text-ink-soft mb-6">
+                Sales {rangeLabel} split by the website theme each customer was shown. Includes ad, tracked and organic sales.
+              </p>
+              <div className="space-y-4">
+                {Object.entries(data.themes)
+                  .sort((a, b) => b[1].revenue - a[1].revenue)
+                  .map(([key, v]) => {
+                    const max = Math.max(...Object.values(data.themes!).map((x) => x.bookings), 1);
+                    return (
+                      <div key={key}>
+                        <div className="flex items-center justify-between text-[0.85rem] mb-1.5">
+                          <span className="font-medium capitalize">{key}</span>
+                          <span className="text-ink-soft">
+                            <strong className="text-ink">{v.bookings}</strong> sale{v.bookings === 1 ? "" : "s"} · {fmt(v.revenue)}
+                          </span>
+                        </div>
+                        <div className="h-2 bg-ink/[0.05] rounded-full overflow-hidden">
+                          <div className="h-full rounded-full bg-hot-pink" style={{ width: `${(v.bookings / max) * 100}%`, opacity: 0.85 }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          )}
 
           {/* Which campaigns are working */}
           {(data.campaigns || []).length > 0 && (

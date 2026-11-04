@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
-import { getMetaCookies, getAdSource, getGclid, trackPurchase, stashPurchaseEmail } from "@/lib/ad-tracking";
+import { getMetaCookies, getAdSource, getGclid, trackPurchase, stashPurchaseEmail, withThemeVariant } from "@/lib/ad-tracking";
 
 type EventInstance = {
   id: string;
@@ -107,7 +107,7 @@ export default function EventDetailClient({
     setBookingMsg(null);
 
     try {
-      const adSource = getAdSource();
+      const adSource = withThemeVariant(getAdSource());
       const res = await fetch("/api/event-bookings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

@@ -58,6 +58,9 @@ export default function SettingsPage() {
   const [theme, setTheme] = useState<SiteTheme>("default");
   const [savingTheme, setSavingTheme] = useState(false);
   const [themeMsg, setThemeMsg] = useState("");
+  const [abEnabled, setAbEnabled] = useState(false);
+  const [abVariants, setAbVariants] = useState<SiteTheme[]>([]);
+  const [savingAb, setSavingAb] = useState(false);
 
   // Loyalty settings
   const [stampsPerReward, setStampsPerReward] = useState(DEFAULT_STAMPS);
@@ -130,6 +133,8 @@ export default function SettingsPage() {
       setSnapchatPixelId(s.snapchat_pixel_id || "");
       setSnapchatPixelEnabled(!!s.snapchat_pixel_enabled);
       setTheme(s.theme && THEME_OPTIONS.some((t) => t.key === s.theme) ? s.theme : "default");
+      setAbEnabled(!!s.theme_ab_enabled);
+      setAbVariants((s.theme_ab_variants || []).filter((v) => THEME_OPTIONS.some((t) => t.key === v)));
     }
 
     try {
@@ -255,6 +260,35 @@ export default function SettingsPage() {
       const label = THEME_OPTIONS.find((t) => t.key === newTheme);
       setThemeMsg(label ? `${label.icon} ${label.name} theme is live!` : "Theme saved.");
     }
+  }
+
+  async function saveAb(enabled: boolean, variants: SiteTheme[]) {
+    setThemeMsg("");
+    if (enabled && variants.length < 2) {
+      setThemeMsg("Pick at least two themes to A/B test.");
+      return;
+    }
+    setAbEnabled(enabled);
+    setAbVariants(variants);
+    setSavingAb(true);
+    const { error } = await supabase
+      .from("site_settings")
+      .update({ theme_ab_enabled: enabled, theme_ab_variants: enabled ? variants : [] })
+      .eq("id", 1);
+    setSavingAb(false);
+    if (error) {
+      setThemeMsg("Failed to save: " + error.message);
+    } else {
+      setThemeMsg(enabled
+        ? `A/B testing is live — visitors are split randomly across ${variants.length} themes and keep their variant. Results show in Ads → Theme A/B results.`
+        : "A/B testing off — the theme above applies to everyone.");
+    }
+  }
+
+  function toggleAbVariant(key: SiteTheme) {
+    const next = abVariants.includes(key) ? abVariants.filter((v) => v !== key) : [...abVariants, key];
+    if (abEnabled) saveAb(true, next);
+    else setAbVariants(next);
   }
 
   async function saveThemeEndDate(dateStr: string) {
@@ -474,6 +508,48 @@ export default function SettingsPage() {
               <p className="text-[0.78rem] text-ink-soft mt-1">
                 The theme shows until the end of that day, then the site reverts to Slime Studio on its own. Leave blank to keep it until you change it manually.
               </p>
+            </div>
+
+            {/* A/B testing */}
+            <div className="mt-5 max-w-xl border-t border-ink/[0.08] pt-5">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div>
+                  <h3 className="font-display text-[0.95rem] mb-0.5">A/B test themes</h3>
+                  <p className="text-[0.78rem] text-ink-soft">
+                    {abEnabled
+                      ? `ON — visitors are split randomly across the ${abVariants.length} selected themes and keep their variant. Sales per theme show in Ads → Theme A/B results.`
+                      : "Split visitors randomly across themes to see which converts best. Overrides the single theme and end date while on."}
+                  </p>
+                </div>
+                <button
+                  onClick={() => saveAb(!abEnabled, abVariants)}
+                  disabled={savingAb}
+                  className={`relative w-14 h-8 rounded-full transition-colors disabled:opacity-60 ${abEnabled ? "bg-green-400" : "bg-ink/15"}`}
+                >
+                  <span className={`absolute top-1 left-1 w-6 h-6 rounded-full bg-white shadow-sm transition-transform ${abEnabled ? "translate-x-6" : ""}`} />
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2 mt-3">
+                {THEME_OPTIONS.map((t) => {
+                  const on = abVariants.includes(t.key);
+                  return (
+                    <button
+                      key={t.key}
+                      type="button"
+                      onClick={() => toggleAbVariant(t.key)}
+                      disabled={savingAb}
+                      className={`px-3 py-1.5 rounded-full border-2 text-[0.8rem] font-medium transition-all disabled:opacity-60 ${
+                        on ? "border-sky-blue-light bg-sky-blue-light/10 text-ink" : "border-ink/10 bg-white text-ink-soft hover:border-ink/25"
+                      }`}
+                    >
+                      {t.icon} {t.name}{on ? " ✓" : ""}
+                    </button>
+                  );
+                })}
+              </div>
+              {abVariants.length < 2 && (
+                <p className="text-[0.75rem] text-amber-600 mt-2">Pick at least two themes — including Slime Studio if you want to compare against the normal look.</p>
+              )}
             </div>
             {themeMsg && (
               <p className={`text-[0.85rem] mt-3 ${themeMsg.startsWith("Failed") ? "text-red-600" : "text-green-600"}`}>{themeMsg}</p>

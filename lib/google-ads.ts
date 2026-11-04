@@ -142,7 +142,11 @@ export function gclidFromNotes(notes: string | null | undefined): string | null 
 // standard "[Ad: iOS App]" note so it renders and classifies like the others.
 export function sanitizeAdSource(value: unknown): string | null {
   if (value === "ios-app") return "[Ad: iOS App]";
-  return typeof value === "string" && value.startsWith("[Ad:") ? value.slice(0, 500) : null;
+  // "[Theme:x]" is the A/B variant tag — it can stand alone (organic sales)
+  // or trail an "[Ad: ...]" tag, in which case the string starts with "[Ad:".
+  return typeof value === "string" && (value.startsWith("[Ad:") || value.startsWith("[Theme:"))
+    ? value.slice(0, 500)
+    : null;
 }
 
 // Stripe metadata values cap at 500 chars. Truncate an over-long notes string

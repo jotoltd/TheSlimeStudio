@@ -9,7 +9,7 @@ import Calendar from "@/components/Calendar";
 import { supabase, isSlotPlaceholder, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, PRICE_PER_PERSON, MAX_DAILY_BOOKINGS as DEFAULT_MAX, STUDIO_MAPS_URL, PARKING_NOTE } from "@/lib/supabase";
 import type { BookingSettings, OpeningHour, DateOverride } from "@/lib/supabase";
 import { useContent } from "@/lib/useContent";
-import { trackPurchase, trackInitiateCheckout, getMetaCookies, getAdSource, setAdSource, getGclid } from "@/lib/ad-tracking";
+import { trackPurchase, trackInitiateCheckout, getMetaCookies, getAdSource, setAdSource, getGclid, withThemeVariant } from "@/lib/ad-tracking";
 
 const InlinePayment = lazy(() => import("@/components/InlinePayment"));
 
@@ -658,7 +658,7 @@ function BookingPageInner() {
     try {
       if (paymentProvider === "sumup") {
         // SumUp: redirect to hosted checkout
-        const adSource = getAdSource();
+        const adSource = withThemeVariant(getAdSource());
         const res = await fetch("/api/sumup-booking-checkout", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -699,7 +699,7 @@ function BookingPageInner() {
       }
 
       // Stripe: inline payment intent
-      const adSource = getAdSource();
+      const adSource = withThemeVariant(getAdSource());
       const res = await fetch("/api/create-payment-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -947,7 +947,7 @@ function BookingPageInner() {
                             discountCode: appliedDiscount?.code,
                             giftCardCode: giftCardBalance !== null ? giftCardCode : null,
                             giftCardAmount: giftCardCover,
-                            adSource: getAdSource(),
+                            adSource: withThemeVariant(getAdSource()),
                             gclid: getGclid(),
                           }),
                         });
@@ -1241,7 +1241,7 @@ function BookingPageInner() {
                             event_id: selectedEvent.event_id,
                             name: evtName.trim(), email: evtEmail.trim(), phone: evtPhone.trim() || undefined,
                             quantity: evtQty,
-                            adSource: getAdSource(),
+                            adSource: withThemeVariant(getAdSource()),
                             gclid: getGclid(),
                           }),
                         });

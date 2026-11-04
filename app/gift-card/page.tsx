@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { getAdSource, getGclid } from "@/lib/ad-tracking";
+import { getAdSource, getGclid, withThemeVariant } from "@/lib/ad-tracking";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
@@ -94,7 +94,7 @@ function GiftCardInner() {
           message: message.trim() || undefined,
           paymentMethod: paymentProvider,
           customerId,
-          adSource: getAdSource(),
+          adSource: withThemeVariant(getAdSource()),
           gclid: getGclid(),
         }),
       });

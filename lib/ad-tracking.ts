@@ -132,6 +132,35 @@ export function getGclid(): string | null {
   return null;
 }
 
+// Theme A/B variant — assigned by MaintenanceGate while theme A/B testing is
+// on and persisted here. Tagged onto bookings so the Ads page can report
+// conversion per theme. Removed when A/B testing is switched off.
+export const THEME_AB_KEY = "siteThemeAB";
+
+export function getThemeVariantTag(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(THEME_AB_KEY);
+    if (!raw) return null;
+    const v = JSON.parse(raw)?.t;
+    return typeof v === "string" && /^[a-z]+$/.test(v) ? `[Theme:${v}]` : null;
+  } catch {
+    return null;
+  }
+}
+
+// Append the assigned theme variant to an attribution tag. When there's no ad
+// source the theme tag stands alone so organic sales still count per variant.
+export function withThemeVariant(source: string | null): string | null {
+  const tag = getThemeVariantTag();
+  return [source, tag].filter(Boolean).join(" ") || null;
+}
+
+// Pulls the "[Theme:x]" variant back out of a booking/gift-card note.
+export function themeVariantFromNotes(notes: string | null | undefined): string | null {
+  return notes?.match(/\[theme:([a-z]+)\]/i)?.[1]?.toLowerCase() ?? null;
+}
+
 // Stash the customer's email before a hosted-checkout redirect (Stripe/SumUp)
 // so the post-redirect page can still attach it to the conversion.
 const PURCHASE_EMAIL_KEY = "pp_email";

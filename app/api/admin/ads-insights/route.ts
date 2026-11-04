@@ -3,7 +3,7 @@ import { supabaseAdmin, isSlotPlaceholder } from "@/lib/supabase";
 import { verifyToken } from "@/lib/auth";
 import { googleAdsQuery, googleAdsConfig, googleAdsReady } from "@/lib/google-ads";
 import { META_AD_URL_TAGS, metaPost, metaRead } from "@/lib/meta-ads";
-import { classifyBookingSource, bookingSourceLabel, bookingSourceDetail, type BookingSource } from "@/lib/ad-tracking";
+import { classifyBookingSource, bookingSourceLabel, bookingSourceDetail, themeVariantFromNotes, type BookingSource } from "@/lib/ad-tracking";
 
 export const runtime = "nodejs";
 
@@ -246,6 +246,7 @@ export async function GET(req: NextRequest) {
     label: string;
     campaign: string | null;
     adName: string | null;
+    theme: string | null;
   };
 
   // `_slot2` rows are the auto-blocked second hour of 2-hour bookings — not
@@ -266,6 +267,7 @@ export async function GET(req: NextRequest) {
       label: bookingSourceLabel(b.notes),
       campaign: bookingSourceDetail(b.notes).campaign,
       adName: bookingSourceDetail(b.notes).ad,
+      theme: themeVariantFromNotes(b.notes),
     })),
     ...(eventBookings || []).map((b) => ({
       id: b.id,
@@ -282,6 +284,7 @@ export async function GET(req: NextRequest) {
       label: bookingSourceLabel(b.notes),
       campaign: bookingSourceDetail(b.notes).campaign,
       adName: bookingSourceDetail(b.notes).ad,
+      theme: themeVariantFromNotes(b.notes),
     })),
     ...(giftCards || []).map((g) => ({
       id: g.id,
@@ -299,6 +302,7 @@ export async function GET(req: NextRequest) {
       label: bookingSourceLabel(g.ad_source),
       campaign: bookingSourceDetail(g.ad_source).campaign,
       adName: bookingSourceDetail(g.ad_source).ad,
+      theme: themeVariantFromNotes(g.ad_source),
     })),
   ].sort((a, b) => (b.at || "").localeCompare(a.at || ""));
 
@@ -314,6 +318,16 @@ export async function GET(req: NextRequest) {
     if (i.status !== "paid") continue;
     sources[i.source].bookings += 1;
     sources[i.source].revenue += i.amount;
+  }
+
+  // Theme A/B results — the assigned variant is stored on the sale's notes as
+  // "[Theme:x]" while testing is on. Empty when no tagged sales exist yet.
+  const themes: Record<string, { bookings: number; revenue: number }> = {};
+  for (const i of items) {
+    if (i.status !== "paid" || !i.theme) continue;
+    (themes[i.theme] ||= { bookings: 0, revenue: 0 });
+    themes[i.theme].bookings += 1;
+    themes[i.theme].revenue += i.amount;
   }
 
   // Per-campaign view: platform-reported spend/clicks joined by name with the
@@ -393,6 +407,7 @@ export async function GET(req: NextRequest) {
       })),
     },
     sources,
+    themes,
     campaigns,
     // Ad Management only reports paid-channel sales — organic items still
     // count in `sources` above (for the organic footnote) but aren't listed.
