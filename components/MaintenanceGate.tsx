@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { supabase, type SiteSettings, type SiteTheme } from "@/lib/supabase";
 import HalloweenDecor from "@/components/HalloweenDecor";
+import Fireworks from "@/components/Fireworks";
 
 const SEASONAL: SiteTheme[] = ["halloween", "lab", "comic", "mono", "xmas"];
 const THEME_AB_KEY = "siteThemeAB";
@@ -143,6 +144,7 @@ export default function MaintenanceGate({ children }: { children: React.ReactNod
     return (
       <>
         {spooky && <HalloweenDecor />}
+        {isPublicRoute && <Fireworks />}
         {children}
       </>
     );
@@ -156,6 +158,7 @@ export default function MaintenanceGate({ children }: { children: React.ReactNod
           <a href="/dashboard" className="underline font-medium">Go to dashboard</a>
         </div>
         {spooky && <HalloweenDecor />}
+        {isPublicRoute && <Fireworks />}
         {children}
       </>
     );
