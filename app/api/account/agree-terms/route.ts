@@ -16,7 +16,8 @@ export async function POST(req: NextRequest) {
     .eq("id", session.sub);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("agree-terms error:", error);
+    return NextResponse.json({ error: "Failed to save" }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });

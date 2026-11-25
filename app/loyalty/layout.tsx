@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Loyalty Card — Stamp Card Rewards",
+  title: "Loyalty Card — Free Slime Rewards in Holt, Norfolk",
   description:
     "Check your digital stamp card from The Slime Studio. Earn a stamp for every paid booking and collect 10 stamps for a free slime-making session.",
   alternates: { canonical: "https://theslimestudio.co.uk/loyalty" },

@@ -5,15 +5,28 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { supabase } from "@/lib/supabase";
-import type { ShopOrder } from "@/lib/supabase";
 import { trackPurchase, getGclid } from "@/lib/ad-tracking";
+
+type OrderDetails = {
+  id: string;
+  order_number: string;
+  items: { name: string; quantity: number; price: number }[];
+  subtotal: number;
+  shipping_cost: number;
+  total: number;
+  shipping_method: string;
+  shipping_address?: string | null;
+  shipping_city?: string | null;
+  shipping_postcode?: string | null;
+  customer_name: string;
+  customer_email: string;
+};
 
 function SuccessContent() {
   const params = useSearchParams();
   const sessionId = params.get("session_id");
   const sumupRef = params.get("sumup_ref");
-  const [order, setOrder] = useState<ShopOrder | null>(null);
+  const [order, setOrder] = useState<OrderDetails | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -24,33 +37,31 @@ function SuccessContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ checkoutRef: sumupRef, gclid: getGclid() }),
       }).then(() => {
-        // Then fetch the order from DB
-        supabase
-          .from("shop_orders")
-          .select("*")
-          .eq("stripe_session_id", sumupRef)
-          .single()
-          .then(({ data }) => {
+        // Then fetch the order via the token-scoped lookup endpoint
+        fetch(`/api/shop-order?ref=${encodeURIComponent(sumupRef)}`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((json) => {
+            const data = json?.order;
             if (data) {
-              setOrder(data as ShopOrder);
-              trackPurchase(Number((data as ShopOrder).total), "GBP", (data as ShopOrder).id, (data as ShopOrder).customer_email);
+              setOrder(data as OrderDetails);
+              trackPurchase(Number(data.total), "GBP", data.id, data.customer_email);
             }
             setLoading(false);
-          });
+          })
+          .catch(() => setLoading(false));
       }).catch(() => setLoading(false));
     } else if (sessionId) {
-      supabase
-        .from("shop_orders")
-        .select("*")
-        .eq("stripe_session_id", sessionId)
-        .single()
-        .then(({ data }) => {
+      fetch(`/api/shop-order?ref=${encodeURIComponent(sessionId)}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((json) => {
+          const data = json?.order;
           if (data) {
-            setOrder(data as ShopOrder);
-            trackPurchase(Number((data as ShopOrder).total), "GBP", (data as ShopOrder).id, (data as ShopOrder).customer_email);
+            setOrder(data as OrderDetails);
+            trackPurchase(Number(data.total), "GBP", data.id, data.customer_email);
           }
           setLoading(false);
-        });
+        })
+        .catch(() => setLoading(false));
     } else {
       setLoading(false);
     }
@@ -113,7 +124,7 @@ function SuccessContent() {
               </div>
 
               <div className="mt-6 bg-ink/[0.03] rounded-xl p-4 text-[0.85rem] text-ink-soft">
-                <p className="mb-1"><strong className="text-ink">Delivery:</strong> {order.shipping_method === "collection" ? "Collection from studio" : "Delivery"}</p>
+                <p className="mb-1"><strong className="text-ink">Delivery:</strong> {order.shipping_method === "collection" ? "Collection from studio" : "Royal Mail delivery"}</p>
                 {order.shipping_method === "delivery" && order.shipping_address && (
                   <p className="mb-1">
                     {order.shipping_address}{order.shipping_city ? `, ${order.shipping_city}` : ""}{order.shipping_postcode ? `, ${order.shipping_postcode}` : ""}

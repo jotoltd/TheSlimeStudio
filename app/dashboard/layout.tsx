@@ -116,26 +116,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <ToastProvider>
       <div className="min-h-screen bg-cream md:flex">
         {/* Mobile top bar */}
-        <div className="md:hidden bg-ink flex items-center justify-between px-5 py-3.5 sticky top-0 z-50">
-          <Link href="/dashboard" className="font-display text-[1.1rem] text-white">
+        <div className="md:hidden bg-ink flex items-center justify-between px-5 py-4 sticky top-0 z-50 border-b border-white/10">
+          <Link href="/dashboard" className="font-display text-[1.2rem] font-bold tracking-tight text-white">
             Slime Studio
           </Link>
           <div className="flex items-center gap-2">
             <Link
               href="/dashboard/notifications"
-              className="relative w-9 h-9 rounded-full bg-white/15 text-white grid place-items-center transition-colors hover:bg-white/25"
+              className="relative w-10 h-10 rounded-full bg-white/10 text-white grid place-items-center transition-colors hover:bg-white/20"
               aria-label="Notifications"
             >
-              <BellIcon size={17} />
+              <BellIcon size={18} />
               {unread > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#ff2d78] text-white text-[0.6rem] font-semibold grid place-items-center">
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-hot-pink text-white text-[0.6rem] font-semibold grid place-items-center">
                   {unread > 99 ? "99+" : unread}
                 </span>
               )}
             </Link>
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="w-9 h-9 rounded-full bg-white/15 text-white grid place-items-center transition-colors hover:bg-white/25"
+              className="w-10 h-10 rounded-full bg-white/10 text-white grid place-items-center transition-colors hover:bg-white/20"
               aria-label="Toggle menu"
             >
             {mobileOpen ? (
@@ -154,14 +154,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           }`}
         >
           {/* Desktop header */}
-          <div className="hidden md:block px-6 py-7">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-bright-lavender to-sky-blue-light grid place-items-center text-white font-display text-[0.9rem]">
+          <div className="hidden md:block px-6 pt-8 pb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-bright-lavender to-sky-blue-light grid place-items-center text-white font-display text-[1.05rem] font-bold shadow-lg">
                 S
               </div>
               <div>
-                <h1 className="font-display text-[1.15rem] text-white leading-tight">Slime Studio</h1>
-                <p className="text-[0.7rem] text-white/50 mt-0.5">Admin Panel</p>
+                <h1 className="font-display text-[1.35rem] font-bold tracking-tight text-white leading-tight">Slime Studio</h1>
+                <p className="text-[0.72rem] font-medium uppercase tracking-[0.14em] text-white/40 mt-0.5">Admin Console</p>
               </div>
             </div>
           </div>
@@ -170,8 +170,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <nav className="px-3 py-4 md:py-0 flex-1 overflow-y-auto">
             {navSections.map((section, si) => (
               <div key={section.label} className={si > 0 ? "mt-5" : ""}>
-                <div className="px-4 mb-1.5 text-[0.65rem] uppercase tracking-wider text-white/35 font-semibold">{section.label}</div>
-                <ul className="space-y-0.5">
+                <div className="px-4 mb-2 text-[0.68rem] uppercase tracking-[0.16em] text-white/35 font-bold">{section.label}</div>
+                <ul className="space-y-1">
                   {section.items.map((item) => {
                     const active = pathname === item.href;
                     const { Icon } = item;
@@ -180,14 +180,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         <Link
                           href={item.href}
                           onClick={() => setMobileOpen(false)}
-                          className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-[0.88rem] font-medium transition-all ${
-                            active ? "bg-white text-ink shadow-sm" : "text-white/65 hover:bg-white/8 hover:text-white"
+                          className={`relative flex items-center gap-3 px-4 py-2.5 rounded-lg text-[0.92rem] font-medium transition-all ${
+                            active
+                              ? "bg-bright-lavender/15 text-white"
+                              : "text-white/60 hover:bg-white/8 hover:text-white"
                           }`}
                         >
-                          <Icon size={18} className={active ? "text-ink" : "text-white/50"} />
+                          {active && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full bg-bright-lavender" />}
+                          <Icon size={19} className={active ? "text-bright-lavender" : "text-white/45"} />
                           {item.label}
                           {item.href === "/dashboard/notifications" && unread > 0 && (
-                            <span className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-[#ff2d78] text-white text-[0.65rem] font-semibold grid place-items-center">
+                            <span className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-hot-pink text-white text-[0.65rem] font-semibold grid place-items-center">
                               {unread > 99 ? "99+" : unread}
                             </span>
                           )}
@@ -201,26 +204,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </nav>
 
           {/* User + actions */}
-          <div className="px-3 pb-5 md:pb-6 pt-4 border-t border-white/8 md:border-0">
-            <div className="flex items-center gap-3 px-4 py-2.5 mb-2">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-bright-lavender to-sky-blue-light grid place-items-center font-display text-sm text-white">
+          <div className="px-3 pb-5 md:pb-6 pt-4 border-t border-white/10">
+            <div className="flex items-center gap-3 px-4 py-3 mb-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-bright-lavender to-sky-blue-light grid place-items-center font-display text-sm font-bold text-white">
                 {initials}
               </div>
               <div className="min-w-0">
-                <div className="text-[0.85rem] font-medium text-white truncate">{adminName}</div>
-                <div className="text-[0.7rem] text-white/50">Studio Owner</div>
+                <div className="text-[0.88rem] font-semibold text-white truncate">{adminName}</div>
+                <div className="text-[0.7rem] font-medium uppercase tracking-wider text-white/40">Studio Owner</div>
               </div>
             </div>
             <div className="flex gap-2">
               <Link
                 href="/"
-                className="flex-1 px-3 py-2.5 rounded-xl bg-white/10 text-white text-[0.8rem] text-center hover:bg-white/20 transition-colors"
+                className="flex-1 px-3 py-2.5 rounded-lg bg-white/10 text-white text-[0.82rem] font-medium text-center hover:bg-white/20 transition-colors"
               >
                 View Site
               </Link>
               <button
                 onClick={handleLogout}
-                className="flex-1 px-3 py-2.5 rounded-xl bg-white/10 text-white text-[0.8rem] hover:bg-white/20 transition-colors"
+                className="flex-1 px-3 py-2.5 rounded-lg bg-white/10 text-white text-[0.82rem] font-medium hover:bg-white/20 transition-colors"
               >
                 Logout
               </button>

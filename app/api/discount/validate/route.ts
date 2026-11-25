@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { rateLimited, clientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
+  // Codes are enumerable — throttle guesses per IP.
+  if (rateLimited(`discount:${clientIp(req)}`, 30, 15 * 60 * 1000)) {
+    return NextResponse.json({ error: "Too many attempts. Please try again later." }, { status: 429 });
+  }
+
   const { code, scope, amount } = await req.json() as {
     code?: string;
     scope?: "booking" | "shop";

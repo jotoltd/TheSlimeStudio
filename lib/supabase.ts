@@ -11,7 +11,17 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 });
 
-export const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey || supabaseAnonKey);
+// The service-role key bypasses RLS — never fall back to the anon key, or a
+// missing env var would silently degrade every "admin" server operation to
+// public privileges. If it's absent, every call throws instead.
+const missingServiceKey = () => {
+  throw new Error("SUPABASE_SERVICE_ROLE_KEY is not configured — refusing to run with anon privileges");
+};
+export const supabaseAdmin = serviceRoleKey
+  ? createClient(supabaseUrl, serviceRoleKey)
+  : (new Proxy({} as ReturnType<typeof createClient>, {
+      get: () => missingServiceKey,
+    }) as ReturnType<typeof createClient>);
 
 export type Product = {
   id: string;
@@ -131,7 +141,7 @@ export type Admin = {
   created_at: string;
 };
 
-export type SiteTheme = "default" | "halloween" | "lab" | "comic" | "mono" | "xmas";
+export type SiteTheme = "default" | "halloween" | "lab" | "mono" | "xmas";
 
 export type SiteSettings = {
   id: number;
@@ -140,8 +150,6 @@ export type SiteSettings = {
   referrals_enabled?: boolean;
   theme?: SiteTheme;
   theme_end_date?: string | null;
-  theme_ab_enabled?: boolean;
-  theme_ab_variants?: SiteTheme[];
   stamps_per_reward: number;
   launch_date: string;
   stripe_mode?: string;
@@ -239,5 +247,14 @@ export type ShopOrder = {
   fulfillment_status?: string | null;
   stripe_session_id: string | null;
   notes: string | null;
+  rm_shipment?: {
+    status?: string;
+    orderIdentifier?: number;
+    orderReference?: string;
+    trackingNumber?: string | null;
+    serviceCode?: string;
+    createdAt?: string;
+    error?: string;
+  } | null;
   created_at: string;
 };

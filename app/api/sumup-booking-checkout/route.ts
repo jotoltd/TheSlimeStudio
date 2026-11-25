@@ -5,10 +5,16 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { sendCapiEvent, metaContextFromRequest } from "@/lib/capi";
 import { withGclidTag, sanitizeAdSource } from "@/lib/google-ads";
 import { computeBookingPrice } from "@/lib/booking-price";
+import { rateLimited, clientIp } from "@/lib/rate-limit";
+import { isValidDateString, isValidTimeSlot } from "@/lib/time-slots";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
+  if (rateLimited(`sumup-booking:${clientIp(req)}`, 20, 15 * 60 * 1000)) {
+    return NextResponse.json({ error: "Too many attempts. Please try again later." }, { status: 429 });
+  }
+
   const body = await req.json();
   const {
     name,
@@ -16,7 +22,7 @@ export async function POST(req: NextRequest) {
     phone,
     date,
     timeSlot,
-    people,
+    people: rawPeople,
     totalPrice,
     discountCode,
   } = body as {
@@ -30,6 +36,7 @@ export async function POST(req: NextRequest) {
     discountCode?: string;
     giftCardCode?: string;
   };
+  let people = rawPeople;
 
   const email = String(rawEmail || "").trim().toLowerCase();
 
@@ -41,6 +48,29 @@ export async function POST(req: NextRequest) {
   if (!emailOk) {
     return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
   }
+
+  // Strict date/time formats — malformed values produce NaN dates that
+  // bypass the past check and the opening-hours lookup below.
+  if (!isValidDateString(date) || !isValidTimeSlot(timeSlot)) {
+    return NextResponse.json({ error: "Invalid date or time slot." }, { status: 400 });
+  }
+
+  // Price is computed server-side first so capacity checks run on the
+  // validated people count, not raw client input.
+  const price = await computeBookingPrice({
+    people,
+    discountCode,
+    giftCardCode: body.giftCardCode,
+  });
+  if ("error" in price) {
+    return NextResponse.json({ error: price.error }, { status: price.status });
+  }
+  if (price.finalTotal !== Number(totalPrice)) {
+    console.warn(
+      `[sumup-booking-checkout] client total ${totalPrice} != computed ${price.finalTotal} for ${email}`
+    );
+  }
+  people = price.people;
 
   // Don't allow booking in the past
   const [h, m] = timeSlot.split(":").map(Number);
@@ -115,23 +145,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "This date is fully booked." }, { status: 409 });
   }
 
-  // Price is computed server-side — the client's totalPrice is display-only.
-  // Discount and gift-card codes are re-validated here so a tampered request
-  // can't create a free or underpaid booking.
-  const price = await computeBookingPrice({
-    people,
-    discountCode,
-    giftCardCode: body.giftCardCode,
-  });
-  if ("error" in price) {
-    return NextResponse.json({ error: price.error }, { status: price.status });
-  }
-  if (price.finalTotal !== Number(totalPrice)) {
-    console.warn(
-      `[sumup-booking-checkout] client total ${totalPrice} != computed ${price.finalTotal} for ${email}`
-    );
-  }
-
   if (!isSumUpConfigured()) {
     return NextResponse.json({ error: "SumUp is not configured" }, { status: 500 });
   }
@@ -167,8 +180,7 @@ export async function POST(req: NextRequest) {
 
     if (!res.ok || !data.id) {
       console.error("SumUp checkout error:", JSON.stringify(data));
-      const errMsg = data.message ? `${data.message}${data.param ? ` (${data.param})` : ""}` : "Failed to create SumUp checkout";
-      return NextResponse.json({ error: errMsg }, { status: 500 });
+      return NextResponse.json({ error: "Failed to start payment. Please try again." }, { status: 500 });
     }
 
     // Store booking as pending — confirmed after redirect.
@@ -187,6 +199,8 @@ export async function POST(req: NextRequest) {
       stripe_session_id: checkoutRef,
       discount_code: price.discountCode,
       discount_amount: price.discountAmount,
+      gift_card_code: body.giftCardCode || null,
+      gift_card_amount: price.giftCardCover,
       notes: withGclidTag(sanitizeAdSource(body.adSource), body.gclid),
     }).select().single();
 

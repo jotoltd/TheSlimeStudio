@@ -127,7 +127,7 @@ export function bookingConfirmationHtml(opts: {
       <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Time:</strong> ${escapeHtml(opts.timeSlot)}</p>
       <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>${opts.isParty ? "Children" : "People"}:</strong> ${opts.people}</p>
       <p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Total:</strong> &pound;${opts.totalPrice.toFixed(2)}</p>
-      ${opts.isParty ? '<p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Type:</strong> Birthday Party (1.5 hours)</p>' : '<p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Type:</strong> Standard Session (1 hour)</p>'}
+      ${opts.isParty ? '<p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Type:</strong> Birthday Party (1.5 hours)</p>' : '<p style="margin: 4px 0; color: #333; font-size: 0.9rem;"><strong>Type:</strong> Standard Session (45 minutes)</p>'}
     </div>
     <div style="background: #fdeef7; border-radius: 12px; padding: 16px; margin: 16px 0;">
       <p style="margin: 0 0 4px; color: #333; font-size: 0.9rem;"><strong>Getting here</strong></p>
@@ -138,7 +138,7 @@ export function bookingConfirmationHtml(opts: {
     <p style="color: #333; font-size: 1rem; line-height: 1.6;">
       ${ov.email_tpl_booking_note || (opts.isParty
         ? "Please arrive 10 minutes early so we can get everyone set up. Each child will make their own slime to take home!"
-        : "Please arrive 5 minutes before your session. Everything you need is provided!"
+        : "Please arrive 5 minutes before your session. Sessions last 45 minutes — some slime makers finish in around 30, others stay to play with their slime for the full time. Everything you need is provided!"
       )}
     </p>
     <p style="color: #333; font-size: 1rem; line-height: 1.6;">
@@ -231,7 +231,7 @@ export async function sendEventBookingEmails(opts: {
 }) {
   const resend = getResend();
   if (!resend) {
-    console.log("Resend not configured, skipping event booking email for", opts.email);
+    console.log("Resend not configured, skipping event booking email");
     return;
   }
 
@@ -392,7 +392,7 @@ export async function sendGiftCardEmail(opts: {
 }) {
   const resend = getResend();
   if (!resend) {
-    console.log("Resend not configured, skipping gift card email for", opts.purchaserEmail);
+    console.log("Resend not configured, skipping gift card email");
     return;
   }
   if (!(await emailEnabled("gift_card"))) return;
@@ -445,7 +445,7 @@ export async function sendOrderConfirmationEmail(opts: {
 }) {
   const resend = getResend();
   if (!resend) {
-    console.log("Resend not configured, skipping order email for", opts.email);
+    console.log("Resend not configured, skipping order email");
     return;
   }
 

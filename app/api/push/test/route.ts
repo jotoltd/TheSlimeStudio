@@ -1,11 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendPush } from "@/lib/apns";
+import { verifyToken } from "@/lib/auth";
+import { rateLimited, clientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
-// Sends a fixed test push to a given device token. Message content is
-// hardcoded so the endpoint can't be abused as a free relay.
+// Sends a fixed test push to a given device token. Admin-only — without auth
+// this was a free relay for pushing arbitrary notifications to any device.
 export async function POST(req: NextRequest) {
+  const adminToken = req.cookies.get("admin_token")?.value;
+  if (!adminToken || !verifyToken(adminToken)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (rateLimited(`push-test:${clientIp(req)}`, 10, 15 * 60 * 1000)) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
   let body: { token?: string };
   try {
     body = await req.json();

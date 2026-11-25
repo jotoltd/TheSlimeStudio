@@ -5,7 +5,12 @@ import { verifyToken } from "@/lib/auth";
 export const runtime = "nodejs";
 
 function escapeICal(text: string): string {
-  return text.replace(/[,;\\]/g, "\\$&").replace(/\n/g, "\\n");
+  // Normalise all line endings first — a raw \r would inject a literal
+  // carriage return into the VEVENT and corrupt the file for strict parsers.
+  return text
+    .replace(/\r\n?/g, "\n")
+    .replace(/[,;\\]/g, "\\$&")
+    .replace(/\n/g, "\\n");
 }
 
 export async function GET(req: NextRequest) {
@@ -34,11 +39,16 @@ export async function GET(req: NextRequest) {
   ical += "METHOD:PUBLISH\r\n";
 
   for (const b of bookings || []) {
-    const [h, m] = b.time_slot.split(":").map(Number);
+    const [h, m] = String(b.time_slot || "").split(":").map(Number);
     const start = new Date(`${b.date}T00:00:00`);
     start.setHours(h, m, 0, 0);
+    // Skip rows with malformed dates/slots — one bad row shouldn't 500 the
+    // whole calendar export (Invalid Date.toISOString() throws).
+    if (!Number.isFinite(h) || !Number.isFinite(m) || isNaN(start.getTime())) continue;
     const end = new Date(start);
-    end.setHours(h + 1, m, 0, 0);
+    // Parties run 1.5h; standard slime sessions are booked on the hour but
+    // last 45 minutes.
+    end.setMinutes(end.getMinutes() + (b.is_party ? 90 : 45));
 
     const dtStart = start.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
     const dtEnd = end.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";

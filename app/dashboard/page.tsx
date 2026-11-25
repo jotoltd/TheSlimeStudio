@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { supabase, type Product, type Enquiry, type Booking } from "@/lib/supabase";
+import { type Product, type Enquiry, type Booking } from "@/lib/supabase";
 import { classifyBookingSource } from "@/lib/ad-tracking";
 
 export default function DashboardPage() {
@@ -29,77 +29,79 @@ export default function DashboardPage() {
 
   async function loadData() {
     setLoadingData(true);
-    const { data: prods } = await supabase.from("products").select("*");
+    const [prodsRes, eqsRes, bksRes, evbRes, ordersRes, cardsRes, custRes] = await Promise.all([
+      fetch("/api/admin/products"),
+      fetch("/api/admin/enquiries"),
+      fetch("/api/admin/bookings"),
+      fetch("/api/admin/event-bookings"),
+      fetch("/api/admin/orders"),
+      fetch("/api/admin/gift-card-stats"),
+      fetch("/api/admin/customers"),
+    ]);
+
+    const { products: prods } = await prodsRes.json();
     if (prods) setProducts(prods as Product[]);
 
-
-    const { data: eqs } = await supabase.from("enquiries").select("*").order("created_at", { ascending: false }).limit(1);
+    const { enquiries: eqs } = await eqsRes.json();
     if (eqs && eqs.length > 0) setLatestEnquiry(eqs[0] as Enquiry);
 
-    const { count: bCount } = await supabase.from("bookings").select("*", { count: "exact", head: true });
-    setBookingCount(bCount || 0);
+    const { bookings: bks } = await bksRes.json();
+    const allBookings = (bks || []) as Booking[];
+    setBookings(allBookings);
+    setBookingCount(allBookings.length);
 
-    const todayStr = new Date().toISOString().split("T")[0];
-    const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split("T")[0];
-    const weekStart = new Date();
-    weekStart.setDate(weekStart.getDate() - 7);
-    const weekStartStr = weekStart.toISOString().split("T")[0];
-    const monthStart = new Date();
-    monthStart.setDate(monthStart.getDate() - 30);
-    const monthStartStr = monthStart.toISOString().split("T")[0];
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const dayStr = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const todayStr = dayStr(now);
+    const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = dayStr(tomorrow);
+    const weekStart = new Date(now); weekStart.setDate(weekStart.getDate() - 7);
+    const weekStartStr = dayStr(weekStart);
+    const monthStart = new Date(now); monthStart.setDate(monthStart.getDate() - 30);
+    const monthStartStr = dayStr(monthStart);
 
-    const { data: bks } = await supabase
-      .from("bookings")
-      .select("*")
-      .order("date", { ascending: true });
-    if (bks) {
-      const allBookings = bks as Booking[];
-      setBookings(allBookings);
+    // Today's bookings (paid only)
+    const today = allBookings.filter((b) => b.date === todayStr && b.payment_status === "paid");
+    setTodayBookings(today.sort((a, b) => a.time_slot.localeCompare(b.time_slot)));
 
-      // Today's bookings (paid only)
-      const today = allBookings.filter((b) => b.date === todayStr && b.payment_status === "paid");
-      setTodayBookings(today.sort((a, b) => a.time_slot.localeCompare(b.time_slot)));
-
-      // Revenue from paid bookings only
-      setRevenueToday(today.reduce((sum, b) => sum + Number(b.total_price), 0));
-      setRevenueWeek(allBookings.filter((b) => b.date >= weekStartStr && b.payment_status === "paid").reduce((sum, b) => sum + Number(b.total_price), 0));
-      setRevenueMonth(allBookings.filter((b) => b.date >= monthStartStr && b.payment_status === "paid").reduce((sum, b) => sum + Number(b.total_price), 0));
-    }
+    // Revenue from paid bookings only
+    setRevenueToday(today.reduce((sum, b) => sum + Number(b.total_price), 0));
+    setRevenueWeek(allBookings.filter((b) => b.date >= weekStartStr && b.payment_status === "paid").reduce((sum, b) => sum + Number(b.total_price), 0));
+    setRevenueMonth(allBookings.filter((b) => b.date >= monthStartStr && b.payment_status === "paid").reduce((sum, b) => sum + Number(b.total_price), 0));
 
     // Revenue from other sources: special events, shop orders, gift card sales
-    const { data: evb } = await supabase
-      .from("special_event_bookings")
-      .select("id, name, quantity, total_price, payment_status, instance_id, event_id, notes");
-    const { data: evi } = await supabase.from("special_event_instances").select("id, date, start_time");
-    const { data: evts } = await supabase.from("special_events").select("id, title");
-    const { data: orders } = await supabase.from("shop_orders").select("total, payment_status, created_at");
-    const { data: cards } = await supabase.from("gift_cards").select("initial_value, purchased_at, ad_source");
+    const { bookings: evb } = await evbRes.json();
+    const { orders } = await ordersRes.json();
+    const { cards } = await cardsRes.json();
+    const { total: custTotal } = await custRes.json();
+    setCustomerCount(custTotal || 0);
 
-    type EvBooking = { id: string; name: string; quantity: number; total_price: number | string; payment_status: string; instance_id: string; event_id: string; notes?: string | null };
-    type EvInstance = { id: string; date: string; start_time: string };
-    type ShopOrder = { total: number | string; payment_status: string; created_at: string };
+    type EvBooking = { id: string; name: string; quantity: number; total_price: number | string; payment_status: string; instance_id: string; event_id: string; notes?: string | null; instance?: { date?: string; start_time?: string } | null; event?: { id?: string; title?: string } | null };
+    type ShopOrder = { total: number | string; payment_status: string; created_at: string; fulfillment_status?: string };
     type GiftCardRow = { initial_value: number | string; purchased_at: string; ad_source: string | null };
 
-    const instMap = new Map(((evi || []) as EvInstance[]).map((i) => [i.id, i]));
-    const titleMap = new Map(((evts || []) as { id: string; title: string }[]).map((e) => [e.id, e.title]));
     const paidEv = ((evb || []) as EvBooking[]).filter((b) => b.payment_status === "paid");
-    const dayStr = (iso: string) => (iso || "").split("T")[0];
+    const isoDay = (iso: string) => (iso || "").split("T")[0];
+    const instDate = (b: EvBooking) => b.instance?.date || "";
+    const instTime = (b: EvBooking) => b.instance?.start_time || "";
+    const evTitle = (b: EvBooking) => b.event?.title || "Special Event";
 
     const evRev = (from: string, to?: string) =>
       paidEv.filter((b) => {
-        const d = instMap.get(b.instance_id)?.date;
+        const d = instDate(b);
         return d && d >= from && (!to || d < to);
       }).reduce((s: number, b) => s + Number(b.total_price || 0), 0);
     const shopRev = (from: string) =>
-      ((orders || []) as ShopOrder[]).filter((o) => o.payment_status === "paid" && dayStr(o.created_at) >= from)
+      ((orders || []) as ShopOrder[]).filter((o) => o.payment_status === "paid" && isoDay(o.created_at) >= from)
         .reduce((s: number, o) => s + Number(o.total || 0), 0);
     const cardRev = (from: string) =>
-      ((cards || []) as GiftCardRow[]).filter((c) => dayStr(c.purchased_at) >= from)
+      ((cards || []) as GiftCardRow[]).filter((c) => isoDay(c.purchased_at) >= from)
         .reduce((s: number, c) => s + Number(c.initial_value || 0), 0);
 
     const bookingRev = (from: string) =>
-      (bks || []).filter((b: Booking) => b.date >= from && b.payment_status === "paid")
-        .reduce((s: number, b: Booking) => s + Number(b.total_price), 0);
+      allBookings.filter((b) => b.date >= from && b.payment_status === "paid")
+        .reduce((s: number, b) => s + Number(b.total_price), 0);
 
     setRevenueToday((prev) => prev + evRev(todayStr, tomorrowStr) + shopRev(todayStr) + cardRev(todayStr));
     setRevenueWeek((prev) => prev + evRev(weekStartStr) + shopRev(weekStartStr) + cardRev(weekStartStr));
@@ -115,9 +117,9 @@ export default function DashboardPage() {
     // Ad-driven revenue this month — only real ad clicks (Meta/Google); email
     // campaigns and other tracked links are classified separately.
     const adTagged = (n: string | null | undefined) => ["meta", "google"].includes(classifyBookingSource(n));
-    const adBookings = (bks || []).filter((b: Booking) => b.payment_status === "paid" && b.date >= monthStartStr && adTagged(b.notes));
-    const adEvents = paidEv.filter((b) => adTagged(b.notes) && (instMap.get(b.instance_id)?.date || "") >= monthStartStr);
-    const adCards = ((cards || []) as GiftCardRow[]).filter((c) => adTagged(c.ad_source) && dayStr(c.purchased_at) >= monthStartStr);
+    const adBookings = allBookings.filter((b) => b.payment_status === "paid" && b.date >= monthStartStr && adTagged(b.notes));
+    const adEvents = paidEv.filter((b) => adTagged(b.notes) && instDate(b) >= monthStartStr);
+    const adCards = ((cards || []) as GiftCardRow[]).filter((c) => adTagged(c.ad_source) && isoDay(c.purchased_at) >= monthStartStr);
     setAdMonth({
       count: adBookings.length + adEvents.length + adCards.length,
       revenue:
@@ -129,42 +131,30 @@ export default function DashboardPage() {
     // Today's special event bookings
     setTodayEvents(
       paidEv
-        .filter((b) => instMap.get(b.instance_id)?.date === todayStr)
+        .filter((b) => instDate(b) === todayStr)
         .map((b) => ({
           id: b.id,
           name: b.name,
           quantity: b.quantity,
           total_price: Number(b.total_price),
-          title: titleMap.get(b.event_id) || "Special Event",
-          start_time: instMap.get(b.instance_id)?.start_time || "",
+          title: evTitle(b),
+          start_time: instTime(b),
         }))
         .sort((a, b) => a.start_time.localeCompare(b.start_time))
     );
 
-    // Orders still needing fulfilment — the column is new, so if the
-    // migration hasn't run yet the card simply stays hidden.
-    const { data: fulfilRows, error: fulfilErr } = await supabase
-      .from("shop_orders").select("payment_status, fulfillment_status").eq("payment_status", "paid");
-    if (!fulfilErr) {
-      setOrdersToFulfil(
-        (fulfilRows || []).filter((o) => (o.fulfillment_status || "new") !== "completed").length
-      );
-    }
+    // Orders still needing fulfilment
+    setOrdersToFulfil(
+      ((orders || []) as ShopOrder[]).filter((o) => o.payment_status === "paid" && (o.fulfillment_status || "new") !== "completed").length
+    );
 
-    const { count: custCount } = await supabase.from("customers").select("*", { count: "exact", head: true });
-    setCustomerCount(custCount || 0);
-
-    const { data: paidBookings } = await supabase
-      .from("bookings")
-      .select("total_price")
-      .eq("payment_status", "paid");
-    const allRevenue = (paidBookings || []).reduce((sum: number, b: { total_price: number }) => sum + Number(b.total_price), 0);
-    const allEventRevenue = ((await supabase.from("special_event_bookings").select("total_price").eq("payment_status", "paid")).data || [])
-      .reduce((sum: number, b: { total_price: number }) => sum + Number(b.total_price), 0);
-    const allShopRevenue = ((await supabase.from("shop_orders").select("total").eq("payment_status", "paid")).data || [])
-      .reduce((sum: number, o: { total: number }) => sum + Number(o.total), 0);
-    const allCardRevenue = ((await supabase.from("gift_cards").select("initial_value")).data || [])
-      .reduce((sum: number, c: { initial_value: number }) => sum + Number(c.initial_value), 0);
+    const allRevenue = allBookings.filter((b) => b.payment_status === "paid")
+      .reduce((sum, b) => sum + Number(b.total_price), 0);
+    const allEventRevenue = paidEv.reduce((sum, b) => sum + Number(b.total_price || 0), 0);
+    const allShopRevenue = ((orders || []) as ShopOrder[]).filter((o) => o.payment_status === "paid")
+      .reduce((sum, o) => sum + Number(o.total || 0), 0);
+    const allCardRevenue = ((cards || []) as GiftCardRow[])
+      .reduce((sum, c) => sum + Number(c.initial_value || 0), 0);
     setTotalRevenue(allRevenue + allEventRevenue + allShopRevenue + allCardRevenue);
 
     setLoadingData(false);
@@ -203,12 +193,12 @@ export default function DashboardPage() {
   return (
     <div className="py-8 md:py-10 px-5 md:px-10">
       {/* Welcome banner */}
-      <div className="reveal rounded-[28px] p-8 md:p-10 mb-8 shadow-sm" style={{ background: "linear-gradient(135deg, #2b2350 0%, #4a3f7a 100%)" }}>
+      <div className="reveal rounded-[24px] p-8 md:p-10 mb-8 shadow-md ring-1 ring-white/10" style={{ background: "var(--hero-grad)" }}>
         <span className="eyebrow">{greeting}</span>
-        <h1 className="font-display text-[1.8rem] md:text-[2.4rem] mt-2 mb-2 text-white">
-          Welcome back, Lara! ✨
+        <h1 className="font-display text-[2rem] md:text-[2.75rem] font-bold tracking-tight mt-2 mb-3 text-white">
+          Welcome back, Lara!
         </h1>
-        <p className="text-white/70 text-[0.95rem] max-w-lg">
+        <p className="text-white/80 text-[1rem] max-w-lg font-medium">
           Here&apos;s what&apos;s happening at The Slime Studio today. Bookings,
           shop stock and enquiries all in one place.
         </p>
@@ -229,24 +219,24 @@ export default function DashboardPage() {
 
       {/* Revenue Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-5 mb-8">
-        <div className="bg-white rounded-[16px] md:rounded-[20px] p-4 md:p-6 shadow-sm border-l-4 border-green-400">
-          <div className="text-[0.65rem] md:text-[0.75rem] text-ink-soft uppercase tracking-wider mb-1 md:mb-2">Today&apos;s Revenue</div>
-          <div className="font-display text-[1.2rem] md:text-[1.8rem]">{loadingData ? "--" : `£${revenueToday.toFixed(2)}`}</div>
+        <div className="bg-white rounded-2xl p-5 md:p-6 shadow-sm ring-1 ring-ink/[0.06] border-l-4 border-green-400">
+          <div className="text-[0.72rem] md:text-[0.8rem] text-ink-soft uppercase tracking-[0.12em] font-semibold mb-1 md:mb-2">Today&apos;s Revenue</div>
+          <div className="font-display text-[1.7rem] md:text-[2.3rem] font-bold tracking-tight">{loadingData ? "--" : `£${revenueToday.toFixed(2)}`}</div>
         </div>
-        <div className="bg-white rounded-[16px] md:rounded-[20px] p-4 md:p-6 shadow-sm border-l-4 border-sky-blue-light">
-          <div className="text-[0.65rem] md:text-[0.75rem] text-ink-soft uppercase tracking-wider mb-1 md:mb-2">This Week</div>
-          <div className="font-display text-[1.2rem] md:text-[1.8rem]">{loadingData ? "--" : `£${revenueWeek.toFixed(2)}`}</div>
+        <div className="bg-white rounded-2xl p-5 md:p-6 shadow-sm ring-1 ring-ink/[0.06] border-l-4 border-sky-blue-light">
+          <div className="text-[0.72rem] md:text-[0.8rem] text-ink-soft uppercase tracking-[0.12em] font-semibold mb-1 md:mb-2">This Week</div>
+          <div className="font-display text-[1.7rem] md:text-[2.3rem] font-bold tracking-tight">{loadingData ? "--" : `£${revenueWeek.toFixed(2)}`}</div>
         </div>
-        <div className="bg-white rounded-[16px] md:rounded-[20px] p-4 md:p-6 shadow-sm border-l-4 border-bright-lavender">
-          <div className="text-[0.65rem] md:text-[0.75rem] text-ink-soft uppercase tracking-wider mb-1 md:mb-2">This Month</div>
-          <div className="font-display text-[1.2rem] md:text-[1.8rem]">{loadingData ? "--" : `£${revenueMonth.toFixed(2)}`}</div>
+        <div className="bg-white rounded-2xl p-5 md:p-6 shadow-sm ring-1 ring-ink/[0.06] border-l-4 border-bright-lavender">
+          <div className="text-[0.72rem] md:text-[0.8rem] text-ink-soft uppercase tracking-[0.12em] font-semibold mb-1 md:mb-2">This Month</div>
+          <div className="font-display text-[1.7rem] md:text-[2.3rem] font-bold tracking-tight">{loadingData ? "--" : `£${revenueMonth.toFixed(2)}`}</div>
         </div>
       </div>
 
       {/* Money in — this month, by source */}
-      <div className="bg-white rounded-[20px] p-6 md:p-7 shadow-sm mb-8">
+      <div className="bg-white rounded-2xl p-6 md:p-7 shadow-sm mb-8">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="font-display text-[1.1rem]">Money In — This Month</h2>
+          <h2 className="font-display text-[1.3rem] font-bold tracking-tight">Money In — This Month</h2>
           <Link href="/dashboard/ads" className="text-[0.8rem] text-bright-lavender hover:underline">Ad stats →</Link>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
@@ -269,36 +259,36 @@ export default function DashboardPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5 mb-8">
-        <Link href="/dashboard/bookings" className="bg-white rounded-[20px] p-5 md:p-6 shadow-sm hover:-translate-y-1 hover:shadow-md transition-all group">
+        <Link href="/dashboard/bookings" className="bg-white rounded-2xl p-5 md:p-6 shadow-sm ring-1 ring-ink/[0.06] hover:-translate-y-1 hover:shadow-lg transition-all group">
           <div className="flex items-center justify-between mb-3">
-            <div className="w-10 h-10 rounded-xl bg-sky-blue-light/20 grid place-items-center text-lg">📅</div>
+            <div className="w-11 h-11 rounded-xl bg-sky-blue-light/20 grid place-items-center text-lg">📅</div>
             <span className="text-[0.7rem] text-ink-soft uppercase tracking-wider">Total</span>
           </div>
-          <div className="font-display text-[1.6rem] md:text-[1.8rem]">{loadingData ? "--" : bookingCount}</div>
+          <div className="font-display text-[1.9rem] md:text-[2.4rem] font-bold tracking-tight">{loadingData ? "--" : bookingCount}</div>
           <div className="text-[0.8rem] text-ink-soft mt-0.5">Bookings</div>
         </Link>
-        <Link href="/dashboard/customers" className="bg-white rounded-[20px] p-5 md:p-6 shadow-sm hover:-translate-y-1 hover:shadow-md transition-all group">
+        <Link href="/dashboard/customers" className="bg-white rounded-2xl p-5 md:p-6 shadow-sm ring-1 ring-ink/[0.06] hover:-translate-y-1 hover:shadow-lg transition-all group">
           <div className="flex items-center justify-between mb-3">
-            <div className="w-10 h-10 rounded-xl bg-bright-lavender/15 grid place-items-center text-lg">👥</div>
+            <div className="w-11 h-11 rounded-xl bg-bright-lavender/15 grid place-items-center text-lg">👥</div>
             <span className="text-[0.7rem] text-ink-soft uppercase tracking-wider">Total</span>
           </div>
-          <div className="font-display text-[1.6rem] md:text-[1.8rem]">{loadingData ? "--" : customerCount}</div>
+          <div className="font-display text-[1.9rem] md:text-[2.4rem] font-bold tracking-tight">{loadingData ? "--" : customerCount}</div>
           <div className="text-[0.8rem] text-ink-soft mt-0.5">Customers</div>
         </Link>
-        <div className="bg-white rounded-[20px] p-5 md:p-6 shadow-sm">
+        <div className="bg-white rounded-2xl p-5 md:p-6 shadow-sm ring-1 ring-ink/[0.06]">
           <div className="flex items-center justify-between mb-3">
-            <div className="w-10 h-10 rounded-xl bg-green-100 grid place-items-center text-lg">💰</div>
+            <div className="w-11 h-11 rounded-xl bg-green-100 grid place-items-center text-lg">💰</div>
             <span className="text-[0.7rem] text-ink-soft uppercase tracking-wider">All Time</span>
           </div>
-          <div className="font-display text-[1.6rem] md:text-[1.8rem]">{loadingData ? "--" : `£${totalRevenue.toFixed(0)}`}</div>
+          <div className="font-display text-[1.9rem] md:text-[2.4rem] font-bold tracking-tight">{loadingData ? "--" : `£${totalRevenue.toFixed(0)}`}</div>
           <div className="text-[0.8rem] text-ink-soft mt-0.5">Total Revenue</div>
         </div>
-        <Link href="/dashboard/shop" className="bg-white rounded-[20px] p-5 md:p-6 shadow-sm hover:-translate-y-1 hover:shadow-md transition-all group">
+        <Link href="/dashboard/shop" className="bg-white rounded-2xl p-5 md:p-6 shadow-sm ring-1 ring-ink/[0.06] hover:-translate-y-1 hover:shadow-lg transition-all group">
           <div className="flex items-center justify-between mb-3">
             <div className={`w-10 h-10 rounded-xl grid place-items-center text-lg ${lowStock.length > 0 ? "bg-red-100" : "bg-green-100"}`}>📦</div>
             <span className="text-[0.7rem] text-ink-soft uppercase tracking-wider">Alert</span>
           </div>
-          <div className="font-display text-[1.6rem] md:text-[1.8rem]">{loadingData ? "--" : lowStock.length}</div>
+          <div className="font-display text-[1.9rem] md:text-[2.4rem] font-bold tracking-tight">{loadingData ? "--" : lowStock.length}</div>
           <div className="text-[0.8rem] text-ink-soft mt-0.5">Low Stock</div>
         </Link>
       </div>
@@ -306,8 +296,8 @@ export default function DashboardPage() {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-8">
         {/* Weekly bookings chart */}
-        <div className="bg-white rounded-[20px] p-7 shadow-sm">
-          <h2 className="font-display text-[1.1rem] mb-5">Bookings — Last 8 Weeks</h2>
+        <div className="bg-white rounded-2xl p-7 shadow-sm">
+          <h2 className="font-display text-[1.3rem] font-bold tracking-tight mb-5">Bookings — Last 8 Weeks</h2>
           {loadingData ? (
             <div className="text-center py-8 text-ink-soft text-[0.9rem]">Loading...</div>
           ) : (
@@ -327,8 +317,8 @@ export default function DashboardPage() {
         </div>
 
         {/* Popular time slots */}
-        <div className="bg-white rounded-[20px] p-7 shadow-sm">
-          <h2 className="font-display text-[1.1rem] mb-5">Popular Time Slots</h2>
+        <div className="bg-white rounded-2xl p-7 shadow-sm">
+          <h2 className="font-display text-[1.3rem] font-bold tracking-tight mb-5">Popular Time Slots</h2>
           {loadingData ? (
             <div className="text-center py-8 text-ink-soft text-[0.9rem]">Loading...</div>
           ) : topSlots.length === 0 ? (
@@ -356,9 +346,9 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         {/* Today's bookings */}
-        <div className="bg-white rounded-[20px] p-7 shadow-sm">
+        <div className="bg-white rounded-2xl p-7 shadow-sm">
           <div className="flex justify-between items-center mb-5">
-            <h2 className="font-display text-[1.1rem]">Today&apos;s Sessions</h2>
+            <h2 className="font-display text-[1.3rem] font-bold tracking-tight">Today&apos;s Sessions</h2>
             <span className="text-[0.8rem] text-ink-soft">{todayBookings.length + todayEvents.length} booked</span>
           </div>
           {loadingData ? (
@@ -406,9 +396,9 @@ export default function DashboardPage() {
         </div>
 
         {/* Upcoming bookings preview */}
-        <div className="bg-white rounded-[20px] p-7 shadow-sm">
+        <div className="bg-white rounded-2xl p-7 shadow-sm">
           <div className="flex justify-between items-center mb-5">
-            <h2 className="font-display text-[1.1rem]">Next Up</h2>
+            <h2 className="font-display text-[1.3rem] font-bold tracking-tight">Next Up</h2>
             <Link href="/dashboard/bookings" className="text-[0.8rem] text-bright-lavender hover:underline">
               View all →
             </Link>
@@ -436,8 +426,8 @@ export default function DashboardPage() {
 
         {/* Quick links + latest enquiry */}
         <div className="space-y-6">
-          <div className="bg-white rounded-[20px] p-7 shadow-sm">
-            <h2 className="font-display text-[1.1rem] mb-5">Quick Actions</h2>
+          <div className="bg-white rounded-2xl p-7 shadow-sm">
+            <h2 className="font-display text-[1.3rem] font-bold tracking-tight mb-5">Quick Actions</h2>
             <div className="grid grid-cols-2 gap-3">
               <Link href="/dashboard/shop" className="bg-sky-blue-light/20 rounded-xl p-4 text-center hover:bg-sky-blue-light/30 transition-colors">
                 <div className="text-xl mb-1">➕</div>
@@ -458,9 +448,9 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-[20px] p-7 shadow-sm">
+          <div className="bg-white rounded-2xl p-7 shadow-sm">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="font-display text-[1.1rem]">Latest Enquiry</h2>
+              <h2 className="font-display text-[1.3rem] font-bold tracking-tight">Latest Enquiry</h2>
               <Link href="/dashboard/enquiries" className="text-[0.8rem] text-bright-lavender hover:underline">
                 View all →
               </Link>

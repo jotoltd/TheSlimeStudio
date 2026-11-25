@@ -66,7 +66,7 @@ const DEFAULTS: Record<string, string> = {
   faq_cta_title: "Still Got Questions?",
   booking_title: "Book a Slime-Making Session",
   booking_subtitle: "Choose Your Session",
-  booking_info: "One-hour sessions, every hour. Up to 10 slime makers per slot at £15.00 per person.",
+  booking_info: "Sessions are booked on the hour and last 45 minutes — some finish a little sooner. Up to 10 slime makers per slot at £15.00 per person.",
   booking_walkins: "Walk-ins also welcome, subject to space",
   shop_title: "Slime, Kits & Accessories",
   shop_subtitle: "Handmade in small batches in our Norfolk studio. Every slime is unique, scented and ready to squish.",

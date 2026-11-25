@@ -57,6 +57,46 @@ export async function activateGiftCard(code: string, orderId: string) {
   }
 }
 
+export const GIFT_CARD_EXPIRY_KEY = "gift_card_expiry_date";
+
+/**
+ * Resolves the expiry applied to NEW gift-card purchases.
+ * site_content.gift_card_expiry_date wins when set to "none" (never expires)
+ * or a future date; anything else falls back to 3 months from purchase.
+ * Throws if the config can't be read — callers must not silently issue cards
+ * with the wrong expiry.
+ */
+export async function resolveGiftCardExpiry(): Promise<Date | null> {
+  const { data, error } = await supabaseAdmin
+    .from("site_content")
+    .select("value")
+    .eq("key", GIFT_CARD_EXPIRY_KEY)
+    .maybeSingle();
+  if (error) throw new Error(`gift card expiry config lookup failed: ${error.message}`);
+
+  const v = data?.value?.trim();
+  if (v === "none") return null;
+  if (v) {
+    const d = new Date(v);
+    if (!isNaN(d.getTime()) && d > new Date()) return d;
+  }
+  const fallback = new Date();
+  fallback.setMonth(fallback.getMonth() + 3);
+  return fallback;
+}
+
+/**
+ * Validates the admin "default expiry for new cards" setting.
+ * Returns the value to store ("none" or an ISO date), or null if invalid.
+ */
+export function normalizeGiftCardExpirySetting(raw: unknown): string | null {
+  const v = typeof raw === "string" ? raw.trim() : "";
+  if (!v || v === "none") return "none";
+  const d = new Date(v);
+  if (isNaN(d.getTime()) || d <= new Date()) return null;
+  return d.toISOString();
+}
+
 export type RedeemResult =
   | { success: true; remainingBalance: number; redeemedAmount: number }
   | { success: false; error: string; status: number };

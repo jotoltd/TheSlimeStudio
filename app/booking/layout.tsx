@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Book a Slime-Making Session",
+  title: "Book a Slime Session — Holt, Norfolk | From £15",
   description:
-    "Book your hands-on slime-making session at The Slime Studio in Holt, Norfolk. One-hour sessions from £15 per person. Choose your date and time slot online.",
+    "Book your hands-on slime-making session at The Slime Studio in Holt, Norfolk. 45-minute sessions from £15 per person. Choose your date and time slot online.",
   alternates: { canonical: "https://theslimestudio.co.uk/booking" },
   openGraph: {
     title: "Book a Slime-Making Session — The Slime Studio, Holt",

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Shop — Slime Kits, Handmade Slimes & Accessories",
+  title: "Slime Shop UK — Handmade Slimes, Kits & Party Extras",
   description:
     "Shop DIY slime kits, handmade slimes, slime textures and accessories from The Slime Studio. Delivered across the UK from Holt, Norfolk.",
   alternates: { canonical: "https://theslimestudio.co.uk/shop" },

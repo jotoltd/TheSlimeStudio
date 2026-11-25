@@ -6,7 +6,7 @@ import { expireStalePendingBookings, expireStalePendingEventBookings } from "@/l
 export const runtime = "nodejs";
 
 // GET — public, returns weekly schedule + date overrides
-export async function GET() {
+export async function GET(req: NextRequest) {
   // Customers hit this on every booking page load — sweep abandoned
   // checkouts after responding so cleanup doesn't depend on admin traffic.
   after(() => Promise.all([expireStalePendingBookings(), expireStalePendingEventBookings()]).then(() => undefined).catch(() => {}));
@@ -24,9 +24,17 @@ export async function GET() {
   if (weeklyErr) console.error("opening_hours GET weekly error:", weeklyErr);
   if (overridesErr) console.error("opening_hours GET overrides error:", overridesErr);
 
+  // `label` is an admin note (e.g. "Ofsted visit") — the booking page only
+  // needs date/is_open/time_slots, so strip it for non-admin callers.
+  const token = req.cookies.get("admin_token")?.value;
+  const isAdmin = !!token && !!verifyToken(token);
+  const publicOverrides = (overrides || []).map((o) =>
+    isAdmin ? o : { ...o, label: null }
+  );
+
   return NextResponse.json({
     weekly: weekly || [],
-    overrides: overrides || [],
+    overrides: publicOverrides,
   }, {
     headers: { "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0" },
   });

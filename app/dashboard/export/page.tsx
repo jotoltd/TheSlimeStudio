@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase, type Booking, type Enquiry, type Subscriber } from "@/lib/supabase";
+import { type Booking, type Enquiry, type Subscriber } from "@/lib/supabase";
 
 export default function ExportPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -13,12 +13,15 @@ export default function ExportPage() {
 
   async function loadData() {
     setLoading(true);
-    const { data: bks } = await supabase.from("bookings").select("*").order("date", { ascending: false });
-    if (bks) setBookings(bks as Booking[]);
-    const { data: enqs } = await supabase.from("enquiries").select("*").order("created_at", { ascending: false });
-    if (enqs) setEnquiries(enqs as Enquiry[]);
-    const { data: subs } = await supabase.from("subscribers").select("*").order("created_at", { ascending: false });
-    if (subs) setSubscribers(subs as Subscriber[]);
+    const [bksRes, enqsRes, subsRes] = await Promise.all([
+      fetch("/api/admin/bookings"), fetch("/api/admin/enquiries"), fetch("/api/admin/subscribers"),
+    ]);
+    const bksData = await bksRes.json();
+    const enqsData = await enqsRes.json();
+    const subsData = await subsRes.json();
+    if (bksData.bookings) setBookings(bksData.bookings as Booking[]);
+    if (enqsData.enquiries) setEnquiries(enqsData.enquiries as Enquiry[]);
+    if (subsData.subscribers) setSubscribers(subsData.subscribers as Subscriber[]);
     setLoading(false);
   }
 

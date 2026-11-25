@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSumUpKey } from "@/lib/payment";
 import { supabaseAdmin } from "@/lib/supabase";
-import { sendOrderConfirmationEmail } from "@/lib/email";
-import { redeemGiftCard } from "@/lib/gift-cards";
-import { awardReferrerReward } from "@/lib/create-booking";
-import { sanitizeGclid, uploadClickConversion } from "@/lib/google-ads";
+import { claimShopOrder, settleShopOrder, type ShopOrderRow } from "@/lib/order-settlement";
+import { sanitizeGclid } from "@/lib/google-ads";
 
 export const runtime = "nodejs";
 
@@ -50,70 +48,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Payment not completed" }, { status: 400 });
     }
 
-    // Mark order as paid
-    await supabaseAdmin
-      .from("shop_orders")
-      .update({ payment_status: "paid" })
-      .eq("id", order.id);
-
-    // Google Ads offline conversion — orderId matches the browser tag's
-    // transaction_id (the order id used on the success page).
-    const cleanGclid = sanitizeGclid(gclid);
-    if (cleanGclid) {
-      await uploadClickConversion({ gclid: cleanGclid, value: order.total, orderId: order.id }).catch(() => {});
+    // Atomic claim — the SumUp webhook may be settling this order concurrently.
+    const won = await claimShopOrder(order.id);
+    if (!won) {
+      return NextResponse.json({ success: true, orderNumber: order.order_number });
     }
 
-    // Decrement stock
-    for (const item of order.items) {
-      const { data: product } = await supabaseAdmin
-        .from("products")
-        .select("stock")
-        .eq("id", item.product_id)
-        .single();
-      if (product) {
-        const newStock = Math.max(0, (product.stock || 0) - item.quantity);
-        await supabaseAdmin
-          .from("products")
-          .update({ stock: newStock })
-          .eq("id", item.product_id);
-      }
-    }
-
-    // Referral codes reward the referrer on a confirmed order
-    if (order.discount_code) {
-      await awardReferrerReward(order.discount_code).catch(() => {});
-    }
-
-    // Redeem gift card if provided
-    if (order.gift_card_code) {
-      try {
-        const { data: giftCard } = await supabaseAdmin
-          .from("gift_cards")
-          .select("balance")
-          .eq("code", order.gift_card_code.trim().toUpperCase())
-          .single();
-
-        if (giftCard && giftCard.balance > 0) {
-          const redeemAmount = Math.min(giftCard.balance, order.total);
-          const red = await redeemGiftCard(order.gift_card_code, redeemAmount, { shopOrderId: order.id });
-          if (!red.success) console.error("Gift card redeem failed:", red.error);
-        }
-      } catch (e) {
-        console.error("Failed to redeem gift card:", e);
-      }
-    }
-
-    // Send confirmation email
-    await sendOrderConfirmationEmail({
-      orderNumber: order.order_number,
-      name: order.customer_name,
-      email: order.customer_email,
-      items: order.items,
-      subtotal: order.subtotal,
-      shippingCost: order.shipping_cost,
-      total: order.total,
-      shippingMethod: order.shipping_method,
-    });
+    await settleShopOrder(order as ShopOrderRow, { gclid: sanitizeGclid(gclid) || undefined });
 
     return NextResponse.json({ success: true, orderNumber: order.order_number });
   } catch (e) {

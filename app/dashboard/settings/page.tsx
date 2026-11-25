@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase, type BookingSettings, type SiteSettings, type SiteTheme, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, MAX_DAILY_BOOKINGS as DEFAULT_MAX, STAMPS_PER_REWARD as DEFAULT_STAMPS } from "@/lib/supabase";
+import { type BookingSettings, type SiteSettings, type SiteTheme, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, MAX_DAILY_BOOKINGS as DEFAULT_MAX, STAMPS_PER_REWARD as DEFAULT_STAMPS } from "@/lib/supabase";
 
 const THEME_OPTIONS: { key: SiteTheme; icon: string; name: string; desc: string; swatch: string }[] = [
   {
@@ -17,13 +17,6 @@ const THEME_OPTIONS: { key: SiteTheme; icon: string; name: string; desc: string;
     name: "Slime Lab",
     desc: "Dark & edgy — green/cyan, sharp corners",
     swatch: "linear-gradient(135deg, #0d1216 0%, #12231b 55%, #4ade80 140%)",
-  },
-  {
-    key: "comic",
-    icon: "💥",
-    name: "Comic Pop",
-    desc: "Bold & bright — thick outlines, tilted cards, comic font",
-    swatch: "linear-gradient(135deg, #ffd23f 0%, #ff5d1f 70%, #111 130%)",
   },
   {
     key: "mono",
@@ -58,9 +51,6 @@ export default function SettingsPage() {
   const [theme, setTheme] = useState<SiteTheme>("default");
   const [savingTheme, setSavingTheme] = useState(false);
   const [themeMsg, setThemeMsg] = useState("");
-  const [abEnabled, setAbEnabled] = useState(false);
-  const [abVariants, setAbVariants] = useState<SiteTheme[]>([]);
-  const [savingAb, setSavingAb] = useState(false);
 
   // Loyalty settings
   const [stampsPerReward, setStampsPerReward] = useState(DEFAULT_STAMPS);
@@ -116,7 +106,9 @@ export default function SettingsPage() {
   useEffect(() => { loadAll(); }, []);
 
   async function loadAll() {
-    const { data: ss } = await supabase.from("site_settings").select("*").eq("id", 1).single();
+    const ssRes = await fetch("/api/admin/settings?table=site_settings");
+    const ssRows = ssRes.ok ? ((await ssRes.json()).rows || []) : [];
+    const ss = ssRows.find((r: { id: number }) => r.id === 1) || ssRows[0];
     if (ss) {
       const s = ss as SiteSettings;
       setSiteSettings(s);
@@ -133,8 +125,6 @@ export default function SettingsPage() {
       setSnapchatPixelId(s.snapchat_pixel_id || "");
       setSnapchatPixelEnabled(!!s.snapchat_pixel_enabled);
       setTheme(s.theme && THEME_OPTIONS.some((t) => t.key === s.theme) ? s.theme : "default");
-      setAbEnabled(!!s.theme_ab_enabled);
-      setAbVariants((s.theme_ab_variants || []).filter((v) => THEME_OPTIONS.some((t) => t.key === v)));
     }
 
     try {
@@ -150,7 +140,9 @@ export default function SettingsPage() {
       if (data.provider) setPaymentProvider(data.provider);
     } catch {}
 
-    const { data: bs } = await supabase.from("booking_settings").select("*").eq("id", 1).single();
+    const bsRes = await fetch("/api/admin/settings?table=booking_settings");
+    const bsRows = bsRes.ok ? ((await bsRes.json()).rows || []) : [];
+    const bs = bsRows.find((r: { id: number }) => r.id === 1) || bsRows[0];
     if (bs) {
       const s = bs as BookingSettings;
       setPrice(String(s.price_per_person));
@@ -214,34 +206,50 @@ export default function SettingsPage() {
     }
   }
 
+  // Settings writes go through the admin API — direct table updates are no
+  // longer permitted for the anon client.
+  async function saveSettings(table: string, patch: Record<string, unknown>): Promise<string | null> {
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ table, id: 1, patch }),
+      });
+      const data = await res.json();
+      return res.ok ? null : (data.error || "Failed to save");
+    } catch {
+      return "Network error";
+    }
+  }
+
   async function toggleMaintenance() {
     if (!siteSettings) return;
     const newVal = !siteSettings.maintenance_mode;
     setSiteSettings({ ...siteSettings, maintenance_mode: newVal });
-    await supabase.from("site_settings").update({ maintenance_mode: newVal }).eq("id", 1);
+    await saveSettings("site_settings", { maintenance_mode: newVal });
   }
 
   async function toggleLoyalty() {
     if (!siteSettings) return;
     const newVal = !siteSettings.loyalty_enabled;
     setSiteSettings({ ...siteSettings, loyalty_enabled: newVal });
-    await supabase.from("site_settings").update({ loyalty_enabled: newVal }).eq("id", 1);
+    await saveSettings("site_settings", { loyalty_enabled: newVal });
   }
 
   async function toggleReferrals() {
     if (!siteSettings) return;
     const newVal = !(siteSettings.referrals_enabled ?? true);
     setSiteSettings({ ...siteSettings, referrals_enabled: newVal });
-    const { error } = await supabase.from("site_settings").update({ referrals_enabled: newVal }).eq("id", 1);
-    if (error) setSiteSettings({ ...siteSettings, referrals_enabled: !newVal });
+    const err = await saveSettings("site_settings", { referrals_enabled: newVal });
+    if (err) setSiteSettings({ ...siteSettings, referrals_enabled: !newVal });
   }
 
   async function saveLoyaltySettings() {
     if (stampsPerReward < 1) { setLoyaltyMsg("Stamps per reward must be at least 1"); return; }
     setSavingLoyalty(true); setLoyaltyMsg("");
-    const { error } = await supabase.from("site_settings").update({ stamps_per_reward: stampsPerReward }).eq("id", 1);
+    const err = await saveSettings("site_settings", { stamps_per_reward: stampsPerReward });
     setSavingLoyalty(false);
-    if (error) setLoyaltyMsg("Failed to save: " + error.message);
+    if (err) setLoyaltyMsg("Failed to save: " + err);
     else setLoyaltyMsg("Loyalty settings saved!");
   }
 
@@ -251,44 +259,15 @@ export default function SettingsPage() {
     setTheme(newTheme);
     setThemeMsg("");
     setSavingTheme(true);
-    const { error } = await supabase.from("site_settings").update({ theme: newTheme }).eq("id", 1);
+    const err = await saveSettings("site_settings", { theme: newTheme });
     setSavingTheme(false);
-    if (error) {
+    if (err) {
       setTheme(previous);
-      setThemeMsg("Failed to save: " + error.message);
+      setThemeMsg("Failed to save: " + err);
     } else {
       const label = THEME_OPTIONS.find((t) => t.key === newTheme);
       setThemeMsg(label ? `${label.icon} ${label.name} theme is live!` : "Theme saved.");
     }
-  }
-
-  async function saveAb(enabled: boolean, variants: SiteTheme[]) {
-    setThemeMsg("");
-    if (enabled && variants.length < 2) {
-      setThemeMsg("Pick at least two themes to A/B test.");
-      return;
-    }
-    setAbEnabled(enabled);
-    setAbVariants(variants);
-    setSavingAb(true);
-    const { error } = await supabase
-      .from("site_settings")
-      .update({ theme_ab_enabled: enabled, theme_ab_variants: enabled ? variants : [] })
-      .eq("id", 1);
-    setSavingAb(false);
-    if (error) {
-      setThemeMsg("Failed to save: " + error.message);
-    } else {
-      setThemeMsg(enabled
-        ? `A/B testing is live — visitors are split randomly across ${variants.length} themes and keep their variant. Results show in Ads → Theme A/B results.`
-        : "A/B testing off — the theme above applies to everyone.");
-    }
-  }
-
-  function toggleAbVariant(key: SiteTheme) {
-    const next = abVariants.includes(key) ? abVariants.filter((v) => v !== key) : [...abVariants, key];
-    if (abEnabled) saveAb(true, next);
-    else setAbVariants(next);
   }
 
   async function saveThemeEndDate(dateStr: string) {
@@ -296,9 +275,9 @@ export default function SettingsPage() {
     // Theme shows until the end of the chosen day, then the site reverts to default.
     const iso = dateStr ? new Date(dateStr + "T23:59:59").toISOString() : null;
     setSiteSettings({ ...siteSettings, theme_end_date: iso });
-    const { error } = await supabase.from("site_settings").update({ theme_end_date: iso }).eq("id", 1);
-    if (error) {
-      setThemeMsg("Failed to save: " + error.message);
+    const err = await saveSettings("site_settings", { theme_end_date: iso });
+    if (err) {
+      setThemeMsg("Failed to save: " + err);
     } else {
       setThemeMsg(dateStr
         ? `Theme will switch back to Slime Studio after ${new Date(dateStr + "T12:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "long" })}`
@@ -310,7 +289,7 @@ export default function SettingsPage() {
     if (!maintDate) return;
     setSavingMaint(true);
     const isoDate = new Date(maintDate).toISOString();
-    await supabase.from("site_settings").update({ launch_date: isoDate }).eq("id", 1);
+    await saveSettings("site_settings", { launch_date: isoDate });
     setSavingMaint(false);
     loadAll();
   }
@@ -356,15 +335,15 @@ export default function SettingsPage() {
     const value = parseFloat(price);
     if (isNaN(value) || value < 0) { setPriceMsg({ type: "err", text: "Please enter a valid price." }); return; }
     setSavingPrice(true); setPriceMsg(null);
-    const { error } = await supabase.from("booking_settings").update({ price_per_person: value }).eq("id", 1);
+    const err = await saveSettings("booking_settings", { price_per_person: value });
     setSavingPrice(false);
-    if (error) setPriceMsg({ type: "err", text: "Failed to save." });
+    if (err) setPriceMsg({ type: "err", text: "Failed to save." });
     else setPriceMsg({ type: "ok", text: "Price updated successfully!" });
   }
 
   async function saveAds() {
     setSavingAds(true); setAdsMsg("");
-    const { error } = await supabase.from("site_settings").update({
+    const err = await saveSettings("site_settings", {
       fb_pixel_id: fbPixelId || null,
       fb_pixel_enabled: fbPixelEnabled,
       ga_measurement_id: gaMeasurementId || null,
@@ -375,9 +354,9 @@ export default function SettingsPage() {
       google_ads_enabled: googleAdsEnabled,
       snapchat_pixel_id: snapchatPixelId || null,
       snapchat_pixel_enabled: snapchatPixelEnabled,
-    }).eq("id", 1);
+    });
     setSavingAds(false);
-    if (error) setAdsMsg("Failed: " + error.message);
+    if (err) setAdsMsg("Failed: " + err);
     else setAdsMsg("Marketing settings saved!");
   }
 
@@ -386,13 +365,13 @@ export default function SettingsPage() {
     if (maxDaily < 1) { setSlotsMsg("Max daily bookings must be at least 1"); return; }
     setSavingSlots(true); setSlotsMsg("");
     const parsedSlots = slotsText.split("\n").map((s) => s.trim()).filter(Boolean);
-    const { error } = await supabase.from("booking_settings").update({
+    const err = await saveSettings("booking_settings", {
       time_slots: parsedSlots,
       slot_capacity: slotCapacity,
       max_daily_bookings: maxDaily,
-    }).eq("id", 1);
+    });
     setSavingSlots(false);
-    if (error) setSlotsMsg("Failed to save: " + error.message);
+    if (err) setSlotsMsg("Failed to save: " + err);
     else setSlotsMsg("Settings saved!");
   }
 
@@ -510,47 +489,6 @@ export default function SettingsPage() {
               </p>
             </div>
 
-            {/* A/B testing */}
-            <div className="mt-5 max-w-xl border-t border-ink/[0.08] pt-5">
-              <div className="flex items-center justify-between flex-wrap gap-3">
-                <div>
-                  <h3 className="font-display text-[0.95rem] mb-0.5">A/B test themes</h3>
-                  <p className="text-[0.78rem] text-ink-soft">
-                    {abEnabled
-                      ? `ON — visitors are split randomly across the ${abVariants.length} selected themes and keep their variant. Sales per theme show in Ads → Theme A/B results.`
-                      : "Split visitors randomly across themes to see which converts best. Overrides the single theme and end date while on."}
-                  </p>
-                </div>
-                <button
-                  onClick={() => saveAb(!abEnabled, abVariants)}
-                  disabled={savingAb}
-                  className={`relative w-14 h-8 rounded-full transition-colors disabled:opacity-60 ${abEnabled ? "bg-green-400" : "bg-ink/15"}`}
-                >
-                  <span className={`absolute top-1 left-1 w-6 h-6 rounded-full bg-white shadow-sm transition-transform ${abEnabled ? "translate-x-6" : ""}`} />
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2 mt-3">
-                {THEME_OPTIONS.map((t) => {
-                  const on = abVariants.includes(t.key);
-                  return (
-                    <button
-                      key={t.key}
-                      type="button"
-                      onClick={() => toggleAbVariant(t.key)}
-                      disabled={savingAb}
-                      className={`px-3 py-1.5 rounded-full border-2 text-[0.8rem] font-medium transition-all disabled:opacity-60 ${
-                        on ? "border-sky-blue-light bg-sky-blue-light/10 text-ink" : "border-ink/10 bg-white text-ink-soft hover:border-ink/25"
-                      }`}
-                    >
-                      {t.icon} {t.name}{on ? " ✓" : ""}
-                    </button>
-                  );
-                })}
-              </div>
-              {abVariants.length < 2 && (
-                <p className="text-[0.75rem] text-amber-600 mt-2">Pick at least two themes — including Slime Studio if you want to compare against the normal look.</p>
-              )}
-            </div>
             {themeMsg && (
               <p className={`text-[0.85rem] mt-3 ${themeMsg.startsWith("Failed") ? "text-red-600" : "text-green-600"}`}>{themeMsg}</p>
             )}

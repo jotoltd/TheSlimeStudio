@@ -28,14 +28,32 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
 
-  // Load cart from localStorage on mount
+  // Load cart from localStorage on mount — validate the shape before trusting
+  // it: a corrupted/hand-edited entry with NaN prices or quantities would
+  // otherwise produce NaN subtotals and broken checkout totals.
   useEffect(() => {
     try {
       const saved = localStorage.getItem("slime_cart");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) setItems(parsed);
+      if (!saved) return;
+      const parsed = JSON.parse(saved);
+      if (!Array.isArray(parsed)) return;
+      const merged = new Map<string, CartItem>();
+      for (const raw of parsed) {
+        const p = raw?.product;
+        const qty = Math.floor(Number(raw?.quantity));
+        if (
+          !p || typeof p.id !== "string" || typeof p.name !== "string" ||
+          !Number.isFinite(Number(p.price)) || Number(p.price) < 0 ||
+          !Number.isFinite(qty) || qty < 1
+        ) continue;
+        const existing = merged.get(p.id);
+        if (existing) {
+          existing.quantity = Math.min(existing.quantity + qty, p.stock || 99);
+        } else {
+          merged.set(p.id, { product: { ...p, price: Number(p.price) }, quantity: Math.min(qty, p.stock || 99) });
+        }
       }
+      setItems(Array.from(merged.values()));
     } catch {}
   }, []);
 
@@ -67,7 +85,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }
 
   function updateQuantity(productId: string, quantity: number) {
-    if (quantity <= 0) {
+    if (!Number.isFinite(quantity) || quantity <= 0) {
       removeItem(productId);
       return;
     }

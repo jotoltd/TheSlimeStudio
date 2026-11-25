@@ -4,36 +4,10 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { supabase, type SiteSettings, type SiteTheme } from "@/lib/supabase";
 import HalloweenDecor from "@/components/HalloweenDecor";
+import XmasDecor from "@/components/XmasDecor";
 import Fireworks from "@/components/Fireworks";
 
-const SEASONAL: SiteTheme[] = ["halloween", "lab", "comic", "mono", "xmas"];
-const THEME_AB_KEY = "siteThemeAB";
-
-// A/B assignment is per-visitor and client-side — public pages are
-// ISR-cached so SSR can't vary the theme per person. A visitor keeps their
-// variant until the admin changes the pool (a changed pool re-rolls so the
-// new theme gets traffic). Returns null when A/B isn't a valid pool.
-function resolveAbVariant(variants: SiteTheme[]): SiteTheme | null {
-  const pool = variants.filter((v) => v === "default" || SEASONAL.includes(v));
-  if (pool.length < 2) return null;
-  try {
-    const raw = localStorage.getItem(THEME_AB_KEY);
-    if (raw) {
-      const o = JSON.parse(raw) as { v?: string[]; t?: string };
-      if (
-        o?.t && Array.isArray(o?.v) &&
-        (pool as string[]).includes(o.t) &&
-        o.v.length === pool.length &&
-        o.v.every((x) => (pool as string[]).includes(x))
-      ) {
-        return o.t as SiteTheme;
-      }
-    }
-  } catch {}
-  const t = pool[Math.floor(Math.random() * pool.length)];
-  try { localStorage.setItem(THEME_AB_KEY, JSON.stringify({ v: pool, t })); } catch {}
-  return t;
-}
+const SEASONAL: SiteTheme[] = ["halloween", "lab", "mono", "xmas"];
 
 function useCountdown(target: Date) {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
@@ -66,6 +40,7 @@ export default function MaintenanceGate({ children }: { children: React.ReactNod
   const countdown = useCountdown(launchDate);
   const isPublicRoute = !pathname.startsWith("/admin") && !pathname.startsWith("/api") && !pathname.startsWith("/dashboard");
   const spooky = theme === "halloween" && isPublicRoute;
+  const festive = theme === "xmas" && isPublicRoute;
 
   useEffect(() => {
     if (!isPublicRoute) {
@@ -101,7 +76,10 @@ export default function MaintenanceGate({ children }: { children: React.ReactNod
       if (data) {
         const s = data as SiteSettings;
         setInMaintenance(s.maintenance_mode);
-        setLaunchDate(new Date(s.launch_date));
+        // Guard against an invalid launch_date — Invalid Date makes the
+        // countdown NaN forever.
+        const parsedLaunch = new Date(s.launch_date);
+        if (!isNaN(parsedLaunch.getTime())) setLaunchDate(parsedLaunch);
         // ?theme=halloween|lab|default previews a theme without saving it
         const preview = new URLSearchParams(window.location.search).get("theme") as SiteTheme | null;
         // A scheduled theme auto-reverts to default once theme_end_date passes —
@@ -109,17 +87,10 @@ export default function MaintenanceGate({ children }: { children: React.ReactNod
         const scheduledExpired =
           s.theme && s.theme !== "default" && s.theme_end_date &&
           new Date(s.theme_end_date).getTime() < Date.now();
-        // A/B testing overrides the single theme — the assigned variant wins.
-        const abVariant = s.theme_ab_enabled && s.theme_ab_variants
-          ? resolveAbVariant(s.theme_ab_variants)
-          : null;
-        if (!abVariant) {
-          try { localStorage.removeItem(THEME_AB_KEY); } catch {}
-        }
         const t: SiteTheme =
           preview === "default" || (preview && SEASONAL.includes(preview))
             ? preview
-            : abVariant ?? (s.theme && SEASONAL.includes(s.theme) && !scheduledExpired ? s.theme : "default");
+            : s.theme && SEASONAL.includes(s.theme) && !scheduledExpired ? s.theme : "default";
         setTheme(t);
         document.documentElement.dataset.theme = t;
         try {
@@ -144,6 +115,7 @@ export default function MaintenanceGate({ children }: { children: React.ReactNod
     return (
       <>
         {spooky && <HalloweenDecor />}
+        {festive && <XmasDecor />}
         {isPublicRoute && <Fireworks />}
         {children}
       </>
@@ -158,6 +130,7 @@ export default function MaintenanceGate({ children }: { children: React.ReactNod
           <a href="/dashboard" className="underline font-medium">Go to dashboard</a>
         </div>
         {spooky && <HalloweenDecor />}
+        {festive && <XmasDecor />}
         {isPublicRoute && <Fireworks />}
         {children}
       </>
@@ -167,6 +140,7 @@ export default function MaintenanceGate({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen grid place-items-center p-6 text-center hero-gradient">
       {spooky && <HalloweenDecor />}
+      {festive && <XmasDecor />}
       <div className="max-w-2xl mx-auto">
         <div className="text-5xl mb-6">🫧✨🫧</div>
         <div className="flex items-center justify-center gap-3 mb-4">

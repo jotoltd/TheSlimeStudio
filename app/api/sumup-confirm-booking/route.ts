@@ -4,15 +4,13 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { sendCapiEvent, metaContextFromRequest } from "@/lib/capi";
 import {
   createPaidBooking,
-  sendCustomerConfirmation,
-  sendAdminNotification,
-  awardLoyaltyStamp,
-  awardReferrerReward,
+  claimPendingBooking,
+  settleExistingBooking,
   type BookingDetails,
 } from "@/lib/create-booking";
-import { redeemRewardCode } from "@/lib/loyalty-rewards";
-import { redeemGiftCard } from "@/lib/gift-cards";
+import { computeBookingPrice } from "@/lib/booking-price";
 import { gclidFromNotes, uploadClickConversion } from "@/lib/google-ads";
+import { isValidDateString, isValidTimeSlot } from "@/lib/time-slots";
 
 export const runtime = "nodejs";
 
@@ -72,26 +70,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Payment not completed" }, { status: 400 });
     }
 
-    // If booking exists but is pending, mark it as paid directly
+    // If booking exists but is pending, mark it as paid — atomically, so the
+    // SumUp webhook racing this request can't double-send emails/loyalty or
+    // double-redeem the gift card.
     if (booking) {
-      const { data: updated, error } = await supabaseAdmin
-        .from("bookings")
-        .update({ payment_status: "paid" })
-        .eq("id", booking.id)
-        .select()
-        .single();
-
-      if (error || !updated) {
-        return NextResponse.json({ error: "Failed to update booking" }, { status: 500 });
+      const won = await claimPendingBooking(booking.id);
+      if (won) {
+        await settleExistingBooking(booking, checkoutRef);
       }
-
-      // Use createPaidBooking's side-effect logic by calling it with the existing booking's details.
-      // It will detect the existing booking (now paid) and return early — but we still need
-      // to send notifications and award loyalty. So we call it with the booking details.
-      // Since the booking already exists and is now paid, createPaidBooking will find it
-      // and return { created: false } without sending duplicate emails.
-      // Instead, send notifications directly here.
-      await sendNotificationsAndLoyalty(booking);
 
       const gclid = gclidFromNotes(booking.notes);
       if (gclid) {
@@ -114,18 +100,21 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        bookingId: updated.id,
-        name: updated.name,
-        email: updated.email,
-        date: updated.date,
-        timeSlot: updated.time_slot,
-        people: updated.people,
-        totalPrice: updated.total_price,
+        bookingId: booking.id,
+        name: booking.name,
+        email: booking.email,
+        date: booking.date,
+        timeSlot: booking.time_slot,
+        people: booking.people,
+        totalPrice: booking.total_price,
       });
     }
 
     // Booking not found — try to create it from fallback details provided by the client
-    // or from the SumUp checkout amount
+    // or from the SumUp checkout amount. This only runs when the pending row was
+    // lost, so validate formats and recompute the gift-card cover server-side —
+    // a client-supplied giftCardAmount would let them drain a card they never
+    // actually paid with.
     const fallbackDetails: BookingDetails = {
       paymentRef: checkoutRef,
       name: body.name || "Unknown",
@@ -141,11 +130,30 @@ export async function POST(req: NextRequest) {
       gclid: body.gclid || null,
     };
 
-    if (!fallbackDetails.email || !fallbackDetails.date || !fallbackDetails.timeSlot) {
+    if (
+      !fallbackDetails.email ||
+      !fallbackDetails.date ||
+      !fallbackDetails.timeSlot ||
+      !isValidDateString(fallbackDetails.date) ||
+      !isValidTimeSlot(fallbackDetails.timeSlot)
+    ) {
       console.error(`[sumup-confirm] Booking ${checkoutRef} not found and no fallback details provided`);
       return NextResponse.json({
         error: "Booking not found and insufficient details to create it",
       }, { status: 404 });
+    }
+
+    // Recompute the gift-card cover from the card itself — never trust the
+    // client's giftCardAmount.
+    if (body.giftCardCode) {
+      const price = await computeBookingPrice({
+        people: fallbackDetails.people,
+        giftCardCode: body.giftCardCode,
+      });
+      if (!("error" in price)) {
+        fallbackDetails.giftCardCode = body.giftCardCode;
+        fallbackDetails.giftCardAmount = price.giftCardCover;
+      }
     }
 
     const result = await createPaidBooking(fallbackDetails);
@@ -167,28 +175,6 @@ export async function POST(req: NextRequest) {
         console.warn(`[sumup-confirm] Recovered booking ${result.bookingId} for ${checkoutRef} — pending booking was missing.`);
       }
 
-      // Redeem gift card if provided
-      if (body.giftCardCode && result.bookingId) {
-        try {
-          const { data: giftCard } = await supabaseAdmin
-            .from("gift_cards")
-            .select("balance")
-            .eq("code", body.giftCardCode.trim().toUpperCase())
-            .single();
-
-          if (giftCard && giftCard.balance > 0) {
-            const cover = Number(body.giftCardAmount) > 0 ? Number(body.giftCardAmount) : fallbackDetails.totalPrice;
-            const redeemAmount = Math.min(giftCard.balance, cover);
-            const red = await redeemGiftCard(body.giftCardCode, redeemAmount, { bookingId: result.bookingId });
-            if (!red.success) {
-              console.error("Gift card redeem failed:", red.error);
-            }
-          }
-        } catch (e) {
-          console.error("Failed to redeem gift card:", e);
-        }
-      }
-
       return NextResponse.json({
         success: true,
         bookingId: result.bookingId,
@@ -208,34 +194,5 @@ export async function POST(req: NextRequest) {
   } catch (e) {
     console.error("SumUp confirm booking error:", e);
     return NextResponse.json({ error: "Failed to confirm booking" }, { status: 500 });
-  }
-}
-
-async function sendNotificationsAndLoyalty(booking: {
-  name: string; email: string; phone?: string | null;
-  date: string; time_slot: string; people: number; total_price: number;
-  discount_code?: string | null;
-}) {
-  const details: BookingDetails = {
-    paymentRef: "",
-    name: booking.name,
-    email: booking.email,
-    phone: booking.phone,
-    date: booking.date,
-    timeSlot: booking.time_slot,
-    people: booking.people,
-    totalPrice: booking.total_price,
-    isParty: false,
-    discountCode: booking.discount_code,
-  };
-  await sendCustomerConfirmation(details).catch(() => {});
-  await sendAdminNotification(details, false).catch(() => {});
-  // One stamp per slime maker paid for.
-  await awardLoyaltyStamp(booking.name, booking.email, booking.people).catch(() => {});
-  if (booking.discount_code && booking.discount_code.toUpperCase().startsWith("FREE-")) {
-    await redeemRewardCode(booking.discount_code, booking.email).catch(() => {});
-  }
-  if (booking.discount_code) {
-    await awardReferrerReward(booking.discount_code).catch(() => {});
   }
 }

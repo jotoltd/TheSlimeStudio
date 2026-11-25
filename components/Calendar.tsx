@@ -107,12 +107,15 @@ export default function Calendar({
     }
   }
 
-  const displayDate = selected.toLocaleDateString("en-GB", {
-    weekday: "short",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  const isTodaySelected = value === toISO(new Date());
+  const displayDate = isTodaySelected
+    ? "Today"
+    : selected.toLocaleDateString("en-GB", {
+        weekday: "short",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
 
   return (
     <div className="relative" ref={ref}>

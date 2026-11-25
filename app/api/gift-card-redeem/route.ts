@@ -1,27 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
-import { redeemGiftCard } from "@/lib/gift-cards";
+import { rateLimited, clientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
-export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const { code, amount, bookingId, shopOrderId } = body as {
-    code: string;
-    amount: number;
-    bookingId?: string;
-    shopOrderId?: string;
-  };
+// NOTE: there is intentionally no POST handler. Redemption only happens inside
+// verified payment flows via lib/gift-cards.redeemGiftCard — a public redeem
+// endpoint let anyone drain a card against an arbitrary booking id.
 
-  const result = await redeemGiftCard(code, amount, { bookingId, shopOrderId });
-  if (!result.success) {
-    return NextResponse.json({ error: result.error }, { status: result.status });
-  }
-  return NextResponse.json(result);
-}
-
-// GET endpoint to validate a gift card without redeeming it
+// GET endpoint to validate a gift card without redeeming it.
+// Rate-limited: codes are enumerable, so this can't be an unlimited oracle.
 export async function GET(req: NextRequest) {
+  if (rateLimited(`giftcard-lookup:${clientIp(req)}`, 30, 15 * 60 * 1000)) {
+    return NextResponse.json({ error: "Too many attempts. Please try again later." }, { status: 429 });
+  }
+
   const { searchParams } = new URL(req.url);
   const code = searchParams.get("code");
 
@@ -31,7 +24,7 @@ export async function GET(req: NextRequest) {
 
   const { data: giftCard, error: giftCardError } = await supabaseAdmin
     .from("gift_cards")
-    .select("*")
+    .select("balance, initial_value, expiry_date, status")
     .eq("code", code.trim().toUpperCase())
     .single();
 

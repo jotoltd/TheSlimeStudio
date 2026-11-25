@@ -9,12 +9,18 @@ import { sendCapiEvent, metaContextFromRequest } from "@/lib/capi";
 import { withGclidTag, uploadClickConversion, sanitizeGclid, sanitizeAdSource } from "@/lib/google-ads";
 import { computeBookingPrice } from "@/lib/booking-price";
 import { sanitizePushToken, sendPushToCustomerOrDevice } from "@/lib/apns";
+import { rateLimited, clientIp } from "@/lib/rate-limit";
+import { isValidDateString, isValidTimeSlot } from "@/lib/time-slots";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
+  if (rateLimited(`pi:${clientIp(req)}`, 20, 15 * 60 * 1000)) {
+    return NextResponse.json({ error: "Too many attempts. Please try again later." }, { status: 429 });
+  }
+
   const body = await req.json();
-  const { name, email: rawEmail, date, timeSlot, totalPrice, isParty, discountCode, giftCardCode } = body as {
+  const { name, email: rawEmail, date, timeSlot, totalPrice, discountCode, giftCardCode } = body as {
     name: string;
     email: string;
     date: string;
@@ -26,6 +32,10 @@ export async function POST(req: NextRequest) {
     giftCardCode?: string;
   };
   let { people } = body as { people: number };
+  // Party status is decided server-side, never by the client — a self-declared
+  // "party" would evade the daily capacity cap. Parties are booked via
+  // enquiries/manual bookings, not this endpoint.
+  const isParty = false;
 
   const email = String(rawEmail || "").trim().toLowerCase();
 
@@ -37,6 +47,12 @@ export async function POST(req: NextRequest) {
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   if (!emailOk) {
     return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
+  }
+
+  // Strict date/time formats — a malformed value makes Date parsing yield NaN,
+  // which silently bypasses the past-date check and the opening-hours lookup.
+  if (!isValidDateString(date) || !isValidTimeSlot(timeSlot)) {
+    return NextResponse.json({ error: "Invalid date or time slot." }, { status: 400 });
   }
 
   // Don't allow booking in the past
@@ -317,6 +333,6 @@ export async function POST(req: NextRequest) {
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error("Payment intent error:", msg);
-    return NextResponse.json({ error: `Failed to create payment intent: ${msg}` }, { status: 500 });
+    return NextResponse.json({ error: "Failed to start payment. Please try again." }, { status: 500 });
   }
 }

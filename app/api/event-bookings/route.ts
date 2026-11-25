@@ -27,8 +27,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
-  if (quantity < 1) {
-    return NextResponse.json({ error: "Quantity must be at least 1" }, { status: 400 });
+  const qty = Math.floor(Number(quantity));
+  if (!Number.isFinite(qty) || qty < 1 || qty > 50) {
+    return NextResponse.json({ error: "Invalid quantity" }, { status: 400 });
   }
 
   // Fetch the instance and event
@@ -68,11 +69,11 @@ export async function POST(req: NextRequest) {
   const booked = (existingBookings || []).reduce((sum: number, b: { quantity: number }) => sum + b.quantity, 0);
   const remaining = capacity - booked;
 
-  if (quantity > remaining) {
+  if (qty > remaining) {
     return NextResponse.json({ error: `Only ${remaining} spots remaining` }, { status: 400 });
   }
 
-  const totalPrice = parseFloat(event.price) * quantity;
+  const totalPrice = parseFloat(event.price) * qty;
 
   // Create the booking record (pending payment)
   const { data: booking, error: bookingError } = await supabaseAdmin
@@ -83,7 +84,7 @@ export async function POST(req: NextRequest) {
       name: name.trim(),
       email: email.trim(),
       phone: phone || null,
-      quantity,
+      quantity: qty,
       total_price: totalPrice,
       payment_status: "pending",
       notes: withGclidTag(sanitizeAdSource(body.adSource), body.gclid),
@@ -92,7 +93,8 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (bookingError) {
-    return NextResponse.json({ error: bookingError.message }, { status: 500 });
+    console.error("event booking insert error:", bookingError);
+    return NextResponse.json({ error: "Failed to create booking" }, { status: 500 });
   }
 
   // Determine payment provider
@@ -165,7 +167,8 @@ async function createStripeCheckout(booking: BookingRow, event: EventRow, instan
 
   const data = await res.json();
   if (data.error) {
-    return NextResponse.json({ error: data.error.message }, { status: 500 });
+    console.error("SumUp event checkout error:", JSON.stringify(data.error));
+    return NextResponse.json({ error: "Failed to start payment. Please try again." }, { status: 500 });
   }
 
   // Update booking with payment reference

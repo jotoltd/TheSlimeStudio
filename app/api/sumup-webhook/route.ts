@@ -3,13 +3,10 @@ import { verifySumUpPayment } from "@/lib/payment";
 import { supabaseAdmin } from "@/lib/supabase";
 import { sendCapiEvent } from "@/lib/capi";
 import {
-  sendCustomerConfirmation,
-  sendAdminNotification,
-  awardLoyaltyStamp,
-  awardReferrerReward,
-  type BookingDetails,
+  claimPendingBooking,
+  settleExistingBooking,
 } from "@/lib/create-booking";
-import { redeemRewardCode } from "@/lib/loyalty-rewards";
+import { claimShopOrder, settleShopOrder } from "@/lib/order-settlement";
 import { gclidFromNotes, uploadClickConversion } from "@/lib/google-ads";
 
 export const runtime = "nodejs";
@@ -140,40 +137,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ received: true, notPaid: true });
     }
 
-    // If booking exists but is pending, mark as paid and send notifications
+    // If booking exists but is pending, mark as paid and settle — atomically,
+    // so a racing /api/sumup-confirm-booking can't double-send emails,
+    // double-award loyalty, or double-redeem the gift card.
     if (booking) {
-      const { error } = await supabaseAdmin
-        .from("bookings")
-        .update({ payment_status: "paid" })
-        .eq("id", booking.id);
-
-      if (error) {
-        console.error("[sumup-webhook] Failed to update booking:", error);
-        return NextResponse.json({ error: "Failed to update booking" }, { status: 500 });
+      const won = await claimPendingBooking(booking.id);
+      if (!won) {
+        return NextResponse.json({ received: true, alreadyPaid: true });
       }
 
-      const details: BookingDetails = {
-        paymentRef: checkoutRef,
-        name: booking.name,
-        email: booking.email,
-        phone: booking.phone,
-        date: booking.date,
-        timeSlot: booking.time_slot,
-        people: booking.people,
-        totalPrice: booking.total_price,
-        isParty: booking.is_party,
-        discountCode: booking.discount_code,
-      };
-
-      await sendCustomerConfirmation(details).catch(() => {});
-      await sendAdminNotification(details, false).catch(() => {});
-      await awardLoyaltyStamp(booking.name, booking.email, booking.people).catch(() => {});
-      if (booking.discount_code && booking.discount_code.toUpperCase().startsWith("FREE-")) {
-        await redeemRewardCode(booking.discount_code, booking.email).catch(() => {});
-      }
-      if (booking.discount_code) {
-        await awardReferrerReward(booking.discount_code).catch(() => {});
-      }
+      await settleExistingBooking(booking, checkoutRef);
 
       const gclid = gclidFromNotes(booking.notes);
       if (gclid) {
@@ -238,6 +211,28 @@ export async function POST(req: NextRequest) {
       }
 
       return NextResponse.json({ received: true, recovered: true, giftCardId: giftCard.id });
+    }
+
+    // Shop order recovery — the success-page redirect calls
+    // /api/sumup-confirm-shop-order, but if the customer closes the tab the
+    // order would stay pending forever despite being paid.
+    const { data: shopOrder } = await supabaseAdmin
+      .from("shop_orders")
+      .select("*")
+      .eq("stripe_session_id", checkoutRef)
+      .maybeSingle();
+
+    if (shopOrder) {
+      if (shopOrder.payment_status === "paid") {
+        return NextResponse.json({ received: true, alreadyPaid: true });
+      }
+      // verifySumUpPayment was already called above and returned paid.
+      const won = await claimShopOrder(shopOrder.id);
+      if (won) {
+        await settleShopOrder(shopOrder);
+        console.warn(`[sumup-webhook] Recovered shop order ${shopOrder.order_number} for ${checkoutRef}.`);
+      }
+      return NextResponse.json({ received: true, recovered: true, orderNumber: shopOrder.order_number });
     }
 
     // Booking not found — can't create without customer details

@@ -849,164 +849,6 @@ html[data-theme="lab"] summary:focus-visible {
 
 html[data-theme="lab"] .navbar-bg { background: var(--hero-grad); }
 
-/* ==================== Comic Pop theme ==================== */
-/* html[data-theme="comic"] — bright neo-brutalist comic-book look: cream
-   paper background, thick black outlines, hard offset shadows, tilted
-   cards. Light theme (dark ink), so no bg-white remap needed. */
-html[data-theme="comic"] {
-  --c-aquamarine: 255 210 63;      /* bold yellow */
-  --c-sky-blue-light: 0 194 203;   /* comic cyan */
-  --c-bright-lavender: 155 93 229; /* comic purple */
-  --c-blush-pop: 255 111 145;
-  --c-canary-yellow: 255 210 63;
-  --c-peach: 255 93 31;            /* hot orange */
-  --c-ink: 17 17 17;               /* ink black */
-  --c-ink-soft: 96 84 64;
-  --c-cream: 255 244 214;          /* paper cream */
-  --c-body-bg: 255 244 214;
-  --c-body-text: 17 17 17;
-  --c-card: 255 255 255;
-  --c-on-accent: 17 17 17;         /* dark text on yellow/cyan accents */
-  --c-hot-pink: 255 93 31;         /* hot orange primary */
-  --c-magenta: 155 93 229;
-  --c-pink-soft: 255 210 63;
-  --c-soft-pink: 255 230 180;
-  --hero-grad: linear-gradient(135deg, #ffe98f 0%, #ffc4dc 100%);
-  --hero-overlay: linear-gradient(135deg, rgba(255, 240, 179, 0.88) 0%, rgba(255, 209, 227, 0.82) 100%);
-  --shadow-sm: 4px 4px 0 #111111;
-  --shadow-md: 6px 6px 0 #111111;
-  --shadow-lg: 8px 8px 0 #111111;
-}
-
-html[data-theme="comic"] body {
-  background-color: rgb(var(--c-body-bg));
-  color: rgb(var(--c-body-text));
-  background-image: radial-gradient(rgba(17, 17, 17, 0.05) 1.2px, transparent 1.2px);
-  background-size: 22px 22px;
-}
-
-html[data-theme="comic"] ::selection {
-  background: rgba(255, 210, 63, 0.8);
-  color: #111;
-}
-
-/* ---- Comic layout: everything outlined + offset-shadowed + tilted ---- */
-html[data-theme="comic"] .bg-white,
-html[data-theme="comic"] .bg-white\/70,
-html[data-theme="comic"] .bg-white\/60 {
-  border: 3px solid #111;
-}
-html[data-theme="comic"] .shadow-sm,
-html[data-theme="comic"] .shadow-md,
-html[data-theme="comic"] .shadow-lg {
-  border: 3px solid #111;
-  box-shadow: 6px 6px 0 #111;
-}
-html[data-theme="comic"] .hover\:shadow-lg:hover,
-html[data-theme="comic"] .hover\:-translate-y-1\.5:hover {
-  transform: translate(-2px, -2px) !important;
-  box-shadow: 9px 9px 0 #111 !important;
-}
-
-/* Sticker-tilt: alternate cards rotate slightly — instantly different feel */
-html[data-theme="comic"] .grid .reveal:nth-child(odd) { transform: rotate(-1.2deg); }
-html[data-theme="comic"] .grid .reveal:nth-child(even) { transform: rotate(1.2deg); }
-
-/* The round logo becomes a rotated sticker tile */
-html[data-theme="comic"] header .max-w-lg img {
-  border-radius: 14px;
-  border: 4px solid #111;
-  box-shadow: 7px 7px 0 #111;
-  transform: rotate(-3deg);
-}
-
-/* Section headings get a comic banner plate */
-html[data-theme="comic"] h2.font-display,
-html[data-theme="comic"] .font-display {
-  font-family: var(--font-bungee), "Avenir", "Avenir Next", var(--font-poppins), system-ui, sans-serif;
-  font-weight: 400;
-  letter-spacing: 0.02em;
-}
-html[data-theme="comic"] .section .text-center h2 {
-  display: inline-block;
-  background: #ffd23f;
-  border: 3px solid #111;
-  box-shadow: 5px 5px 0 #111;
-  padding: 8px 22px;
-  transform: rotate(-1deg);
-}
-
-/* Buttons: rectangles with a push-in offset shadow */
-html[data-theme="comic"] .btn-primary {
-  background: #ff5d1f;
-  color: #fff;
-  border: 3px solid #111;
-  border-radius: 8px;
-  text-transform: uppercase;
-  box-shadow: 5px 5px 0 #111;
-}
-html[data-theme="comic"] .btn-primary:hover {
-  background: #ff7a3d;
-  transform: translate(2px, 2px);
-  box-shadow: 2px 2px 0 #111;
-}
-html[data-theme="comic"] .btn-secondary {
-  background: #00c2cb;
-  color: #111;
-  border: 3px solid #111;
-  border-radius: 8px;
-  text-transform: uppercase;
-  box-shadow: 5px 5px 0 #111;
-}
-html[data-theme="comic"] .btn-secondary:hover {
-  background: #1ad8e0;
-  transform: translate(2px, 2px);
-  box-shadow: 2px 2px 0 #111;
-}
-html[data-theme="comic"] .btn-ghost {
-  color: #111;
-  border: 3px solid #111;
-  border-radius: 8px;
-  background: #fff;
-  box-shadow: 4px 4px 0 #111;
-}
-html[data-theme="comic"] .btn-ghost:hover {
-  background: #fff7e0;
-  transform: translate(2px, 2px);
-  box-shadow: 2px 2px 0 #111;
-}
-html[data-theme="comic"] .eyebrow {
-  color: #111;
-  background: #ffd23f;
-  border: 2px solid #111;
-  border-radius: 6px;
-  box-shadow: 3px 3px 0 #111;
-  transform: rotate(-1deg);
-}
-
-/* Book Now keeps its attention pull but as a wobble instead of a glow */
-html[data-theme="comic"] .btn-book-now { animation-name: bookNowWobble; }
-html[data-theme="comic"] .btn-book-now::before { display: none; }
-html[data-theme="comic"] .btn-book-now:hover { animation: none; transform: translate(2px, 2px) rotate(-1deg); box-shadow: 2px 2px 0 #111; }
-@keyframes bookNowWobble {
-  0%, 100% { transform: rotate(-1deg) scale(1); }
-  25% { transform: rotate(1.5deg) scale(1.04); }
-  50% { transform: rotate(-1.5deg) scale(1.04); }
-  75% { transform: rotate(1deg) scale(1); }
-}
-
-html[data-theme="comic"] a:focus-visible,
-html[data-theme="comic"] button:focus-visible,
-html[data-theme="comic"] input:focus-visible,
-html[data-theme="comic"] textarea:focus-visible,
-html[data-theme="comic"] select:focus-visible,
-html[data-theme="comic"] summary:focus-visible {
-  outline-color: #ff5d1f;
-}
-
-html[data-theme="comic"] .navbar-bg { background: #ffd23f; border-bottom: 3px solid #111; }
-html[data-theme="comic"] .cta-gradient { background: linear-gradient(135deg, #ff5d1f, #9b5de5); }
-
 /* ==================== Mono Studio theme ==================== */
 /* html[data-theme="mono"] — gallery-minimal: black & white only, zero
    rounded corners, hairline borders, split hero (logo left / copy right
@@ -1231,19 +1073,19 @@ html[data-theme="xmas"] {
 html[data-theme="xmas"] body {
   background-color: rgb(var(--c-body-bg));
   color: rgb(var(--c-body-text));
-  /* Snow speckle: two dot layers at different sizes/densities */
+  /* Warm candlelight glows — gold spilling from the top corner, a faint
+     cranberry ember low on the other side. Real falling snow lives in
+     components/XmasDecor.tsx. */
   background-image:
-    radial-gradient(rgba(255, 255, 255, 0.22) 1.1px, transparent 1.1px),
-    radial-gradient(rgba(255, 255, 255, 0.13) 1.6px, transparent 1.6px);
-  background-size: 90px 90px, 140px 140px;
-  background-position: 0 0, 45px 60px;
+    radial-gradient(1000px 520px at 85% -10%, rgba(253, 230, 138, 0.09), transparent 62%),
+    radial-gradient(900px 540px at 6% 108%, rgba(220, 38, 38, 0.1), transparent 62%);
 }
 @media (hover: hover) and (min-width: 768px) {
   html[data-theme="xmas"] body { background-attachment: fixed; }
 }
 
 html[data-theme="xmas"] ::selection {
-  background: rgba(250, 204, 21, 0.4);
+  background: rgba(253, 230, 138, 0.38);
   color: #fff;
 }
 
@@ -1273,7 +1115,7 @@ html[data-theme="xmas"] .bg-sky-blue-light.text-ink {
 html[data-theme="xmas"] .shadow-sm,
 html[data-theme="xmas"] .shadow-md,
 html[data-theme="xmas"] .shadow-lg {
-  border: 1px solid rgba(250, 204, 21, 0.18);
+  border: 1px solid rgba(253, 230, 138, 0.16);
 }
 
 /* Festive script display font */
@@ -1289,37 +1131,37 @@ html[data-theme="xmas"] h4 {
 /* Section headings get a holly divider */
 html[data-theme="xmas"] .section .text-center h2::after,
 html[data-theme="xmas"] .text-center h2.font-display::after {
-  content: "✦  ✦  ✦";
+  content: "❦  ❦  ❦";
   display: block;
-  margin: 10px auto 0;
-  font-size: 0.85rem;
-  letter-spacing: 0.5em;
-  color: #facc15;
+  margin: 12px auto 0;
+  font-size: 0.8rem;
+  letter-spacing: 0.55em;
+  color: #fde68a;
 }
 
 /* Logo tile gets a gold frame */
 html[data-theme="xmas"] header .max-w-lg img {
-  border: 3px solid rgba(250, 204, 21, 0.55);
-  box-shadow: 0 10px 40px rgba(250, 204, 21, 0.15);
+  border: 3px solid rgba(253, 230, 138, 0.5);
+  box-shadow: 0 10px 40px rgba(253, 230, 138, 0.14);
 }
 
 /* Buttons */
 html[data-theme="xmas"] .btn-primary {
-  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  background: linear-gradient(135deg, #dc2626, #991b1b);
   color: #fff;
-  box-shadow: 0 8px 24px rgba(220, 38, 38, 0.4);
+  box-shadow: 0 8px 24px rgba(220, 38, 38, 0.38);
 }
 html[data-theme="xmas"] .btn-primary:hover {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
-  box-shadow: 0 14px 36px rgba(220, 38, 38, 0.55);
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  box-shadow: 0 14px 36px rgba(220, 38, 38, 0.52);
 }
 html[data-theme="xmas"] .btn-secondary {
-  background: linear-gradient(135deg, #16a34a, #15803d);
-  box-shadow: 0 8px 24px rgba(22, 163, 74, 0.35);
+  background: linear-gradient(135deg, #16a34a, #14532d);
+  box-shadow: 0 8px 24px rgba(22, 163, 74, 0.34);
 }
 html[data-theme="xmas"] .btn-secondary:hover {
-  background: linear-gradient(135deg, #22c55e, #16a34a);
-  box-shadow: 0 14px 36px rgba(22, 163, 74, 0.5);
+  background: linear-gradient(135deg, #22c55e, #166534);
+  box-shadow: 0 14px 36px rgba(22, 163, 74, 0.48);
 }
 html[data-theme="xmas"] .btn-ghost {
   color: rgb(var(--c-body-text));
@@ -1330,8 +1172,8 @@ html[data-theme="xmas"] .btn-ghost:hover {
   border-color: rgba(245, 240, 230, 0.5);
 }
 html[data-theme="xmas"] .eyebrow {
-  color: #facc15;
-  background: rgba(250, 204, 21, 0.12);
+  color: #fde68a;
+  background: rgba(253, 230, 138, 0.12);
 }
 
 /* Book Now → cranberry-gold pulse */
@@ -1372,6 +1214,64 @@ html[data-theme="xmas"] summary:focus-visible {
 html[data-theme="xmas"] .navbar-bg {
   background: var(--hero-grad);
   border-bottom: 3px solid;
-  border-image: repeating-linear-gradient(90deg, #dc2626 0 24px, #f5f0e6 24px 48px) 3;
+  border-image: repeating-linear-gradient(90deg, #d92b3a 0 22px, #fdf3dd 22px 44px) 3;
 }
 html[data-theme="xmas"] .cta-gradient { background: linear-gradient(135deg, #b91c1c, #166534); }
+
+/* ==================== Christmas ambient decorations ==================== */
+/* See components/XmasDecor.tsx — falling snow, twinkling stars, snowdrift.
+   Same fixed overlay pattern as .halloween-decor: pointer-events none,
+   below the navbar (z-1000). */
+.xmas-decor {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  overflow: hidden;
+}
+.xmas-decor > * {
+  position: absolute;
+  line-height: 1;
+}
+
+@keyframes xmas-snow-fall {
+  0%   { transform: translate3d(0, -10vh, 0) rotate(0deg); opacity: 0; }
+  10%  { opacity: var(--flake-o, 0.7); }
+  30%  { transform: translate3d(var(--sway), 30vh, 0) rotate(140deg); }
+  55%  { transform: translate3d(calc(var(--sway) * -0.55), 60vh, 0) rotate(260deg); }
+  80%  { transform: translate3d(calc(var(--sway) * 0.7), 90vh, 0) rotate(340deg); }
+  95%  { opacity: var(--flake-o, 0.7); }
+  100% { transform: translate3d(0, 112vh, 0) rotate(400deg); opacity: 0; }
+}
+.xmas-snow {
+  animation: xmas-snow-fall var(--dur, 14s) linear var(--delay, 0s) infinite;
+  will-change: transform;
+}
+
+@keyframes xmas-twinkle {
+  0%, 100% { opacity: 0.12; transform: scale(0.6) rotate(0deg); }
+  50%      { opacity: 0.9;  transform: scale(1.15) rotate(25deg); }
+}
+.xmas-twinkle {
+  animation: xmas-twinkle var(--dur, 4s) ease-in-out var(--delay, 0s) infinite;
+  color: #fde68a;
+  text-shadow: 0 0 8px rgba(253, 230, 138, 0.6);
+}
+
+.xmas-drift {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 34vh;
+  background: linear-gradient(to top, rgba(224, 242, 254, 0.08), transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Without the fall animation every flake would pile up at the top edge —
+     hide them and leave the static twinkles + drift as the decoration. */
+  .xmas-snow { display: none; }
+  .xmas-twinkle {
+    animation: none;
+    opacity: 0.45;
+  }
+}

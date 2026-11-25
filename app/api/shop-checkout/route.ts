@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getStripeAsync } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase";
 import { sanitizeGclid } from "@/lib/google-ads";
+import { rateLimited, clientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -9,6 +10,10 @@ const DELIVERY_FEE = 3.95;
 const FREE_DELIVERY_THRESHOLD = 30;
 
 export async function POST(req: NextRequest) {
+  if (rateLimited(`shop-checkout:${clientIp(req)}`, 20, 15 * 60 * 1000)) {
+    return NextResponse.json({ error: "Too many attempts. Please try again later." }, { status: 429 });
+  }
+
   const body = await req.json();
   const {
     items,
@@ -77,16 +82,28 @@ export async function POST(req: NextRequest) {
   }[] = [];
 
   let subtotal = 0;
+  const verifiedItems: { product_id: string; name: string; price: number; quantity: number; image_url: string | null }[] = [];
   for (const item of items) {
     const product = products.find((p) => p.id === item.product_id);
     if (!product) {
       return NextResponse.json({ error: `Product not found: ${item.name}` }, { status: 400 });
     }
-    if ((product.stock || 0) < item.quantity) {
+    const qty = Math.floor(Number(item.quantity));
+    if (!Number.isFinite(qty) || qty < 1 || qty > 100) {
+      return NextResponse.json({ error: `Invalid quantity for ${product.name}` }, { status: 400 });
+    }
+    if ((product.stock || 0) < qty) {
       return NextResponse.json({ error: `Not enough stock for ${product.name}` }, { status: 400 });
     }
     const unitPrice = Math.round(product.price * 100);
-    subtotal += product.price * item.quantity;
+    subtotal += product.price * qty;
+    verifiedItems.push({
+      product_id: product.id,
+      name: product.name,
+      price: Number(product.price),
+      quantity: qty,
+      image_url: item.image_url || null,
+    });
     lineItems.push({
       price_data: {
         currency: "gbp",
@@ -96,7 +113,7 @@ export async function POST(req: NextRequest) {
         },
         unit_amount: unitPrice,
       },
-      quantity: item.quantity,
+      quantity: qty,
     });
   }
 
@@ -121,7 +138,6 @@ export async function POST(req: NextRequest) {
 
   // Apply discount if code provided
   let discountAmount = 0;
-  let finalTotal = total;
   if (discountCode) {
     const { data: discount } = await supabaseAdmin
       .from("discount_codes")
@@ -129,19 +145,35 @@ export async function POST(req: NextRequest) {
       .eq("code", discountCode.trim().toUpperCase())
       .maybeSingle();
     if (discount && discount.active && (!discount.expires_at || new Date(discount.expires_at) > new Date()) && (discount.max_uses === null || discount.used_count < discount.max_uses)) {
-      if (discount.scope === "both" || discount.scope === "shop") {
-        if (discount.min_spend === 0 || subtotal >= Number(discount.min_spend)) {
-          if (discount.discount_type === "percentage") {
-            discountAmount = (subtotal * Number(discount.value)) / 100;
-          } else {
-            discountAmount = Number(discount.value);
-          }
-          discountAmount = Math.min(discountAmount, subtotal);
-          finalTotal = Math.max(0, total - discountAmount);
-        }
+      if ((discount.scope === "both" || discount.scope === "shop") && (discount.min_spend === 0 || subtotal >= Number(discount.min_spend))) {
+        discountAmount = discount.discount_type === "percentage"
+          ? (subtotal * Number(discount.value)) / 100
+          : Number(discount.value);
+        discountAmount = Math.min(discountAmount, subtotal);
       }
     }
   }
+
+  // Gift card: validate server-side and compute how much of the (discounted)
+  // order it covers. The customer is only charged the remainder — previously
+  // the card was redeemed post-payment while the full price was still charged.
+  const afterDiscountTotal = Math.max(0, total - discountAmount);
+  let giftCardCover = 0;
+  let giftCardValid = false;
+  if (giftCardCode) {
+    const { data: card } = await supabaseAdmin
+      .from("gift_cards")
+      .select("balance, status, expiry_date")
+      .eq("code", giftCardCode.trim().toUpperCase())
+      .maybeSingle();
+    const expired = card?.expiry_date && new Date(card.expiry_date) < new Date();
+    if (card && card.status === "active" && !expired && card.balance > 0) {
+      giftCardCover = Math.min(Number(card.balance), afterDiscountTotal);
+      giftCardValid = true;
+    }
+  }
+
+  const chargeTotal = Math.max(0, afterDiscountTotal - giftCardCover);
 
   // Generate order number
   const orderNumber = `SLM-${Date.now().toString(36).toUpperCase()}`;
@@ -155,10 +187,25 @@ export async function POST(req: NextRequest) {
   const origin = req.nextUrl.origin;
 
   try {
+    // Stripe Checkout can't express "discount + gift card" natively, so apply
+    // their combined value as a one-time amount-off coupon — the charge then
+    // equals exactly what the customer saw at checkout.
+    const discountPence = Math.round((discountAmount + giftCardCover) * 100);
+    let couponId: string | undefined;
+    if (discountPence > 0) {
+      const coupon = await stripe.coupons.create({
+        id: `slm-${orderNumber}`.toLowerCase(),
+        amount_off: discountPence,
+        currency: "gbp",
+        duration: "once",
+      });
+      couponId = coupon.id;
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items: lineItems,
-      discounts: discountAmount > 0 ? [{ coupon: undefined }] : undefined,
+      discounts: couponId ? [{ coupon: couponId }] : undefined,
       success_url: `${origin}/shop/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/shop/checkout?cancelled=true`,
       customer_email: customerEmail,
@@ -177,14 +224,17 @@ export async function POST(req: NextRequest) {
         shipping_postcode: shippingPostcode || "",
         notes: notes || "",
         gclid: sanitizeGclid(body.gclid) || "",
-        discount_code: discountCode || "",
+        discount_code: discountAmount > 0 ? (discountCode || "") : "",
         discount_amount: String(discountAmount.toFixed(2)),
-        gift_card_code: giftCardCode || "",
+        gift_card_code: giftCardValid ? (giftCardCode || "") : "",
+        gift_card_cover: String(giftCardCover.toFixed(2)),
       },
     });
 
-    // Create order in database with pending status
-    await supabaseAdmin.from("shop_orders").insert({
+    // Create order in database with pending status. gift_card_cover needs the
+    // 20261101000003 migration — if it hasn't been applied yet, retry without
+    // it (the cover still travels in Stripe metadata for the webhook).
+    const orderRow = {
       order_number: orderNumber,
       customer_name: customerName,
       customer_email: customerEmail,
@@ -193,22 +243,29 @@ export async function POST(req: NextRequest) {
       shipping_address: shippingAddress || null,
       shipping_city: shippingCity || null,
       shipping_postcode: shippingPostcode || null,
-      items: items.map((i) => ({
-        product_id: i.product_id,
-        name: i.name,
-        price: i.price,
-        quantity: i.quantity,
-        image_url: i.image_url,
-      })),
+      items: verifiedItems,
       subtotal,
       shipping_cost: shippingCost,
-      total: finalTotal,
+      // total = amount actually charged (after discount + gift card cover)
+      total: chargeTotal,
       payment_status: "pending",
       stripe_session_id: session.id,
       notes: notes || null,
-      discount_code: discountCode || null,
+      discount_code: discountAmount > 0 ? (discountCode || null) : null,
       discount_amount: discountAmount,
-    });
+      gift_card_code: giftCardValid ? (giftCardCode || null) : null,
+      gift_card_cover: giftCardCover,
+    };
+    let { error: orderError } = await supabaseAdmin.from("shop_orders").insert(orderRow);
+    if (orderError) {
+      const withoutCover = { ...orderRow } as Record<string, unknown>;
+      delete withoutCover.gift_card_cover;
+      const retry = await supabaseAdmin.from("shop_orders").insert(withoutCover);
+      orderError = retry.error;
+    }
+    if (orderError) {
+      console.error("Failed to store shop order:", orderError);
+    }
 
     return NextResponse.json({ url: session.url });
   } catch (err) {

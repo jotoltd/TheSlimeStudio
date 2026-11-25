@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripeAsync, getStripeModeAsync, getStripeKeysForMode } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase";
-import { sendOrderConfirmationEmail } from "@/lib/email";
-import { createPaidBooking, awardReferrerReward } from "@/lib/create-booking";
-import { redeemGiftCard, activateGiftCard } from "@/lib/gift-cards";
+import { createPaidBooking } from "@/lib/create-booking";
+import { claimShopOrder, settleShopOrder } from "@/lib/order-settlement";
+import { activateGiftCard } from "@/lib/gift-cards";
 import { sendCapiEvent } from "@/lib/capi";
 import { gclidFromNotes, uploadClickConversion, sanitizeGclid } from "@/lib/google-ads";
 
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
       case "checkout.session.completed": {
         const session = event.data.object as {
           id: string;
-          metadata?: { bookingId?: string; subscriberId?: string; type?: string; order_number?: string; gift_card_code?: string; booking_type?: string; event_booking_id?: string; adSource?: string; gclid?: string; price?: string; fbp?: string; fbc?: string; cip?: string; cua?: string };
+          metadata?: { bookingId?: string; subscriberId?: string; type?: string; order_number?: string; gift_card_code?: string; gift_card_cover?: string; booking_type?: string; event_booking_id?: string; adSource?: string; gclid?: string; price?: string; fbp?: string; fbc?: string; cip?: string; cua?: string };
           payment_status: string;
         };
 
@@ -158,69 +158,30 @@ export async function POST(req: NextRequest) {
             .single();
 
           if (order) {
-            await supabaseAdmin
-              .from("shop_orders")
-              .update({ payment_status: "paid" })
-              .eq("id", order.id);
-
-            // Decrement stock
-            for (const item of order.items) {
-              const { data: product } = await supabaseAdmin
-                .from("products")
-                .select("stock")
-                .eq("id", item.product_id)
-                .single();
-              if (product) {
-                const newStock = Math.max(0, (product.stock || 0) - item.quantity);
-                await supabaseAdmin
-                  .from("products")
-                  .update({ stock: newStock })
-                  .eq("id", item.product_id);
-              }
-            }
+            // Atomic claim — Stripe retries webhooks, and without this guard a
+            // redelivery would double-decrement stock, double-send email, and
+            // double-redeem the gift card.
+            const won = await claimShopOrder(order.id);
+            if (!won) break;
 
             // Google Ads offline conversion — gclid travels via session
             // metadata; orderId matches the browser tag's transaction_id.
             const orderGclid = sanitizeGclid(session.metadata?.gclid);
-            if (orderGclid) {
-              await uploadClickConversion({ gclid: orderGclid, value: order.total, orderId: order.id }).catch(() => {});
-            }
 
-            // Referral codes reward the referrer on a confirmed order
-            if (order.discount_code) {
-              await awardReferrerReward(order.discount_code).catch(() => {});
-            }
-
-            // Redeem gift card if provided
-            if (session.metadata?.gift_card_code) {
-              try {
-                const { data: giftCard } = await supabaseAdmin
-                  .from("gift_cards")
-                  .select("balance")
-                  .eq("code", session.metadata.gift_card_code.trim().toUpperCase())
-                  .single();
-
-                if (giftCard && giftCard.balance > 0) {
-                  const redeemAmount = Math.min(giftCard.balance, order.total);
-                  const red = await redeemGiftCard(session.metadata.gift_card_code, redeemAmount, { shopOrderId: order.id });
-                  if (!red.success) console.error("Gift card redeem failed:", red.error);
-                }
-              } catch (e) {
-                console.error("Failed to redeem gift card in webhook:", e);
-              }
-            }
-
-            // Send confirmation email
-            await sendOrderConfirmationEmail({
-              orderNumber: order.order_number,
-              name: order.customer_name,
-              email: order.customer_email,
-              items: order.items,
-              subtotal: order.subtotal,
-              shippingCost: order.shipping_cost,
-              total: order.total,
-              shippingMethod: order.shipping_method,
-            });
+            await settleShopOrder(
+              {
+                ...order,
+                // The gift-card cover lives in session metadata for Stripe
+                // orders (shop_orders.gift_card_cover is written by the SumUp
+                // path); prefer the column when present.
+                gift_card_cover:
+                  Number(order.gift_card_cover) > 0
+                    ? Number(order.gift_card_cover)
+                    : Number(session.metadata?.gift_card_cover) || 0,
+                gift_card_code: order.gift_card_code || session.metadata?.gift_card_code || null,
+              },
+              { gclid: orderGclid || undefined },
+            );
           }
         }
         break;
@@ -293,6 +254,8 @@ export async function POST(req: NextRequest) {
             cip?: string;
             cua?: string;
             gift_card_code?: string;
+            giftCardCode?: string;
+            giftCardAmount?: string;
           };
         };
 
@@ -337,6 +300,8 @@ export async function POST(req: NextRequest) {
             totalPrice: md.totalPrice ? parseFloat(md.totalPrice) : intent.amount / 100,
             isParty: md.type === "party",
             discountCode: md.discountCode || null,
+            giftCardCode: md.giftCardCode || null,
+            giftCardAmount: Number(md.giftCardAmount) || 0,
             adSource: md.adSource || null,
             gclid: md.gclid || null,
             deviceToken: md.deviceToken || null,

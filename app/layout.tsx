@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import { unstable_cache } from "next/cache";
-import { Poppins, Creepster, Titan_One, Bungee, Mountains_of_Christmas } from "next/font/google";
+import { Poppins, Creepster, Titan_One, Mountains_of_Christmas } from "next/font/google";
 import "./globals.css";
 import { supabaseAdmin, type SiteTheme } from "@/lib/supabase";
 import MaintenanceGate from "@/components/MaintenanceGate";
@@ -63,14 +63,6 @@ const titanOne = Titan_One({
   display: "swap",
 });
 
-// Display font used by the Comic Pop theme (html[data-theme="comic"]).
-const bungee = Bungee({
-  weight: "400",
-  subsets: ["latin"],
-  variable: "--font-bungee",
-  display: "swap",
-});
-
 // Display font used by the Christmas theme (html[data-theme="xmas"]).
 const xmas = Mountains_of_Christmas({
   weight: "400",
@@ -79,7 +71,7 @@ const xmas = Mountains_of_Christmas({
   display: "swap",
 });
 
-const SEASONAL_THEMES: SiteTheme[] = ["halloween", "lab", "comic", "mono", "xmas"];
+const SEASONAL_THEMES: SiteTheme[] = ["halloween", "lab", "mono", "xmas"];
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -156,7 +148,7 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className={`${poppins.variable} ${creepster.variable} ${titanOne.variable} ${bungee.variable} ${xmas.variable}`}
+      className={`${poppins.variable} ${creepster.variable} ${titanOne.variable} ${xmas.variable}`}
       data-theme={siteTheme === "default" ? undefined : siteTheme}
       suppressHydrationWarning
     >
@@ -171,7 +163,7 @@ export default async function RootLayout({
             maintenance-mode decision. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var KN=["halloween","lab","comic","mono","xmas"];var p=location.pathname;if(/^\\/(admin|api|dashboard)/.test(p)){delete document.documentElement.dataset.theme}else{var t=localStorage.getItem("siteTheme"),e=localStorage.getItem("siteThemeEnd");if(KN.indexOf(t)>-1||t==="default"){if(t!=="default"&&e&&new Date(e).getTime()<Date.now())t="default";document.documentElement.dataset.theme=t}window.__siteSettings=fetch(${JSON.stringify(process.env.NEXT_PUBLIC_SUPABASE_URL || "")}+"/rest/v1/site_settings?select=maintenance_mode,theme,theme_end_date,theme_ab_enabled,theme_ab_variants,launch_date&id=eq.1",{headers:{apikey:${JSON.stringify(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "")},authorization:"Bearer "+${JSON.stringify(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "")}}}).then(function(r){return r.json()}).then(function(rows){var s=rows&&rows[0];var exp=s&&s.theme_end_date&&new Date(s.theme_end_date).getTime()<Date.now();var preview=new URLSearchParams(location.search).get("theme");if(!preview){var vs=s&&s.theme_ab_enabled&&s.theme_ab_variants?s.theme_ab_variants.filter(function(x){return KN.indexOf(x)>-1||x==="default"}):[];if(vs.length>=2){var abT=null;try{var o=JSON.parse(localStorage.getItem("siteThemeAB")||"null");if(o&&o.t&&o.v&&vs.indexOf(o.t)>-1&&o.v.length===vs.length&&vs.every(function(x){return o.v.indexOf(x)>-1}))abT=o.t}catch(e){}if(!abT){abT=vs[Math.floor(Math.random()*vs.length)];try{localStorage.setItem("siteThemeAB",JSON.stringify({v:vs,t:abT}))}catch(e){}}try{localStorage.setItem("siteTheme",abT)}catch(e){}document.documentElement.dataset.theme=abT}else{try{localStorage.removeItem("siteThemeAB")}catch(e){}if(s&&KN.indexOf(s.theme)>-1&&!exp){document.documentElement.dataset.theme=s.theme}else if(KN.indexOf(document.documentElement.dataset.theme)>-1){delete document.documentElement.dataset.theme}}}return s||null}).catch(function(){return null})}}catch(e){}`,
+            __html: `try{var KN=["halloween","lab","mono","xmas"];var p=location.pathname;if(/^\\/(admin|api|dashboard)/.test(p)){delete document.documentElement.dataset.theme}else{var t=localStorage.getItem("siteTheme"),e=localStorage.getItem("siteThemeEnd");if(KN.indexOf(t)>-1||t==="default"){if(t!=="default"&&e&&new Date(e).getTime()<Date.now())t="default";document.documentElement.dataset.theme=t}window.__siteSettings=fetch(${JSON.stringify(process.env.NEXT_PUBLIC_SUPABASE_URL || "")}+"/rest/v1/site_settings?select=maintenance_mode,theme,theme_end_date,launch_date&id=eq.1",{headers:{apikey:${JSON.stringify(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "")},authorization:"Bearer "+${JSON.stringify(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "")}}}).then(function(r){return r.json()}).then(function(rows){var s=rows&&rows[0];var exp=s&&s.theme_end_date&&new Date(s.theme_end_date).getTime()<Date.now();var preview=new URLSearchParams(location.search).get("theme");if(!preview){try{localStorage.removeItem("siteThemeAB")}catch(e){}if(s&&KN.indexOf(s.theme)>-1&&!exp){document.documentElement.dataset.theme=s.theme}else if(KN.indexOf(document.documentElement.dataset.theme)>-1){delete document.documentElement.dataset.theme}}return s||null}).catch(function(){return null})}}catch(e){}`,
           }}
         />
 

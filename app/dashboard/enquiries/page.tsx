@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase, type Enquiry } from "@/lib/supabase";
+import { type Enquiry } from "@/lib/supabase";
 import Pagination from "@/components/Pagination";
 
 const PAGE_SIZE = 24;
@@ -18,8 +18,9 @@ export default function EnquiriesAdminPage() {
 
   async function loadEnquiries() {
     setLoading(true);
-    const { data } = await supabase.from("enquiries").select("*").order("created_at", { ascending: false });
-    if (data) setEnquiries(data as Enquiry[]);
+    const res = await fetch("/api/admin/enquiries");
+    const data = await res.json();
+    if (data.enquiries) setEnquiries(data.enquiries as Enquiry[]);
     setLoading(false);
   }
 

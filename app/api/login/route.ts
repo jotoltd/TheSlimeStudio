@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase, type Admin } from "@/lib/supabase";
+import { supabaseAdmin, type Admin } from "@/lib/supabase";
 import { verifyPassword, createToken } from "@/lib/auth";
 
 export const runtime = "nodejs";
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("admins")
     .select("*")
     .eq("username", username.trim().toLowerCase())

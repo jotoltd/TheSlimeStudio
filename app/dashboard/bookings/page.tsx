@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { supabase, type Booking, type BookingSettings, paymentMethodFor, isSlotPlaceholder, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, MAX_DAILY_BOOKINGS as DEFAULT_MAX } from "@/lib/supabase";
+import { type Booking, type BookingSettings, paymentMethodFor, isSlotPlaceholder, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, MAX_DAILY_BOOKINGS as DEFAULT_MAX } from "@/lib/supabase";
 import PageHeader from "@/components/PageHeader";
 import PaymentMethodBadge from "@/components/PaymentMethodBadge";
 import Pagination from "@/components/Pagination";
@@ -125,12 +125,14 @@ export default function BookingsAdminPage() {
   const [editNotify, setEditNotify] = useState(true);
   const [savingEdit, setSavingEdit] = useState(false);
   const [editMsg, setEditMsg] = useState("");
+  const [editCustomTime, setEditCustomTime] = useState(false);
   const [showAddBooking, setShowAddBooking] = useState(false);
   const [addForm, setAddForm] = useState({ date: todayISO(), time_slot: "", people: "1", name: "", email: "", phone: "", notes: "", is_party: false, total_price: "0", duration: 1 as 1 | 2 });
   const [savingAdd, setSavingAdd] = useState(false);
   const [addMsg, setAddMsg] = useState("");
   const [addSlotAvailability, setAddSlotAvailability] = useState<Record<string, number>>({});
   const [addDailyUsed, setAddDailyUsed] = useState(0);
+  const [addCustomTime, setAddCustomTime] = useState(false);
   const [calMonth, setCalMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [eventBookingsByDate, setEventBookingsByDate] = useState<Record<string, EventBooking[]>>({});
@@ -156,39 +158,43 @@ export default function BookingsAdminPage() {
 
   const loadBookings = useCallback(async () => {
     setLoading(true);
-    const todayStr = new Date().toISOString().split("T")[0];
-    let query = supabase.from("bookings").select("*");
-    if (filter === "upcoming") query = query.gte("date", todayStr);
-    if (filter === "past") query = query.lt("date", todayStr);
-    const { data } = await query.order("date", { ascending: filter !== "past" }).order("time_slot", { ascending: true });
-    if (data) setBookings(data as Booking[]);
+    try {
+      const res = await fetch("/api/admin/bookings");
+      const data = await res.json();
+      const all = (data.bookings || []) as Booking[];
+      const todayStr = todayISO();
+      const filtered = filter === "upcoming" ? all.filter((b) => b.date >= todayStr)
+        : filter === "past" ? all.filter((b) => b.date < todayStr) : all;
+      filtered.sort((a, b) => (filter === "past"
+        ? b.date.localeCompare(a.date) || a.time_slot.localeCompare(b.time_slot)
+        : a.date.localeCompare(b.date) || a.time_slot.localeCompare(b.time_slot)));
+      setBookings(filtered);
+    } catch {
+      // leave existing state on failure
+    }
     setLoading(false);
   }, [filter]);
 
   const loadEventData = useCallback(async (start: string, end: string) => {
-    // Fetch event instances for this month
-    const { data: instances } = await supabase
-      .from("special_event_instances")
-      .select("*, event:special_events(id, title, slug, category, price, pricing_model, duration_minutes)")
-      .gte("date", start)
-      .lte("date", end)
-      .order("date", { ascending: true });
+    const [eventsRes, ebRes] = await Promise.all([
+      fetch("/api/admin/events?past=true"),
+      fetch("/api/admin/event-bookings"),
+    ]);
 
+    // Event instances for this month
+    const { events } = await eventsRes.json();
     const instMap: Record<string, EventInstance[]> = {};
-    ((instances || []) as EventInstance[]).forEach((inst) => {
-      if (!instMap[inst.date]) instMap[inst.date] = [];
-      instMap[inst.date].push(inst);
-    });
+    ((events || []) as { instances?: EventInstance[] }[])
+      .flatMap((e) => e.instances || [])
+      .filter((inst) => inst.date >= start && inst.date <= end)
+      .forEach((inst) => {
+        if (!instMap[inst.date]) instMap[inst.date] = [];
+        instMap[inst.date].push(inst);
+      });
     setEventInstancesByDate(instMap);
 
-    // Fetch event bookings for this month
-    const { data: evtBookings } = await supabase
-      .from("special_event_bookings")
-      .select("*, event:special_events(title, slug, category), instance:special_event_instances(date, start_time)")
-      // Filter by the event date below, not created_at: future event bookings are
-      // often created months before the event takes place.
-      .order("created_at", { ascending: false });
-
+    // Event bookings — filtered by event date below, not created_at
+    const { bookings: evtBookings } = await ebRes.json();
     const ebMap: Record<string, EventBooking[]> = {};
     ((evtBookings || []) as (EventBooking & { instance?: { date?: string } | null })[]).forEach((eb) => {
       const date = eb.instance?.date || eb.created_at?.split("T")[0];
@@ -252,14 +258,19 @@ export default function BookingsAdminPage() {
   }, [bookings]);
 
   useEffect(() => {
-    supabase.from("booking_settings").select("*").eq("id", 1).single().then(({ data }) => {
-      if (data) {
-        const s = data as BookingSettings;
-        if (s.time_slots && s.time_slots.length > 0) { setTimeSlots(s.time_slots); }
-        if (s.slot_capacity) setSlotCapacity(s.slot_capacity);
-        if (s.max_daily_bookings) setMaxDaily(s.max_daily_bookings);
-      }
-    });
+    fetch("/api/admin/settings?table=booking_settings")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => {
+        const rows = json?.rows || [];
+        const data = rows.find((r: { id: number }) => r.id === 1) || rows[0];
+        if (data) {
+          const s = data as BookingSettings;
+          if (s.time_slots && s.time_slots.length > 0) { setTimeSlots(s.time_slots); }
+          if (s.slot_capacity) setSlotCapacity(s.slot_capacity);
+          if (s.max_daily_bookings) setMaxDaily(s.max_daily_bookings);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   async function cancelBooking(id: string, name: string, paymentStatus?: string, paymentRef?: string) {
@@ -328,15 +339,18 @@ export default function BookingsAdminPage() {
   function startEdit(b: Booking) {
     setEditingBooking(b);
     setEditForm({ date: b.date, time_slot: b.time_slot, people: String(b.people), name: b.name, email: b.email, phone: b.phone || "", notes: b.notes || "" });
+    setEditCustomTime(!timeSlots.includes(b.time_slot));
     setEditNotify(true);
     setEditMsg("");
   }
 
   async function loadEditAvailability(forDate: string, excludeId: string) {
-    const { data } = await supabase.from("bookings").select("id, time_slot, people, is_party, stripe_session_id, notes").eq("date", forDate).eq("payment_status", "paid");
+    const res = await fetch(`/api/admin/bookings?date=${forDate}`);
+    const { bookings: rows } = await res.json();
     const used: Record<string, number> = {};
     let dailyTotal = 0;
-    (data || []).forEach((b: { id: string; time_slot: string; people: number; is_party: boolean; stripe_session_id?: string; notes?: string }) => {
+    (rows || []).forEach((b: Booking) => {
+      if (b.payment_status !== "paid") return;
       if (b.id === excludeId) return;
       used[b.time_slot] = (used[b.time_slot] || 0) + b.people;
       // Daily usage mirrors the checkout rule: parties and auto-blocked second
@@ -376,21 +390,33 @@ export default function BookingsAdminPage() {
         return;
       }
     }
-    const { error } = await supabase.from("bookings").update({
-      date: editForm.date, time_slot: editForm.time_slot, people: parseInt(editForm.people) || 1,
-      name: editForm.name, email: editForm.email, phone: editForm.phone || null,
-      notes: editForm.notes || null,
-    }).eq("id", editingBooking.id);
+    const res = await fetch("/api/admin/bookings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: editingBooking.id,
+        date: editForm.date,
+        time_slot: editForm.time_slot,
+        people: parseInt(editForm.people) || 1,
+        name: editForm.name,
+        email: editForm.email,
+        phone: editForm.phone || null,
+        notes: editForm.notes || null,
+      }),
+    });
+    const data = await res.json();
     setSavingEdit(false);
-    if (error) { setEditMsg("Failed to save: " + error.message); }
+    if (!res.ok) { setEditMsg("Failed to save: " + (data.error || "Unknown error")); }
     else { setEditMsg("Booking updated successfully!"); setEditingBooking(null); loadBookings(); }
   }
 
   async function loadAddAvailability(forDate: string) {
-    const { data } = await supabase.from("bookings").select("time_slot, people, is_party, stripe_session_id, notes").eq("date", forDate).eq("payment_status", "paid");
+    const res = await fetch(`/api/admin/bookings?date=${forDate}`);
+    const { bookings: rows } = await res.json();
     const used: Record<string, number> = {};
     let dailyTotal = 0;
-    (data || []).forEach((b: { time_slot: string; people: number; is_party: boolean; stripe_session_id?: string; notes?: string }) => {
+    (rows || []).forEach((b: Booking) => {
+      if (b.payment_status !== "paid") return;
       used[b.time_slot] = (used[b.time_slot] || 0) + b.people;
       if (!b.is_party && !isSlotPlaceholder(b)) dailyTotal += b.people;
     });
@@ -450,14 +476,18 @@ export default function BookingsAdminPage() {
   async function searchCustomers() {
     const q = customerQuery.toLowerCase().trim();
     if (!q) { setCustomerResults([]); return; }
-    const { data } = await supabase
-      .from("bookings")
-      .select("*")
-      .neq("payment_status", "refunded")
-      .or(`name.ilike.%${q}%,email.ilike.%${q}%,phone.ilike.%${q}%`)
-      .order("date", { ascending: false })
-      .limit(50);
-    if (data) setCustomerResults(data as Booking[]);
+    try {
+      const res = await fetch("/api/admin/bookings");
+      const { bookings: all } = await res.json();
+      const results = ((all || []) as Booking[])
+        .filter((b) => b.payment_status !== "refunded"
+          && (b.name.toLowerCase().includes(q) || b.email.toLowerCase().includes(q) || (b.phone || "").toLowerCase().includes(q)))
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .slice(0, 50);
+      setCustomerResults(results);
+    } catch {
+      setCustomerResults([]);
+    }
   }
 
   async function saveAddBooking() {
@@ -480,6 +510,7 @@ export default function BookingsAdminPage() {
       } else {
         setAddMsg("");
         setShowAddBooking(false);
+        setAddCustomTime(false);
         setAddForm({ date: todayISO(), time_slot: "", people: "1", name: "", email: "", phone: "", notes: "", is_party: false, total_price: "0", duration: 1 });
         loadBookings();
       }
@@ -510,7 +541,7 @@ export default function BookingsAdminPage() {
     return true;
   });
 
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = todayISO();
   const todaysBookings = bookings.filter((b) => b.date === todayStr && b.payment_status !== "refunded").sort((a, b) => a.time_slot.localeCompare(b.time_slot));
   const todaysPeople = todaysBookings.filter((b) => !isSlotPlaceholder(b)).reduce((s, b) => s + b.people, 0);
 
@@ -545,7 +576,7 @@ export default function BookingsAdminPage() {
         subtitle="Manage all slime-making session bookings."
         actions={
           <div className="flex gap-2 flex-wrap items-center">
-            <button onClick={() => setShowAddBooking(true)} className="px-3 md:px-4 py-2 rounded-full text-[0.8rem] md:text-[0.85rem] font-medium bg-bright-lavender text-white hover:opacity-90 transition-all">+ Add Booking</button>
+            <button onClick={() => { setAddCustomTime(false); setShowAddBooking(true); }} className="px-3 md:px-4 py-2 rounded-full text-[0.8rem] md:text-[0.85rem] font-medium bg-bright-lavender text-white hover:opacity-90 transition-all">+ Add Booking</button>
             <button onClick={() => setShowCustomerLookup(true)} className="px-3 md:px-4 py-2 rounded-full text-[0.8rem] md:text-[0.85rem] font-medium bg-white text-ink hover:bg-sky-blue-light/20 transition-all">Customer Lookup</button>
             <a href="/api/export-ical" className="px-3 md:px-4 py-2 rounded-full text-[0.8rem] md:text-[0.85rem] font-medium bg-white text-ink hover:bg-sky-blue-light/20 transition-all">iCal Export</a>
             <button onClick={() => { setBulkMode(!bulkMode); setSelectedBookings(new Set()); }} className={`px-3 md:px-4 py-2 rounded-full text-[0.8rem] md:text-[0.85rem] font-medium transition-all ${bulkMode ? "bg-ink text-white" : "bg-white text-ink hover:bg-sky-blue-light/20"}`}>{bulkMode ? "Exit Bulk" : "Bulk Select"}</button>
@@ -723,7 +754,7 @@ export default function BookingsAdminPage() {
                 const hasBookings = dayBookings.length > 0;
                 const hasEvents = dayEvents.length > 0;
                 const isSelected = selectedDate === dateStr;
-                const isToday = dateStr === new Date().toISOString().split("T")[0];
+                const isToday = dateStr === todayISO();
                 return (
                   <button key={day} onClick={() => setSelectedDate(isSelected ? null : dateStr)}
                     className={`min-h-[70px] md:min-h-[100px] rounded-lg md:rounded-xl p-1 md:p-1.5 text-left transition-all relative flex flex-col ${
@@ -980,16 +1011,24 @@ export default function BookingsAdminPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1.5">Time Slot</label>
-                <select value={editForm.time_slot} onChange={(e) => setEditForm({ ...editForm, time_slot: e.target.value })} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light">
-                  {timeSlots.map((t) => {
-                    const remaining = slotCapacity - (editSlotAvailability[t] || 0);
-                    return (
-                      <option key={t} value={t} disabled={remaining <= 0}>
-                        {t} — {remaining > 0 ? `${remaining} left` : "FULL"}
-                      </option>
-                    );
-                  })}
-                </select>
+                {editCustomTime ? (
+                  <input type="time" step={60} value={editForm.time_slot} onChange={(e) => setEditForm({ ...editForm, time_slot: e.target.value })} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
+                ) : (
+                  <select value={editForm.time_slot} onChange={(e) => setEditForm({ ...editForm, time_slot: e.target.value })} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light">
+                    {(editForm.time_slot && !timeSlots.includes(editForm.time_slot) ? [editForm.time_slot, ...timeSlots] : timeSlots).map((t) => {
+                      const remaining = slotCapacity - (editSlotAvailability[t] || 0);
+                      return (
+                        <option key={t} value={t} disabled={remaining <= 0 && t !== editForm.time_slot}>
+                          {t}{timeSlots.includes(t) ? ` — ${remaining > 0 ? `${remaining} left` : "FULL"}` : " (custom)"}
+                        </option>
+                      );
+                    })}
+                  </select>
+                )}
+                <label className="flex items-center gap-2 text-[0.8rem] text-ink-soft mt-2 cursor-pointer">
+                  <input type="checkbox" checked={editCustomTime} onChange={(e) => { setEditCustomTime(e.target.checked); if (e.target.checked) setEditForm({ ...editForm, time_slot: editForm.time_slot || "" }); }} />
+                  Custom time / out of hours
+                </label>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1.5">People</label>
@@ -1052,18 +1091,26 @@ export default function BookingsAdminPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1.5">Time Slot</label>
-                <select value={addForm.time_slot} onChange={(e) => setAddForm({ ...addForm, time_slot: e.target.value })} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light">
-                  <option value="">Select time...</option>
-                  {timeSlots.map((s) => {
-                    const used = addSlotAvailability[s] || 0;
-                    const remaining = slotCapacity - used;
-                    return (
-                      <option key={s} value={s} disabled={remaining <= 0}>
-                        {s} — {remaining > 0 ? `${remaining} left` : "FULL"}
-                      </option>
-                    );
-                  })}
-                </select>
+                {addCustomTime ? (
+                  <input type="time" step={60} value={addForm.time_slot} onChange={(e) => setAddForm({ ...addForm, time_slot: e.target.value })} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light" />
+                ) : (
+                  <select value={addForm.time_slot} onChange={(e) => setAddForm({ ...addForm, time_slot: e.target.value })} className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light">
+                    <option value="">Select time...</option>
+                    {timeSlots.map((s) => {
+                      const used = addSlotAvailability[s] || 0;
+                      const remaining = slotCapacity - used;
+                      return (
+                        <option key={s} value={s} disabled={remaining <= 0}>
+                          {s} — {remaining > 0 ? `${remaining} left` : "FULL"}
+                        </option>
+                      );
+                    })}
+                  </select>
+                )}
+                <label className="flex items-center gap-2 text-[0.8rem] text-ink-soft mt-2 cursor-pointer">
+                  <input type="checkbox" checked={addCustomTime} onChange={(e) => { setAddCustomTime(e.target.checked); if (e.target.checked) setAddForm({ ...addForm, time_slot: "" }); }} />
+                  Custom time / out of hours
+                </label>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1.5">Name</label>
@@ -1103,13 +1150,16 @@ export default function BookingsAdminPage() {
                   <button type="button" onClick={() => setAddForm({ ...addForm, duration: 2 })} className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${addForm.duration === 2 ? "bg-sky-blue-light text-ink" : "bg-ink/5 text-ink-soft hover:bg-ink/10"}`}>2 hours (party)</button>
                 </div>
                 {addForm.duration === 2 && addForm.time_slot && (() => {
-                  const [h] = addForm.time_slot.split(":").map(Number);
-                  const nextSlot = `${String(h + 1).padStart(2, "0")}:00`;
-                  const nextUsed = addSlotAvailability[nextSlot] || 0;
+                  const [h, m] = addForm.time_slot.split(":").map(Number);
+                  const total = h * 60 + m + 60;
+                  const nextDay = total >= 24 * 60;
+                  const mins = total % (24 * 60);
+                  const nextSlot = `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
+                  const nextUsed = nextDay ? 0 : (addSlotAvailability[nextSlot] || 0);
                   const nextRemaining = slotCapacity - nextUsed;
                   return (
                     <p className={`text-[0.8rem] mt-2 ${nextRemaining > 0 ? "text-green-600" : "text-red-600"}`}>
-                      This will also block <strong>{nextSlot}</strong> ({nextRemaining > 0 ? `${nextRemaining} spot${nextRemaining === 1 ? "" : "s"} available` : "FULL"})
+                      This will also block <strong>{nextSlot}{nextDay ? " (next day)" : ""}</strong> ({nextRemaining > 0 ? `${nextRemaining} spot${nextRemaining === 1 ? "" : "s"} available` : "FULL"})
                     </p>
                   );
                 })()}

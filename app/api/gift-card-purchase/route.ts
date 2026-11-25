@@ -3,6 +3,7 @@ import { getStripeAsync, getStripeModeAsync } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase";
 import { withGclidTag, sanitizeAdSource } from "@/lib/google-ads";
 import { sanitizePushToken } from "@/lib/apns";
+import { resolveGiftCardExpiry } from "@/lib/gift-cards";
 
 export const runtime = "nodejs";
 
@@ -65,9 +66,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Failed to generate unique gift card code" }, { status: 500 });
   }
 
-  // Calculate expiry date (3 months from purchase)
-  const expiryDate = new Date();
-  expiryDate.setMonth(expiryDate.getMonth() + 3);
+  // Expiry comes from the dashboard-controlled default (site_content
+  // gift_card_expiry_date); falls back to 3 months inside the resolver.
+  // A config read failure must not silently issue cards with the wrong
+  // expiry, so this fails the purchase instead.
+  let expiryDate: Date | null;
+  try {
+    expiryDate = await resolveGiftCardExpiry();
+  } catch (e) {
+    console.error("Gift card expiry config error:", e);
+    return NextResponse.json({ error: "Failed to configure gift card" }, { status: 500 });
+  }
 
   // Insert with ad_source + device_token; retry without either if a column
   // hasn't been added yet so an older schema never blocks the purchase.
@@ -140,7 +149,7 @@ export async function POST(req: NextRequest) {
         recipient_name: recipientName || null,
         message: message || null,
         status: "pending",
-        expiry_date: expiryDate.toISOString(),
+        expiry_date: expiryDate ? expiryDate.toISOString() : null,
         payment_reference: session.id,
         customer_id: customerId || null,
       });
@@ -202,7 +211,7 @@ export async function POST(req: NextRequest) {
         recipient_name: recipientName || null,
         message: message || null,
         status: "pending",
-        expiry_date: expiryDate.toISOString(),
+        expiry_date: expiryDate ? expiryDate.toISOString() : null,
         payment_reference: checkoutRef,
         customer_id: customerId || null,
       });
@@ -254,7 +263,7 @@ export async function POST(req: NextRequest) {
         recipient_name: recipientName || null,
         message: message || null,
         status: "pending",
-        expiry_date: expiryDate.toISOString(),
+        expiry_date: expiryDate ? expiryDate.toISOString() : null,
         payment_reference: intent.id,
         customer_id: customerId || null,
       });

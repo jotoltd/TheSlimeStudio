@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Subscribe — Slime Box Subscription",
+  title: "Slime Subscription Box — Monthly Slime Delivered to Your Door",
   description:
     "Subscribe to The Slime Studio's monthly slime box and get DIY slime kits delivered to your door. A fun creative activity for kids every month.",
   alternates: { canonical: "https://theslimestudio.co.uk/subscribe" },

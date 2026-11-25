@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { getAdSource, getGclid, withThemeVariant } from "@/lib/ad-tracking";
+import { getAdSource, getGclid } from "@/lib/ad-tracking";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
@@ -25,11 +25,29 @@ function GiftCardInner() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [customerId, setCustomerId] = useState<string | null>(null);
+  const [expiryText, setExpiryText] = useState("Gift cards are valid for 3 months from the date of purchase.");
+  const [shopLive, setShopLive] = useState(false);
 
   useEffect(() => {
     supabase.from("site_settings").select("payment_provider").eq("id", 1).single().then(({ data }) => {
       if (data && data.payment_provider) {
         setPaymentProvider(data.payment_provider as "stripe" | "sumup");
+      }
+    });
+    supabase.from("shop_settings").select("live").eq("id", 1).maybeSingle().then(({ data }) => {
+      setShopLive(!!data?.live);
+    });
+    // Must mirror resolveGiftCardExpiry() server-side: "none" = never,
+    // a future date = valid until, anything else = 3-month fallback.
+    supabase.from("site_content").select("value").eq("key", "gift_card_expiry_date").maybeSingle().then(({ data }) => {
+      const v = data?.value?.trim();
+      if (v === "none") {
+        setExpiryText("Gift cards never expire.");
+      } else if (v) {
+        const d = new Date(v);
+        if (!isNaN(d.getTime()) && d > new Date()) {
+          setExpiryText(`Gift cards are valid until ${d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}.`);
+        }
       }
     });
     fetch("/api/account/me").then(r => r.json()).then(data => {
@@ -94,7 +112,7 @@ function GiftCardInner() {
           message: message.trim() || undefined,
           paymentMethod: paymentProvider,
           customerId,
-          adSource: withThemeVariant(getAdSource()),
+          adSource: getAdSource(),
           gclid: getGclid(),
         }),
       });
@@ -229,13 +247,15 @@ function GiftCardInner() {
                 <p className="text-red-600 text-xs mt-1">Maximum amount is £500</p>
               )}
               <p className="text-ink-soft text-xs mt-3">
-                Gift cards are valid for 3 months from the date of purchase.
+                {expiryText}
               </p>
             </div>
 
-            <div className="text-center mt-6">
-              <Link href="/shop" className="btn-primary inline-block">Continue Shopping</Link>
-            </div>
+            {shopLive && (
+              <div className="text-center mt-6">
+                <Link href="/shop" className="btn-primary inline-block">Continue Shopping</Link>
+              </div>
+            )}
 
             <div className="text-center mt-4">
               <Link href="/gift-card/balance" className="text-sky-blue-light hover:underline text-sm">
@@ -338,7 +358,7 @@ function GiftCardInner() {
             </button>
 
             <p className="text-xs text-ink-soft text-center">
-              Gift cards are valid for 3 months from the date of purchase. Cannot be refunded or exchanged for cash.
+              {expiryText} Cannot be refunded or exchanged for cash.
             </p>
           </form>
         </div>

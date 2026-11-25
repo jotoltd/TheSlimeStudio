@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase, type LoyaltyCard, STAMPS_PER_REWARD as DEFAULT_STAMPS } from "@/lib/supabase";
+import { type LoyaltyCard, STAMPS_PER_REWARD as DEFAULT_STAMPS } from "@/lib/supabase";
+
+async function patchCard(id: string, patch: Record<string, unknown>) {
+  return fetch("/api/admin/loyalty", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, ...patch }),
+  });
+}
 import { useToast } from "@/components/Toast";
 import PageHeader from "@/components/PageHeader";
 import Pagination from "@/components/Pagination";
@@ -20,9 +28,12 @@ export default function LoyaltyAdminPage() {
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase.from("loyalty_cards").select("*").order("updated_at", { ascending: false });
-    if (data) setCards(data as LoyaltyCard[]);
-    const { data: settings } = await supabase.from("site_settings").select("stamps_per_reward").eq("id", 1).single();
+    const res = await fetch("/api/admin/loyalty");
+    const data = await res.json();
+    if (data.cards) setCards(data.cards as LoyaltyCard[]);
+    const settingsRes = await fetch("/api/admin/settings?table=site_settings");
+    const settingsRows = settingsRes.ok ? ((await settingsRes.json()).rows || []) : [];
+    const settings = settingsRows.find((r: { id: number }) => r.id === 1) || settingsRows[0];
     if (settings?.stamps_per_reward) setStampsPerReward(settings.stamps_per_reward);
     setLoading(false);
   }
@@ -46,11 +57,8 @@ export default function LoyaltyAdminPage() {
   async function redeemReward(card: LoyaltyCard) {
     if (card.rewards_earned - card.rewards_redeemed <= 0) return;
     if (!confirm(`Redeem a free session reward for ${card.name}?`)) return;
-    const { error } = await supabase
-      .from("loyalty_cards")
-      .update({ rewards_redeemed: card.rewards_redeemed + 1, updated_at: new Date().toISOString() })
-      .eq("id", card.id);
-    if (error) { toast("Failed to redeem: " + error.message, "error"); return; }
+    const res = await patchCard(card.id, { rewards_redeemed: card.rewards_redeemed + 1 });
+    if (!res.ok) { toast("Failed to redeem reward", "error"); return; }
     toast("Reward redeemed!");
     load();
   }
@@ -64,22 +72,16 @@ export default function LoyaltyAdminPage() {
       newRewards += 1;
       stampCount = newStamps - stampsPerReward;
     }
-    const { error } = await supabase
-      .from("loyalty_cards")
-      .update({ stamps: stampCount, total_stamps: newTotal, rewards_earned: newRewards, updated_at: new Date().toISOString() })
-      .eq("id", card.id);
-    if (error) { toast("Failed to add stamp: " + error.message, "error"); return; }
+    const res = await patchCard(card.id, { stamps: stampCount, total_stamps: newTotal, rewards_earned: newRewards });
+    if (!res.ok) { toast("Failed to add stamp", "error"); return; }
     toast("Stamp added!");
     load();
   }
 
   async function removeStamp(card: LoyaltyCard) {
     if (card.stamps <= 0) return;
-    const { error } = await supabase
-      .from("loyalty_cards")
-      .update({ stamps: card.stamps - 1, total_stamps: Math.max(0, card.total_stamps - 1), updated_at: new Date().toISOString() })
-      .eq("id", card.id);
-    if (error) { toast("Failed to remove stamp: " + error.message, "error"); return; }
+    const res = await patchCard(card.id, { stamps: card.stamps - 1, total_stamps: Math.max(0, card.total_stamps - 1) });
+    if (!res.ok) { toast("Failed to remove stamp", "error"); return; }
     toast("Stamp removed");
     load();
   }

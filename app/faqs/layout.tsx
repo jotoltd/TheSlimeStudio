@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "FAQs",
+  title: "FAQs — Slime Sessions, Party Bookings & Prices",
   description:
     "Frequently asked questions about The Slime Studio — session details, pricing, age requirements, what to bring, party bookings and more.",
   alternates: { canonical: "https://theslimestudio.co.uk/faqs" },

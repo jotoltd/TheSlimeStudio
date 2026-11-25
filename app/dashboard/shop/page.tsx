@@ -30,9 +30,12 @@ export default function ShopAdminPage() {
 
   async function loadData() {
     setLoading(true);
-    const { data: productsData } = await supabase.from("products").select("*").order("category").order("name");
-    if (productsData) setProducts(productsData as Product[]);
-    const { data: settingsData } = await supabase.from("shop_settings").select("*").eq("id", 1).single();
+    const res = await fetch("/api/admin/products");
+    const data = await res.json();
+    if (data.products) setProducts(data.products as Product[]);
+    const settingsRes = await fetch("/api/admin/settings?table=shop_settings");
+    const settingsRows = settingsRes.ok ? ((await settingsRes.json()).rows || []) : [];
+    const settingsData = settingsRows.find((r: { id: number }) => r.id === 1) || settingsRows[0];
     if (settingsData) {
       const s = settingsData as ShopSettings;
       setShopSettings(s);
@@ -46,14 +49,22 @@ export default function ShopAdminPage() {
     if (!shopSettings) return;
     const newVal = !shopSettings.live;
     setShopSettings({ ...shopSettings, live: newVal });
-    await supabase.from("shop_settings").update({ live: newVal }).eq("id", 1);
+    await fetch("/api/admin/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ table: "shop_settings", id: 1, patch: { live: newVal } }),
+    });
   }
 
   async function saveLaunchDate() {
     if (!launchDate) return;
     setSavingSettings(true);
     const isoDate = new Date(launchDate).toISOString();
-    await supabase.from("shop_settings").update({ launch_date: isoDate }).eq("id", 1);
+    await fetch("/api/admin/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ table: "shop_settings", id: 1, patch: { launch_date: isoDate } }),
+    });
     setSavingSettings(false);
     loadData();
   }
@@ -61,7 +72,11 @@ export default function ShopAdminPage() {
   async function saveStock(id: string) {
     const stock = stockEdits[id];
     if (stock === undefined) return;
-    await supabase.from("products").update({ stock }).eq("id", id);
+    await fetch("/api/admin/products", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, stock }),
+    });
     setStockEdits((prev) => {
       const next = { ...prev };
       delete next[id];
@@ -76,7 +91,7 @@ export default function ShopAdminPage() {
 
   async function deleteProduct(id: string, name: string) {
     if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
-    await supabase.from("products").delete().eq("id", id);
+    await fetch(`/api/admin/products?id=${id}`, { method: "DELETE" });
     loadData();
   }
 
@@ -91,13 +106,13 @@ export default function ShopAdminPage() {
       weight: formData.weight ? parseInt(formData.weight) : null,
       image_url: formData.image_url || null,
     };
-    if (editingId) {
-      const { error } = await supabase.from("products").update(payload).eq("id", editingId);
-      if (error) { alert("Error: " + error.message); return; }
-    } else {
-      const { error } = await supabase.from("products").insert(payload);
-      if (error) { alert("Error: " + error.message); return; }
-    }
+    const res = await fetch("/api/admin/products", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(editingId ? { id: editingId, ...payload } : payload),
+    });
+    const data = await res.json();
+    if (!res.ok) { alert("Error: " + (data.error || "Failed to save")); return; }
     closeModal();
     loadData();
   }

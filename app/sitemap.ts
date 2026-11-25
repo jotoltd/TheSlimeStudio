@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { supabaseAdmin } from "@/lib/supabase";
+import { POSTS } from "@/app/blog/posts";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = "https://theslimestudio.co.uk";
@@ -19,6 +20,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/subscribe`, lastModified, changeFrequency: "monthly", priority: 0.7 },
     { url: `${base}/loyalty`, lastModified, changeFrequency: "monthly", priority: 0.5 },
     { url: `${base}/press`, lastModified, changeFrequency: "monthly", priority: 0.6 },
+    { url: `${base}/blog`, lastModified, changeFrequency: "weekly", priority: 0.7 },
     { url: `${base}/privacy`, lastModified, changeFrequency: "yearly", priority: 0.3 },
   ];
 
@@ -34,5 +36,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
-  return [...staticPages, ...eventPages];
+  const blogPages: MetadataRoute.Sitemap = POSTS.map((post) => ({
+    url: `${base}/blog/${post.meta.slug}`,
+    lastModified: new Date(post.meta.date),
+    changeFrequency: "monthly",
+    priority: 0.7,
+  }));
+
+  return [...staticPages, ...eventPages, ...blogPages];
 }

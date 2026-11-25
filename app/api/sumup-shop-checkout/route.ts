@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomBytes } from "crypto";
 import { getSumUpKey, isSumUpConfigured } from "@/lib/payment";
 import { supabaseAdmin } from "@/lib/supabase";
+import { rateLimited, clientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -8,6 +10,10 @@ const DELIVERY_FEE = 3.95;
 const FREE_DELIVERY_THRESHOLD = 30;
 
 export async function POST(req: NextRequest) {
+  if (rateLimited(`sumup-shop:${clientIp(req)}`, 20, 15 * 60 * 1000)) {
+    return NextResponse.json({ error: "Too many attempts. Please try again later." }, { status: 429 });
+  }
+
   const body = await req.json();
   const {
     items,
@@ -52,29 +58,47 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
   }
 
-  // Verify products and stock
-  const productIds = items.map((i) => i.product_id);
+  // Aggregate duplicate product ids first — per-line stock checks let a cart
+  // with the same product twice bypass the stock limit.
+  const qtyById = new Map<string, number>();
+  for (const item of items) {
+    const qty = Math.floor(Number(item.quantity));
+    if (!item.product_id || !Number.isFinite(qty) || qty < 1 || qty > 100) {
+      return NextResponse.json({ error: "Invalid item in cart" }, { status: 400 });
+    }
+    qtyById.set(item.product_id, (qtyById.get(item.product_id) || 0) + qty);
+  }
+
+  // Verify products and stock — prices always come from the DB, never the client.
   const { data: products } = await supabaseAdmin
     .from("products")
-    .select("id, name, price, stock")
-    .in("id", productIds);
+    .select("id, name, price, stock, image_url")
+    .in("id", Array.from(qtyById.keys()));
 
   if (!products) {
     return NextResponse.json({ error: "Failed to verify products" }, { status: 500 });
   }
 
   let subtotal = 0;
+  const verifiedItems: { product_id: string; name: string; price: number; quantity: number; image_url: string | null }[] = [];
   const itemDesc: string[] = [];
-  for (const item of items) {
-    const product = products.find((p) => p.id === item.product_id);
+  for (const [productId, quantity] of Array.from(qtyById.entries())) {
+    const product = products.find((p) => p.id === productId);
     if (!product) {
-      return NextResponse.json({ error: `Product not found: ${item.name}` }, { status: 400 });
+      return NextResponse.json({ error: "A product in your cart is no longer available" }, { status: 400 });
     }
-    if ((product.stock || 0) < item.quantity) {
+    if ((product.stock || 0) < quantity) {
       return NextResponse.json({ error: `Not enough stock for ${product.name}` }, { status: 400 });
     }
-    subtotal += product.price * item.quantity;
-    itemDesc.push(`${item.quantity}x ${product.name}`);
+    subtotal += Number(product.price) * quantity;
+    verifiedItems.push({
+      product_id: product.id,
+      name: product.name,
+      price: Number(product.price),
+      quantity,
+      image_url: product.image_url || null,
+    });
+    itemDesc.push(`${quantity}x ${product.name}`);
   }
 
   let shippingCost = 0;
@@ -86,7 +110,6 @@ export async function POST(req: NextRequest) {
 
   // Apply discount if code provided
   let discountAmount = 0;
-  let finalTotal = total;
   if (discountCode) {
     const { data: discount } = await supabaseAdmin
       .from("discount_codes")
@@ -94,21 +117,40 @@ export async function POST(req: NextRequest) {
       .eq("code", discountCode.trim().toUpperCase())
       .maybeSingle();
     if (discount && discount.active && (!discount.expires_at || new Date(discount.expires_at) > new Date()) && (discount.max_uses === null || discount.used_count < discount.max_uses)) {
-      if (discount.scope === "both" || discount.scope === "shop") {
-        if (discount.min_spend === 0 || subtotal >= Number(discount.min_spend)) {
-          if (discount.discount_type === "percentage") {
-            discountAmount = (subtotal * Number(discount.value)) / 100;
-          } else {
-            discountAmount = Number(discount.value);
-          }
-          discountAmount = Math.min(discountAmount, subtotal);
-          finalTotal = Math.max(0, total - discountAmount);
-        }
+      if ((discount.scope === "both" || discount.scope === "shop") && (discount.min_spend === 0 || subtotal >= Number(discount.min_spend))) {
+        discountAmount = discount.discount_type === "percentage"
+          ? (subtotal * Number(discount.value)) / 100
+          : Number(discount.value);
+        discountAmount = Math.min(discountAmount, subtotal);
       }
     }
   }
 
+  // Gift card: validate server-side and subtract its cover from the charge —
+  // previously the card was redeemed post-payment while the full price was
+  // still charged, so customers paid twice.
+  const afterDiscountTotal = Math.max(0, total - discountAmount);
+  let giftCardCover = 0;
+  let giftCardValid = false;
+  if (giftCardCode) {
+    const { data: card } = await supabaseAdmin
+      .from("gift_cards")
+      .select("balance, status, expiry_date")
+      .eq("code", giftCardCode.trim().toUpperCase())
+      .maybeSingle();
+    const expired = card?.expiry_date && new Date(card.expiry_date) < new Date();
+    if (card && card.status === "active" && !expired && card.balance > 0) {
+      giftCardCover = Math.min(Number(card.balance), afterDiscountTotal);
+      giftCardValid = true;
+    }
+  }
+
+  const chargeTotal = Math.max(0, afterDiscountTotal - giftCardCover);
+
   const orderNumber = `SLM-${Date.now().toString(36).toUpperCase()}`;
+  // Timestamp-only references collide within the same millisecond — this is
+  // our idempotency key, so add entropy.
+  const checkoutRef = `${orderNumber}-${randomBytes(3).toString("hex").toUpperCase()}`;
 
   if (!isSumUpConfigured()) {
     return NextResponse.json({ error: "SumUp is not configured" }, { status: 500 });
@@ -118,8 +160,6 @@ export async function POST(req: NextRequest) {
   const origin = req.nextUrl.origin;
 
   try {
-    const checkoutRef = orderNumber;
-
     const res = await fetch("https://api.sumup.com/v0.1/checkouts", {
       method: "POST",
       headers: {
@@ -127,7 +167,7 @@ export async function POST(req: NextRequest) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        amount: Number(finalTotal.toFixed(2)),
+        amount: Number(chargeTotal.toFixed(2)),
         currency: "GBP",
         merchant_code: (process.env.SUMUP_MERCHANT_ID || "").toUpperCase() || undefined,
         checkout_reference: checkoutRef,
@@ -141,11 +181,10 @@ export async function POST(req: NextRequest) {
 
     if (!res.ok || !data.id) {
       console.error("SumUp shop checkout error:", JSON.stringify(data));
-      const errMsg = data.message ? `${data.message}${data.param ? ` (${data.param})` : ""}` : "Failed to create SumUp checkout";
-      return NextResponse.json({ error: errMsg }, { status: 500 });
+      return NextResponse.json({ error: "Failed to start payment. Please try again." }, { status: 500 });
     }
 
-    await supabaseAdmin.from("shop_orders").insert({
+    const orderRow = {
       order_number: orderNumber,
       customer_name: customerName,
       customer_email: customerEmail,
@@ -154,23 +193,36 @@ export async function POST(req: NextRequest) {
       shipping_address: shippingAddress || null,
       shipping_city: shippingCity || null,
       shipping_postcode: shippingPostcode || null,
-      items: items.map((i) => ({
-        product_id: i.product_id,
-        name: i.name,
-        price: i.price,
-        quantity: i.quantity,
-        image_url: i.image_url,
-      })),
+      items: verifiedItems,
       subtotal,
       shipping_cost: shippingCost,
-      total: finalTotal,
+      // total = amount actually charged (after discount + gift card cover)
+      total: chargeTotal,
       payment_status: "pending",
       stripe_session_id: checkoutRef,
       notes: notes || null,
-      discount_code: discountCode || null,
+      discount_code: discountAmount > 0 ? (discountCode || null) : null,
       discount_amount: discountAmount,
-      gift_card_code: giftCardCode || null,
-    });
+      gift_card_code: giftCardValid ? (giftCardCode || null) : null,
+      gift_card_cover: giftCardCover,
+    };
+    // gift_card_cover needs migration 20261101000003 — retry without it if the
+    // column isn't there yet (cover is then unrecoverable for this order, so
+    // log loudly).
+    let { error: orderError } = await supabaseAdmin.from("shop_orders").insert(orderRow);
+    if (orderError) {
+      const withoutCover = { ...orderRow } as Record<string, unknown>;
+      delete withoutCover.gift_card_cover;
+      const retry = await supabaseAdmin.from("shop_orders").insert(withoutCover);
+      orderError = retry.error;
+      if (!orderError && giftCardCover > 0) {
+        console.error(`[sumup-shop] Order ${orderNumber} stored without gift_card_cover — card will not be redeemed.`);
+      }
+    }
+    if (orderError) {
+      console.error("Failed to store shop order:", orderError);
+      return NextResponse.json({ error: "Could not create your order. Please try again." }, { status: 500 });
+    }
 
     const checkoutUrl = data.hosted_checkout_url || data.checkout_url || data.url;
     if (!checkoutUrl) {

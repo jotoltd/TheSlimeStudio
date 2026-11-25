@@ -25,6 +25,10 @@ export type BookingDetails = {
   totalPrice: number;
   isParty?: boolean;
   discountCode?: string | null;
+  giftCardCode?: string | null;
+  // Server-stamped cover — how much of the price the gift card paid for.
+  // Never trust a client-supplied amount here.
+  giftCardAmount?: number | null;
   adSource?: string | null;
   gclid?: string | null;
   deviceToken?: string | null;
@@ -84,7 +88,7 @@ export async function expireStalePendingGiftCards() {
 export async function createPaidBooking(details: BookingDetails): Promise<CreateBookingResult> {
   const {
     paymentRef, name, email, phone, date, timeSlot,
-    people, totalPrice, isParty, discountCode, adSource, gclid, deviceToken,
+    people, totalPrice, isParty, discountCode, giftCardCode, giftCardAmount, adSource, gclid, deviceToken,
   } = details;
 
   // Idempotency: has this payment already produced a booking?
@@ -154,7 +158,15 @@ export async function createPaidBooking(details: BookingDetails): Promise<Create
     await redeemRewardCode(discountCode, email).catch(() => {});
   }
   if (discountCode) {
+    await incrementDiscountUsage(discountCode).catch(() => {});
     await awardReferrerReward(discountCode).catch(() => {});
+  }
+
+  // Gift card cover was already deducted from what the customer was charged —
+  // redeem it here so the webhook recovery path (customer closed the tab
+  // before confirming) can't leave the card unspent.
+  if (giftCardCode) {
+    await redeemGiftCardCover(giftCardCode, giftCardAmount || totalPrice, data.id).catch(() => {});
   }
 
   // Google Ads offline conversion — orderId matches the browser tag's
@@ -224,6 +236,105 @@ export async function awardReferrerReward(discountCode: string) {
   if (!referrer?.email) return;
 
   await awardLoyaltyStamp(referrer.name || "Customer", referrer.email);
+}
+
+// Atomic pending → paid transition. Returns true only for the caller that
+// won the race, so the SumUp confirm route and webhook can't both fire
+// emails/loyalty/gift-card redemption for the same booking.
+export async function claimPendingBooking(bookingId: string): Promise<boolean> {
+  const { data } = await supabaseAdmin
+    .from("bookings")
+    .update({ payment_status: "paid" })
+    .eq("id", bookingId)
+    .eq("payment_status", "pending")
+    .select("id");
+  return !!(data && data.length > 0);
+}
+
+// Increments discount_codes.used_count so max_uses is actually enforced.
+// Read-modify-write matches the existing style; the conditional update on
+// used_count guards against lost updates.
+export async function incrementDiscountUsage(code: string) {
+  const { data: disc } = await supabaseAdmin
+    .from("discount_codes")
+    .select("id, used_count")
+    .eq("code", code.trim().toUpperCase())
+    .single();
+  if (!disc) return;
+  await supabaseAdmin
+    .from("discount_codes")
+    .update({ used_count: (disc.used_count || 0) + 1 })
+    .eq("id", disc.id)
+    .eq("used_count", disc.used_count || 0);
+}
+
+// Gift-card redemption capped at the card's remaining balance — the cover was
+// computed when the payment was created, but the card may have been partly
+// spent elsewhere since.
+export async function redeemGiftCardCover(code: string, cover: number, bookingId: string) {
+  const { redeemGiftCard } = await import("@/lib/gift-cards");
+  const { data: card } = await supabaseAdmin
+    .from("gift_cards")
+    .select("balance")
+    .eq("code", code.trim().toUpperCase())
+    .maybeSingle();
+  if (!card || card.balance <= 0) return;
+  const amount = Math.min(Number(card.balance), Math.max(0, cover));
+  if (amount <= 0) return;
+  const red = await redeemGiftCard(code, amount, { bookingId });
+  if (!red.success) console.error("Gift card redeem failed:", red.error);
+}
+
+// Side effects for a booking row that was created as `pending` by a checkout
+// route and has just been verified as paid (SumUp confirm + webhook paths).
+// Call only after claimPendingBooking() returns true.
+export async function settleExistingBooking(
+  booking: {
+    id: string;
+    name: string;
+    email: string;
+    phone?: string | null;
+    date: string;
+    time_slot: string;
+    people: number;
+    total_price: number;
+    is_party?: boolean | null;
+    discount_code?: string | null;
+    gift_card_code?: string | null;
+    gift_card_amount?: number | null;
+    notes?: string | null;
+  },
+  paymentRef: string,
+) {
+  const details: BookingDetails = {
+    paymentRef,
+    name: booking.name,
+    email: booking.email,
+    phone: booking.phone,
+    date: booking.date,
+    timeSlot: booking.time_slot,
+    people: booking.people,
+    totalPrice: booking.total_price,
+    isParty: booking.is_party || false,
+    discountCode: booking.discount_code,
+  };
+  await sendCustomerConfirmation(details).catch(() => {});
+  await sendAdminNotification(details, false).catch(() => {});
+  await awardLoyaltyStamp(booking.name, booking.email, booking.people).catch(() => {});
+  if (booking.discount_code && booking.discount_code.toUpperCase().startsWith("FREE-")) {
+    await redeemRewardCode(booking.discount_code, booking.email).catch(() => {});
+  }
+  if (booking.discount_code) {
+    await incrementDiscountUsage(booking.discount_code).catch(() => {});
+    await awardReferrerReward(booking.discount_code).catch(() => {});
+  }
+  if (booking.gift_card_code) {
+    await redeemGiftCardCover(
+      booking.gift_card_code,
+      Number(booking.gift_card_amount) || booking.total_price,
+      booking.id,
+    ).catch(() => {});
+  }
 }
 
 export async function sendCustomerConfirmation(d: BookingDetails) {

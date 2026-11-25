@@ -14,6 +14,7 @@ export function useContent() {
     supabase
       .from("site_content")
       .select("key, value")
+      .in("key", Object.keys(DEFAULTS))
       .then(({ data }) => {
         if (data) {
           const map: Record<string, string> = {};

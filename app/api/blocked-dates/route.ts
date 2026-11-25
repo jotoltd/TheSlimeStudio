@@ -2,14 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { verifyToken } from "@/lib/auth";
 
-export async function GET() {
+// GET — public callers (booking page) only need the dates. The admin
+// `reason` is internal notes and is only returned to authenticated admins.
+export async function GET(req: NextRequest) {
+  const token = req.cookies.get("admin_token")?.value;
+  const isAdmin = !!token && !!verifyToken(token);
+
   const { data, error } = await supabaseAdmin
     .from("blocked_dates")
-    .select("date, reason")
+    .select(isAdmin ? "date, reason" : "date")
     .order("date", { ascending: true });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to load blocked dates" }, { status: 500 });
   }
 
   return NextResponse.json({ blockedDates: data || [] });

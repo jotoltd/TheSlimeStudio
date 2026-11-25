@@ -10,6 +10,8 @@ import { useContent } from "@/lib/useContent";
 export default function Footer() {
   const [loyaltyEnabled, setLoyaltyEnabled] = useState(true);
   const [shopLive, setShopLive] = useState(false);
+  const [eventsOn, setEventsOn] = useState(true);
+  const [subscribeOn, setSubscribeOn] = useState(true);
   const { content: c } = useContent();
 
   useEffect(() => {
@@ -28,6 +30,19 @@ export default function Footer() {
       .single()
       .then(({ data }) => {
         if (data) setShopLive(!!data.live);
+      });
+    supabase
+      .from("special_events")
+      .select("id", { count: "exact", head: true })
+      .eq("is_active", true)
+      .then(({ count }) => setEventsOn((count || 0) > 0));
+    supabase
+      .from("subscription_settings")
+      .select("enabled")
+      .eq("id", 1)
+      .single()
+      .then(({ data }) => {
+        if (data) setSubscribeOn(!!data.enabled);
       });
   }, []);
 
@@ -53,15 +68,13 @@ export default function Footer() {
           <div>
             <h4 className="font-display text-[1rem] mb-4 text-ink">Explore</h4>
             <ul className="space-y-2.5">
-              <li><Link href="/" className="text-[0.9rem] hover:text-ink transition-colors">Home</Link></li>
               <li><Link href="/about" className="text-[0.9rem] hover:text-ink transition-colors">About</Link></li>
-              <li><Link href="/gallery" className="text-[0.9rem] hover:text-ink transition-colors">Gallery</Link></li>
               <li><Link href="/parties" className="text-[0.9rem] hover:text-ink transition-colors">Parties</Link></li>
+              <li><Link href="/blog" className="text-[0.9rem] hover:text-ink transition-colors">Blog</Link></li>
+              <li><Link href="/gallery" className="text-[0.9rem] hover:text-ink transition-colors">Gallery</Link></li>
               {shopLive && <li><Link href="/shop" className="text-[0.9rem] hover:text-ink transition-colors">Shop</Link></li>}
               {loyaltyEnabled && <li><Link href="/loyalty" className="text-[0.9rem] hover:text-ink transition-colors">Loyalty</Link></li>}
-              <li><Link href="/subscribe" className="text-[0.9rem] hover:text-ink transition-colors">Subscribe</Link></li>
-              <li><Link href="/press" className="text-[0.9rem] hover:text-ink transition-colors">Press</Link></li>
-              <li><Link href="/faqs" className="text-[0.9rem] hover:text-ink transition-colors">FAQs</Link></li>
+              {subscribeOn && <li><Link href="/subscribe" className="text-[0.9rem] hover:text-ink transition-colors">Subscribe</Link></li>}
             </ul>
           </div>
 
@@ -69,7 +82,8 @@ export default function Footer() {
             <h4 className="font-display text-[1rem] mb-4 text-ink">Visit</h4>
             <ul className="space-y-2.5">
               <li><Link href="/booking" className="text-[0.9rem] hover:text-ink transition-colors">Book Now</Link></li>
-              <li><Link href="/events" className="text-[0.9rem] hover:text-ink transition-colors">Events</Link></li>
+              {eventsOn && <li><Link href="/events" className="text-[0.9rem] hover:text-ink transition-colors">Events</Link></li>}
+              <li><Link href="/faqs" className="text-[0.9rem] hover:text-ink transition-colors">FAQs</Link></li>
               <li><Link href="/contact" className="text-[0.9rem] hover:text-ink transition-colors">Contact</Link></li>
             </ul>
           </div>
@@ -87,6 +101,7 @@ export default function Footer() {
         <div className="flex flex-wrap justify-between items-center gap-3 pt-6 text-[0.85rem] text-ink-soft">
           <p>{c.footer_copyright}</p>
           <div className="flex gap-4 items-center">
+            <Link href="/press" className="text-[0.8rem] text-ink-soft/60 hover:text-ink transition-colors">Press</Link>
             <Link href="/privacy" className="text-[0.8rem] text-ink-soft/60 hover:text-ink transition-colors">Privacy</Link>
             <Link href="/admin" className="text-[0.8rem] text-ink-soft/60 hover:text-ink transition-colors">Admin</Link>
             <SocialLinks size={18} />

@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase, type FAQ } from "@/lib/supabase";
+import { type FAQ } from "@/lib/supabase";
+
+async function faqReq(method: string, body?: unknown, id?: string) {
+  return fetch(`/api/admin/faqs${id ? `?id=${id}` : ""}`, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+}
 import { useToast } from "@/components/Toast";
 import PageHeader from "@/components/PageHeader";
 
@@ -19,11 +27,9 @@ export default function FAQsAdminPage() {
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase
-      .from("faqs")
-      .select("*")
-      .order("sort_order", { ascending: true });
-    if (data) setFaqs(data as FAQ[]);
+    const res = await faqReq("GET");
+    const data = await res.json();
+    if (data.faqs) setFaqs(data.faqs as FAQ[]);
     setLoading(false);
   }
 
@@ -55,22 +61,17 @@ export default function FAQsAdminPage() {
     }
     setSaving(true);
     if (editingId) {
-      const { error } = await supabase
-        .from("faqs")
-        .update({ question, answer })
-        .eq("id", editingId);
-      if (error) { toast("Failed to update FAQ", "error"); setSaving(false); return; }
+      const res = await faqReq("PATCH", { id: editingId, question, answer });
+      if (!res.ok) { toast("Failed to update FAQ", "error"); setSaving(false); return; }
       toast("FAQ updated!");
     } else {
-      const { error } = await supabase
-        .from("faqs")
-        .insert({
-          question,
-          answer,
-          sort_order: faqs.length,
-          is_visible: true,
-        });
-      if (error) { toast("Failed to add FAQ", "error"); setSaving(false); return; }
+      const res = await faqReq("POST", {
+        question,
+        answer,
+        sort_order: faqs.length,
+        is_visible: true,
+      });
+      if (!res.ok) { toast("Failed to add FAQ", "error"); setSaving(false); return; }
       toast("FAQ added!");
     }
     setSaving(false);
@@ -79,21 +80,15 @@ export default function FAQsAdminPage() {
   }
 
   async function toggleVisible(faq: FAQ) {
-    const { error } = await supabase
-      .from("faqs")
-      .update({ is_visible: !faq.is_visible })
-      .eq("id", faq.id);
-    if (error) { toast("Failed to update", "error"); return; }
+    const res = await faqReq("PATCH", { id: faq.id, is_visible: !faq.is_visible });
+    if (!res.ok) { toast("Failed to update", "error"); return; }
     setFaqs(faqs.map((f) => (f.id === faq.id ? { ...f, is_visible: !f.is_visible } : f)));
   }
 
   async function deleteFAQ(faq: FAQ) {
     if (!confirm(`Delete this FAQ?\n\nQ: ${faq.question}`)) return;
-    const { error } = await supabase
-      .from("faqs")
-      .delete()
-      .eq("id", faq.id);
-    if (error) { toast("Failed to delete", "error"); return; }
+    const res = await faqReq("DELETE", undefined, faq.id);
+    if (!res.ok) { toast("Failed to delete", "error"); return; }
     setFaqs(faqs.filter((f) => f.id !== faq.id));
     toast("FAQ deleted");
   }
@@ -102,8 +97,8 @@ export default function FAQsAdminPage() {
     if (index === 0) return;
     const target = faqs[index - 1];
     await Promise.all([
-      supabase.from("faqs").update({ sort_order: faq.sort_order }).eq("id", target.id),
-      supabase.from("faqs").update({ sort_order: target.sort_order }).eq("id", faq.id),
+      faqReq("PATCH", { id: target.id, sort_order: faq.sort_order }),
+      faqReq("PATCH", { id: faq.id, sort_order: target.sort_order }),
     ]);
     load();
   }
@@ -112,8 +107,8 @@ export default function FAQsAdminPage() {
     if (index === faqs.length - 1) return;
     const target = faqs[index + 1];
     await Promise.all([
-      supabase.from("faqs").update({ sort_order: faq.sort_order }).eq("id", target.id),
-      supabase.from("faqs").update({ sort_order: target.sort_order }).eq("id", faq.id),
+      faqReq("PATCH", { id: target.id, sort_order: faq.sort_order }),
+      faqReq("PATCH", { id: faq.id, sort_order: target.sort_order }),
     ]);
     load();
   }

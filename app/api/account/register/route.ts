@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { hashPassword } from "@/lib/auth";
-import { createCustomerToken, CUSTOMER_COOKIE, CUSTOMER_SESSION_DAYS, isValidEmail } from "@/lib/customer-auth";
+import { isValidEmail } from "@/lib/customer-auth";
+import { rateLimited, clientIp } from "@/lib/rate-limit";
+import { sendVerificationEmail } from "@/lib/customer-verification";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
+  if (rateLimited(`register:${clientIp(req)}`, 10, 60 * 60 * 1000)) {
+    return NextResponse.json({ error: "Too many attempts. Please try again later." }, { status: 429 });
+  }
+
   const { name, email, phone, password } = await req.json() as {
     name?: string; email?: string; phone?: string; password?: string;
   };
@@ -25,11 +31,21 @@ export async function POST(req: NextRequest) {
 
   const { data: existing } = await supabaseAdmin
     .from("customers")
-    .select("id")
+    .select("id, email_verified")
     .eq("email", cleanEmail)
     .maybeSingle();
 
   if (existing) {
+    // If the account exists but was never verified, resend the link instead of
+    // locking the user out — they still can't take over someone else's email
+    // without proving inbox access.
+    if (existing.email_verified === false) {
+      const sent = await sendVerificationEmail(existing.id, cleanEmail, cleanName);
+      return NextResponse.json(
+        { error: "An account already exists with that email. We've sent a verification link — check your inbox.", verifySent: sent },
+        { status: 409 }
+      );
+    }
     return NextResponse.json(
       { error: "An account already exists with that email. Try signing in instead." },
       { status: 409 }
@@ -43,6 +59,7 @@ export async function POST(req: NextRequest) {
       email: cleanEmail,
       phone: (phone || "").trim() || null,
       password_hash: hashPassword(password),
+      email_verified: false,
     })
     .select("id, name, email")
     .single();
@@ -82,15 +99,17 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const token = createCustomerToken({ sub: customer.id, email: customer.email, name: customer.name });
+  const verifySent = await sendVerificationEmail(customer.id, customer.email, customer.name);
 
-  const res = NextResponse.json({ ok: true, name: customer.name, email: customer.email });
-  res.cookies.set(CUSTOMER_COOKIE, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * CUSTOMER_SESSION_DAYS,
-    path: "/",
+  // No session is issued until the email is verified — this is what stops
+  // someone registering another person's address and reading their bookings.
+  return NextResponse.json({
+    ok: true,
+    verifyRequired: true,
+    verifySent,
+    email: customer.email,
+    message: verifySent
+      ? "Account created! Check your email for a verification link to activate it."
+      : "Account created, but we couldn't send the verification email — use 'Resend verification' on the sign-in page.",
   });
-  return res;
 }

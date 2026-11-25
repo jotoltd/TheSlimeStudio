@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase, type ShopOrder } from "@/lib/supabase";
+import { type ShopOrder } from "@/lib/supabase";
 import PageHeader from "@/components/PageHeader";
 import PaymentMethodBadge from "@/components/PaymentMethodBadge";
 import Pagination from "@/components/Pagination";
@@ -41,21 +41,25 @@ export default function OrdersPage() {
 
   async function loadOrders() {
     setLoading(true);
-    const { data } = await supabase.from("shop_orders").select("*").order("created_at", { ascending: false });
-    if (data) {
-      setOrders(data as ShopOrder[]);
-      // Deep link from notifications: ?order=<id> opens the order detail
-      const target = new URLSearchParams(window.location.search).get("order");
-      if (target) {
-        const found = (data as ShopOrder[]).find((o) => o.id === target);
-        if (found) setSelectedOrder(found);
-      }
+    const res = await fetch("/api/admin/orders");
+    const data = await res.json();
+    const rows = (data.orders || []) as ShopOrder[];
+    setOrders(rows);
+    // Deep link from notifications: ?order=<id> opens the order detail
+    const target = new URLSearchParams(window.location.search).get("order");
+    if (target) {
+      const found = rows.find((o) => o.id === target);
+      if (found) setSelectedOrder(found);
     }
     setLoading(false);
   }
 
   async function updateOrderStatus(id: string, status: string) {
-    await supabase.from("shop_orders").update({ payment_status: status }).eq("id", id);
+    await fetch("/api/admin/orders", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, payment_status: status }),
+    });
     loadOrders();
     if (selectedOrder?.id === id) {
       setSelectedOrder({ ...selectedOrder, payment_status: status });
@@ -63,9 +67,13 @@ export default function OrdersPage() {
   }
 
   async function updateFulfilment(id: string, status: string) {
-    const { error } = await supabase.from("shop_orders").update({ fulfillment_status: status }).eq("id", id);
-    if (error) {
-      toast("Couldn't update fulfilment — apply the latest SQL from supabase/migrations/ in the Supabase SQL Editor", "error");
+    const res = await fetch("/api/admin/orders", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, fulfillment_status: status }),
+    });
+    if (!res.ok) {
+      toast("Couldn't update fulfilment status", "error");
       return;
     }
     loadOrders();
@@ -191,7 +199,7 @@ export default function OrdersPage() {
                     </td>
                     <td className="py-3 pr-4 text-[0.85rem]">{o.items.length} item{o.items.length === 1 ? "" : "s"}</td>
                     <td className="py-3 pr-4 text-[0.85rem] font-medium">£{Number(o.total).toFixed(2)}</td>
-                    <td className="py-3 pr-4 text-[0.85rem] capitalize">{o.shipping_method}</td>
+                    <td className="py-3 pr-4 text-[0.85rem] capitalize">{o.shipping_method === "delivery" ? "Royal Mail" : o.shipping_method}</td>
                     <td className="py-3 pr-4">
                       <span className={`px-3 py-1 rounded-full text-[0.75rem] font-medium capitalize ${statusColors[o.payment_status] || "bg-gray-100 text-gray-500"}`}>
                         {o.payment_status === "refund_pending" ? "refund pending" : o.payment_status}
@@ -252,11 +260,30 @@ export default function OrdersPage() {
                 <div><strong>Name:</strong> {selectedOrder.customer_name}</div>
                 <div><strong>Email:</strong> {selectedOrder.customer_email}</div>
                 {selectedOrder.customer_phone && <div><strong>Phone:</strong> {selectedOrder.customer_phone}</div>}
-                <div><strong>Delivery:</strong> {selectedOrder.shipping_method === "collection" ? "Collection from studio" : "Delivery"}</div>
+                <div><strong>Delivery:</strong> {selectedOrder.shipping_method === "collection" ? "Collection from studio" : "Royal Mail delivery"}</div>
                 {selectedOrder.shipping_method === "delivery" && selectedOrder.shipping_address && (
                   <div><strong>Address:</strong> {selectedOrder.shipping_address}{selectedOrder.shipping_city ? `, ${selectedOrder.shipping_city}` : ""}{selectedOrder.shipping_postcode ? `, ${selectedOrder.shipping_postcode}` : ""}</div>
                 )}
                 {selectedOrder.notes && <div><strong>Notes:</strong> {selectedOrder.notes}</div>}
+                {selectedOrder.rm_shipment?.orderIdentifier != null && (
+                  <div>
+                    <strong>Royal Mail:</strong>{" "}
+                    {selectedOrder.rm_shipment.trackingNumber
+                      ? `Tracking ${selectedOrder.rm_shipment.trackingNumber} — `
+                      : "Order created in Click & Drop"}
+                    <a
+                      href="https://www.royalmail.com/track-your-item"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-sky-600 underline"
+                    >
+                      track parcel
+                    </a>
+                  </div>
+                )}
+                {selectedOrder.rm_shipment?.status === "error" && (
+                  <div className="text-red-600"><strong>Royal Mail:</strong> sync failed — {selectedOrder.rm_shipment.error}. Enter it manually in Click & Drop.</div>
+                )}
               </div>
             </div>
 

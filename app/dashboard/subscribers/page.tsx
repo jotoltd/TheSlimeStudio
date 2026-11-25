@@ -19,8 +19,9 @@ export default function SubscribersPage() {
 
   async function loadData() {
     setLoading(true);
-    const { data: subs } = await supabase.from("subscribers").select("*").order("created_at", { ascending: false });
-    if (subs) setSubscribers(subs as Subscriber[]);
+    const res = await fetch("/api/admin/subscribers");
+    const data = await res.json();
+    if (data.subscribers) setSubscribers(data.subscribers as Subscriber[]);
     const { data: ss } = await supabase.from("subscription_settings").select("*").eq("id", 1).single();
     if (ss) setSettings(ss as SubscriptionSettings);
     setLoading(false);
@@ -28,7 +29,7 @@ export default function SubscribersPage() {
 
   async function removeSubscriber(id: string, name: string) {
     if (!confirm(`Remove subscriber "${name}"? This cannot be undone.`)) return;
-    await supabase.from("subscribers").delete().eq("id", id);
+    await fetch(`/api/admin/subscribers?id=${id}`, { method: "DELETE" });
     loadData();
   }
 
@@ -40,10 +41,15 @@ export default function SubscribersPage() {
   async function saveEdit() {
     if (!editingSub) return;
     setSavingEdit(true);
-    await supabase.from("subscribers").update({
-      name: editForm.name, email: editForm.email, phone: editForm.phone || null,
-      address: editForm.address, postcode: editForm.postcode, status: editForm.status,
-    }).eq("id", editingSub.id);
+    await fetch("/api/admin/subscribers", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: editingSub.id,
+        name: editForm.name, email: editForm.email, phone: editForm.phone || null,
+        address: editForm.address, postcode: editForm.postcode, status: editForm.status,
+      }),
+    });
     setSavingEdit(false);
     setEditingSub(null);
     loadData();
@@ -53,7 +59,11 @@ export default function SubscribersPage() {
     if (!settings) return;
     const newVal = !settings.enabled;
     setSettings({ ...settings, enabled: newVal });
-    await supabase.from("subscription_settings").update({ enabled: newVal }).eq("id", 1);
+    await fetch("/api/admin/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ table: "subscription_settings", id: 1, patch: { enabled: newVal } }),
+    });
   }
 
   const activeCount = subscribers.filter((s) => s.status === "active").length;

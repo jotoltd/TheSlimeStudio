@@ -3,6 +3,14 @@
 import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import { supabase, type GalleryImage } from "@/lib/supabase";
+
+async function galleryReq(method: string, body?: unknown, id?: string) {
+  return fetch(`/api/admin/gallery${id ? `?id=${id}` : ""}`, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+}
 import { useToast } from "@/components/Toast";
 import PageHeader from "@/components/PageHeader";
 
@@ -19,11 +27,9 @@ export default function GalleryAdminPage() {
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase
-      .from("gallery_images")
-      .select("*")
-      .order("sort_order", { ascending: true });
-    if (data) setImages(data as GalleryImage[]);
+    const res = await galleryReq("GET");
+    const data = await res.json();
+    if (data.images) setImages(data.images as GalleryImage[]);
     setLoading(false);
   }
 
@@ -51,17 +57,16 @@ export default function GalleryAdminPage() {
         .getPublicUrl(fileName);
 
       const sortOrder = images.length + i;
-      const { error: insertError } = await supabase
-        .from("gallery_images")
-        .insert({
-          image_url: urlData.publicUrl,
-          caption: caption || file.name.replace(/\.[^/.]+$/, ""),
-          sort_order: sortOrder,
-          is_visible: true,
-        });
+      const res = await galleryReq("POST", {
+        image_url: urlData.publicUrl,
+        caption: caption || file.name.replace(/\.[^/.]+$/, ""),
+        sort_order: sortOrder,
+        is_visible: true,
+      });
 
-      if (insertError) {
-        toast(`Failed to save: ${insertError.message}`, "error");
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        toast(`Failed to save: ${errData.error || "Unknown error"}`, "error");
       }
     }
 
@@ -73,29 +78,20 @@ export default function GalleryAdminPage() {
   }
 
   async function toggleVisible(img: GalleryImage) {
-    const { error } = await supabase
-      .from("gallery_images")
-      .update({ is_visible: !img.is_visible })
-      .eq("id", img.id);
-    if (error) { toast("Failed to update", "error"); return; }
+    const res = await galleryReq("PATCH", { id: img.id, is_visible: !img.is_visible });
+    if (!res.ok) { toast("Failed to update", "error"); return; }
     setImages(images.map((i) => (i.id === img.id ? { ...i, is_visible: !i.is_visible } : i)));
   }
 
   async function updateCaption(img: GalleryImage, newCaption: string) {
-    const { error } = await supabase
-      .from("gallery_images")
-      .update({ caption: newCaption })
-      .eq("id", img.id);
-    if (error) { toast("Failed to update caption", "error"); return; }
+    const res = await galleryReq("PATCH", { id: img.id, caption: newCaption });
+    if (!res.ok) { toast("Failed to update caption", "error"); return; }
     setImages(images.map((i) => (i.id === img.id ? { ...i, caption: newCaption } : i)));
   }
 
   async function deleteImage(img: GalleryImage) {
-    const { error } = await supabase
-      .from("gallery_images")
-      .delete()
-      .eq("id", img.id);
-    if (error) { toast("Failed to delete", "error"); return; }
+    const res = await galleryReq("DELETE", undefined, img.id);
+    if (!res.ok) { toast("Failed to delete", "error"); return; }
     setImages(images.filter((i) => i.id !== img.id));
     toast("Photo deleted");
   }
@@ -117,9 +113,7 @@ export default function GalleryAdminPage() {
       sort_order: idx,
     }));
 
-    for (const u of updates) {
-      await supabase.from("gallery_images").update({ sort_order: u.sort_order }).eq("id", u.id);
-    }
+    await Promise.all(updates.map((u) => galleryReq("PATCH", { id: u.id, sort_order: u.sort_order })));
   }
 
   return (

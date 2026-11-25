@@ -6,7 +6,6 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import type { Booking, LoyaltyCard } from "@/lib/supabase";
 import { paymentMethodFor, PAYMENT_METHOD_LABELS, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP } from "@/lib/supabase";
-import { supabase } from "@/lib/supabase";
 
 type Customer = {
   id: string;
@@ -86,22 +85,15 @@ export default function AccountDashboardPage() {
     setRescheduleDate(b.date);
     setRescheduleSlot(b.time_slot);
     setRescheduleError("");
-    loadRescheduleSlots(b.date, b.id);
+    loadRescheduleSlots(b.date, b);
   }
 
-  async function loadRescheduleSlots(forDate: string, excludeId?: string) {
+  async function loadRescheduleSlots(forDate: string, exclude?: Booking) {
     setRescheduleLoading(true);
-    let query = supabase
-      .from("bookings")
-      .select("time_slot, people")
-      .eq("date", forDate)
-      .eq("payment_status", "paid");
-    if (excludeId) query = query.neq("id", excludeId);
-    const { data } = await query;
-    const used: Record<string, number> = {};
-    (data || []).forEach((b: { time_slot: string; people: number }) => {
-      used[b.time_slot] = (used[b.time_slot] || 0) + b.people;
-    });
+    const avail = await fetch(`/api/availability?date=${forDate}`).then((r) => r.json()).catch(() => ({}));
+    const used: Record<string, number> = { ...(avail.slotUsed || {}) };
+    // Subtract the booking being moved so its own slot shows as available.
+    if (exclude) used[exclude.time_slot] = Math.max(0, (used[exclude.time_slot] || 0) - exclude.people);
     const rem: Record<string, number> = {};
     DEFAULT_SLOTS.forEach((slot) => {
       rem[slot] = Math.max(0, slotCapacity - (used[slot] || 0));
@@ -474,7 +466,7 @@ export default function AccountDashboardPage() {
                   onChange={(e) => {
                     setRescheduleDate(e.target.value);
                     setRescheduleSlot("");
-                    if (e.target.value) loadRescheduleSlots(e.target.value, rescheduleBooking.id);
+                    if (e.target.value && rescheduleBooking) loadRescheduleSlots(e.target.value, rescheduleBooking);
                   }}
                   className="w-full px-4 py-2.5 border-2 border-ink/15 rounded-xl text-sm focus:outline-none focus:border-sky-blue-light"
                 />

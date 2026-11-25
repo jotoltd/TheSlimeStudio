@@ -19,9 +19,14 @@ export async function GET(req: NextRequest) {
   const specificDate = searchParams.get("date");
   const today = new Date().toISOString().split("T")[0];
 
+  // Whitelist public columns — special_events may carry admin-only fields we
+  // don't want exposed to anonymous callers.
+  const EVENT_COLS = "id, title, description, image_url, category, slug, pricing_model, price, duration_minutes, capacity, is_active, created_at";
+  const INSTANCE_COLS = "id, event_id, date, start_time, capacity, status";
+
   let eventQuery = supabaseAdmin
     .from("special_events")
-    .select("*")
+    .select(EVENT_COLS)
     .eq("is_active", true)
     .order("created_at", { ascending: false });
 
@@ -30,7 +35,10 @@ export async function GET(req: NextRequest) {
   }
 
   const { data: events, error } = await eventQuery;
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("events GET error:", error);
+    return NextResponse.json({ error: "Could not load events" }, { status: 500 });
+  }
 
   // Fetch upcoming instances for these events
   const eventIds = (events || []).map((e: EventRow) => e.id);
@@ -39,7 +47,7 @@ export async function GET(req: NextRequest) {
   if (eventIds.length > 0) {
     let instanceQuery = supabaseAdmin
       .from("special_event_instances")
-      .select("*")
+      .select(INSTANCE_COLS)
       .in("event_id", eventIds)
       .eq("status", "open");
 

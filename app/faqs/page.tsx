@@ -12,7 +12,7 @@ const defaultFaqs = [
   { q: "How much is The Slime Studio experience?", a: "The experience is £15 per slime maker, including everything you need to create your slime and take it home." },
   { q: "Do I need to book?", a: "We recommend booking in advance to make sure we have space for you. Walk-ins are welcome where availability allows." },
   { q: "What ages is The Slime Studio suitable for?", a: "The Slime Studio is for all ages. Whether it's your first time making slime or you're already slime obsessed, everyone can get involved." },
-  { q: "How long does the experience take?", a: "Allow around 45–60 minutes to create and customise your slime." },
+  { q: "How long does the experience take?", a: "Sessions are booked on the hour and last 45 minutes — though it varies by age and ability. Some slime makers are done in around 30 minutes, others take the full session to sit and play with their slime." },
   { q: "What do I get to make?", a: "You'll create your own slime, choosing your colours and extras to make it completely your own. Your finished slime is yours to take home." },
   { q: "Can adults make slime too?", a: "Absolutely. The experience isn't just for children — adults are very welcome to book as slime makers too." },
   { q: "Can I bring more than one person?", a: "Yes. When booking, simply select the number of slime makers attending." },
@@ -42,6 +42,20 @@ export default function FAQsPage() {
   return (
     <>
       <Navbar />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: (faqs.length ? faqs : defaultFaqs).map((f) => ({
+              "@type": "Question",
+              name: f.q,
+              acceptedAnswer: { "@type": "Answer", text: f.a },
+            })),
+          }),
+        }}
+      />
 
       {/* Hero */}
       <section className="bg-pagebg pt-16 pb-14 md:pt-20 md:pb-16 text-center px-4">

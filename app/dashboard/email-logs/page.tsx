@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { supabase } from "@/lib/supabase";
 import Pagination from "@/components/Pagination";
 
 const PAGE_SIZE = 25;
@@ -111,18 +110,17 @@ export default function EmailsPage() {
       tpl.fields.forEach((f) => { draft[f.key] = json.templates?.[f.key] || ""; });
       setTplDraft(draft);
     }
+    const params = new URLSearchParams({ limit: "100" });
+    if (filter !== "all") params.set("type", filter);
+    const logsRes = await fetch(`/api/admin/email-logs?${params}`);
+    const json = await logsRes.json();
     // Engagement rows (campaign opens/clicks/bounces/complaints) come from the
     // Resend webhook, not real sends — keep them out of the "recent emails"
     // list and the type filter chips. Per-recipient engagement lives on the
     // Campaigns page.
-    let query = supabase.from("email_logs").select("*")
-      .not("type", "like", "campaign_open%")
-      .not("type", "like", "campaign_click%")
-      .not("type", "like", "campaign_bounce%")
-      .not("type", "like", "campaign_complaint%");
-    if (filter !== "all") query = query.eq("type", filter);
-    const { data: logRows } = await query.order("created_at", { ascending: false }).limit(100);
-    if (logRows) setLogs(logRows as EmailLog[]);
+    const ENGAGEMENT = ["campaign_open", "campaign_click", "campaign_bounce", "campaign_complaint"];
+    const rows = ((json.logs || []) as EmailLog[]).filter((l) => !ENGAGEMENT.some((p) => l.type?.startsWith(p)));
+    setLogs(rows);
     setLoading(false);
   }, [filter]);
 

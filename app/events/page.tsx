@@ -7,7 +7,7 @@ import type { Metadata } from "next";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Special Events — The Slime Studio",
+  title: "Special Events — Themed Slime Sessions in Holt, Norfolk",
   description: "Adult evenings, after-school clubs, seasonal sessions and more at The Slime Studio.",
 };
 

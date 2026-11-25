@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase, type Booking, type Subscriber, type SubscriptionSettings } from "@/lib/supabase";
+import { type Booking, type Subscriber, type SubscriptionSettings, supabase } from "@/lib/supabase";
 
 export default function RevenuePage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -13,10 +13,11 @@ export default function RevenuePage() {
 
   async function loadData() {
     setLoading(true);
-    const { data: bks } = await supabase.from("bookings").select("*").order("date", { ascending: false });
-    if (bks) setBookings(bks as Booking[]);
-    const { data: subs } = await supabase.from("subscribers").select("*");
-    if (subs) setSubscribers(subs as Subscriber[]);
+    const [bksRes, subsRes] = await Promise.all([fetch("/api/admin/bookings"), fetch("/api/admin/subscribers")]);
+    const bksData = await bksRes.json();
+    const subsData = await subsRes.json();
+    if (bksData.bookings) setBookings(bksData.bookings as Booking[]);
+    if (subsData.subscribers) setSubscribers(subsData.subscribers as Subscriber[]);
     const { data: ss } = await supabase.from("subscription_settings").select("*").eq("id", 1).single();
     if (ss) setSubSettings(ss as SubscriptionSettings);
     setLoading(false);

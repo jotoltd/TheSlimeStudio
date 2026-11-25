@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
+import { nextHourSlotWithDate } from "@/lib/time-slots";
 import {
   getResend,
   EMAIL_FROM,
@@ -24,6 +25,9 @@ export async function POST(req: NextRequest) {
   const { bookingId, newDate, newTimeSlot, people, notify } = await req.json();
   if (!bookingId || !newDate || !newTimeSlot) {
     return NextResponse.json({ error: "Missing bookingId, newDate or newTimeSlot" }, { status: 400 });
+  }
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(String(newTimeSlot).trim())) {
+    return NextResponse.json({ error: "Invalid time slot — use 24-hour HH:MM format (e.g. 18:30)" }, { status: 400 });
   }
 
   const { data: booking, error: fetchErr } = await supabaseAdmin
@@ -91,14 +95,23 @@ export async function POST(req: NextRequest) {
   }
 
   // A 2-hour booking's `_slot2` placeholder must move with it, otherwise it
-  // keeps blocking the old slot and leaves the new second hour open.
+  // keeps blocking the old slot and leaves the new second hour open. The
+  // update is a no-op for 1-hour bookings (no matching row). People and
+  // notes stay in sync with the primary booking, and 23:xx starts wrap the
+  // block into the next calendar day.
   if (booking.stripe_session_id) {
-    const [h, m] = newTimeSlot.split(":").map(Number);
-    const nextSlot = `${String(h + 1).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-    await supabaseAdmin
-      .from("bookings")
-      .update({ date: newDate, time_slot: nextSlot, notes: `[Blocked for 2-hour party — primary slot ${newTimeSlot}]` })
-      .eq("stripe_session_id", `${booking.stripe_session_id}_slot2`);
+    const second = nextHourSlotWithDate(newDate, newTimeSlot);
+    if (second) {
+      await supabaseAdmin
+        .from("bookings")
+        .update({
+          date: second.date,
+          time_slot: second.slot,
+          people: newPeople,
+          notes: `[Blocked for 2-hour party — primary slot ${newTimeSlot} on ${newDate}]${booking.notes ? " " + booking.notes : ""}`,
+        })
+        .eq("stripe_session_id", `${booking.stripe_session_id}_slot2`);
+    }
   }
 
   let emailed = false;

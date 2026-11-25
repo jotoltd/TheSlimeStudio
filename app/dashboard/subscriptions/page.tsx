@@ -33,13 +33,20 @@ export default function SubscriptionsAdminPage() {
       const nextIsLive = !!s.next_theme && !!s.theme_change_date &&
         new Date(s.theme_change_date + "T00:00:00").getTime() <= Date.now();
       if (nextIsLive) {
-        await supabase.from("subscription_settings").update({
-          current_theme: s.next_theme,
-          current_theme_description: s.next_theme_description || "",
-          next_theme: "",
-          next_theme_description: "",
-          theme_change_date: null,
-        }).eq("id", 1);
+        await fetch("/api/admin/settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            table: "subscription_settings", id: 1,
+            patch: {
+              current_theme: s.next_theme,
+              current_theme_description: s.next_theme_description || "",
+              next_theme: "",
+              next_theme_description: "",
+              theme_change_date: null,
+            },
+          }),
+        });
         return loadData();
       }
       setSettings(s);
@@ -54,8 +61,9 @@ export default function SubscriptionsAdminPage() {
         perks: (s.perks || []).join("\n"),
       });
     }
-    const { data: subsData } = await supabase.from("subscribers").select("*").order("created_at", { ascending: false });
-    if (subsData) setSubscribers(subsData as Subscriber[]);
+    const res = await fetch("/api/admin/subscribers");
+    const subsData = await res.json();
+    if (subsData.subscribers) setSubscribers(subsData.subscribers as Subscriber[]);
     setLoading(false);
   }, []);
 
@@ -71,7 +79,11 @@ export default function SubscriptionsAdminPage() {
     if (!settings) return;
     const newVal = !settings.enabled;
     setSettings({ ...settings, enabled: newVal });
-    await supabase.from("subscription_settings").update({ enabled: newVal }).eq("id", 1);
+    await fetch("/api/admin/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ table: "subscription_settings", id: 1, patch: { enabled: newVal } }),
+    });
   }
 
   async function saveSettings() {
@@ -87,14 +99,18 @@ export default function SubscriptionsAdminPage() {
       theme_change_date: form.theme_change_date || null,
       perks: form.perks.split("\n").map((p) => p.trim()).filter(Boolean),
     };
-    await supabase.from("subscription_settings").update(payload).eq("id", 1);
+    await fetch("/api/admin/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ table: "subscription_settings", id: 1, patch: payload }),
+    });
     setSaving(false);
     loadData();
   }
 
   async function removeSubscriber(id: string, name: string) {
     if (!confirm(`Remove subscriber "${name}"? This cannot be undone.`)) return;
-    await supabase.from("subscribers").delete().eq("id", id);
+    await fetch(`/api/admin/subscribers?id=${id}`, { method: "DELETE" });
     loadData();
   }
 

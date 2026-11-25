@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Gallery",
+  title: "Gallery — Slime Creations From Our Norfolk Studio",
   description:
     "See slime creations from The Slime Studio in Holt, Norfolk. Browse photos of colourful, squishy slime made by our visitors.",
   alternates: { canonical: "https://theslimestudio.co.uk/gallery" },

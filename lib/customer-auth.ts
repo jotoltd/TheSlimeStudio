@@ -52,7 +52,9 @@ export function verifyCustomerToken(token: string): CustomerSession | null {
 }
 
 export function getCustomerSession(req: NextRequest): CustomerSession | null {
-  const token = req.cookies.get(CUSTOMER_COOKIE)?.value;
+  // Cookie for browsers; Bearer for the native iOS app, which has no cookie jar.
+  const bearer = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+  const token = bearer || req.cookies.get(CUSTOMER_COOKIE)?.value;
   if (!token) return null;
   return verifyCustomerToken(token);
 }

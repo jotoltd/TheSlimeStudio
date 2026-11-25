@@ -4,7 +4,7 @@ import { preload } from "react-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import RefCapture from "@/components/RefCapture";
-import { STUDIO_MAPS_URL, PARKING_NOTE } from "@/lib/supabase";
+import { STUDIO_MAPS_URL, PARKING_NOTE, supabaseAdmin } from "@/lib/supabase";
 import { getSiteContent } from "@/lib/site-content";
 
 // Re-validate every minute so dashboard content edits appear quickly while
@@ -12,7 +12,19 @@ import { getSiteContent } from "@/lib/site-content";
 export const revalidate = 60;
 
 export default async function HomePage() {
-  const c = await getSiteContent();
+  const [c, shopRes] = await Promise.all([
+    getSiteContent(),
+    // On error keep the old behaviour (show Shop) rather than hiding the
+    // button because of a transient DB hiccup.
+    (async () => {
+      try {
+        return await supabaseAdmin.from("shop_settings").select("live").eq("id", 1).maybeSingle();
+      } catch {
+        return { data: null, error: { message: "shop_settings lookup failed" } };
+      }
+    })(),
+  ]);
+  const shopLive = shopRes.error ? true : !!shopRes.data?.live;
   // Hero backdrop is a CSS background rather than <Image fill>: as an LCP
   // candidate the absolute-positioned image kept re-stamping its paint time
   // every time the header reflowed (font swaps, content fetches, hydration),
@@ -66,11 +78,19 @@ export default async function HomePage() {
                 Book Now
               </Link>
               <Link
-                href="/shop"
+                href="/gift-card"
                 className="btn-secondary"
               >
-                Shop
+                🎁 Gift Cards
               </Link>
+              {shopLive && (
+                <Link
+                  href="/shop"
+                  className="btn-secondary"
+                >
+                  Shop
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -98,6 +118,23 @@ export default async function HomePage() {
             </a>
             <p className="text-[0.8rem] text-ink-soft max-w-md">🅿️ {PARKING_NOTE}</p>
           </div>
+        </div>
+      </section>
+
+      {/* Gift Cards */}
+      <section className="container px-4 -mt-2 mb-4 md:mb-6">
+        <div className="reveal bg-gradient-to-r from-bright-lavender/40 via-white to-sky-blue-light/40 rounded-[20px] md:rounded-[28px] p-6 md:p-9 flex flex-col md:flex-row items-center justify-between gap-5 shadow-sm">
+          <div className="text-center md:text-left">
+            <h2 className="font-display text-[1.3rem] md:text-[1.7rem] text-ink mb-1.5">
+              🎁 Looking for a gift?
+            </h2>
+            <p className="text-ink-soft text-[0.9rem] md:text-[1rem] max-w-lg">
+              Slime Studio gift vouchers from £10 — delivered instantly by email. Perfect for birthdays, Christmas, or just because.
+            </p>
+          </div>
+          <Link href="/gift-card" className="btn-primary flex-shrink-0">
+            Buy a Gift Card
+          </Link>
         </div>
       </section>
 

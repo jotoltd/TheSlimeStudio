@@ -214,8 +214,8 @@ export default function CheckoutPage() {
                   <label className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-colors ${shippingMethod === "delivery" ? "border-sky-blue-light bg-sky-blue-light/5" : "border-ink/10"}`}>
                     <input type="radio" name="shipping" value="delivery" checked={shippingMethod === "delivery"} onChange={() => setShippingMethod("delivery")} className="accent-hot-pink" />
                     <div className="flex-1">
-                      <div className="font-medium text-[0.9rem]">UK Delivery</div>
-                      <div className="text-[0.8rem] text-ink-soft">£{DELIVERY_FEE.toFixed(2)} · Free over £{FREE_DELIVERY_THRESHOLD}</div>
+                      <div className="font-medium text-[0.9rem]">Royal Mail Delivery</div>
+                      <div className="text-[0.8rem] text-ink-soft">Dispatched via Royal Mail · £{DELIVERY_FEE.toFixed(2)} · Free over £{FREE_DELIVERY_THRESHOLD}</div>
                     </div>
                     <span className="font-display text-[0.9rem]">{shippingCost === 0 ? "Free" : `£${DELIVERY_FEE.toFixed(2)}`}</span>
                   </label>

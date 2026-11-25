@@ -2,14 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense, lazy } from "react";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Calendar from "@/components/Calendar";
-import { supabase, isSlotPlaceholder, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, PRICE_PER_PERSON, MAX_DAILY_BOOKINGS as DEFAULT_MAX, STUDIO_MAPS_URL, PARKING_NOTE } from "@/lib/supabase";
+import { supabase, TIME_SLOTS as DEFAULT_SLOTS, SLOT_CAPACITY as DEFAULT_CAP, PRICE_PER_PERSON, MAX_DAILY_BOOKINGS as DEFAULT_MAX, STUDIO_MAPS_URL, PARKING_NOTE } from "@/lib/supabase";
 import type { BookingSettings, OpeningHour, DateOverride } from "@/lib/supabase";
 import { useContent } from "@/lib/useContent";
-import { trackPurchase, trackInitiateCheckout, getMetaCookies, getAdSource, setAdSource, getGclid, withThemeVariant } from "@/lib/ad-tracking";
+import { trackPurchase, trackInitiateCheckout, getMetaCookies, getAdSource, setAdSource, getGclid } from "@/lib/ad-tracking";
 
 const InlinePayment = lazy(() => import("@/components/InlinePayment"));
 
@@ -238,7 +239,12 @@ function BookingPageInner() {
       const sumupRef = params.get("ref");
       if (sumupStatus === "paid" && sumupRef) {
         const stored = localStorage.getItem("sumupBookingDetails");
-        const fallback = stored ? JSON.parse(stored) : {};
+        // Unguarded JSON.parse here killed the whole confirmation flow when
+        // the stored blob was corrupt — fall back to an empty object instead.
+        let fallback: Record<string, unknown> = {};
+        try {
+          fallback = stored ? JSON.parse(stored) : {};
+        } catch {}
         fetch("/api/sumup-confirm-booking", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -348,11 +354,8 @@ function BookingPageInner() {
 
   const loadAvailability = useCallback(async (forDate: string) => {
     setLoadingSlots(true);
-    const { data } = await supabase.from("bookings").select("time_slot, people, payment_status").eq("date", forDate).eq("payment_status", "paid");
-    const used: Record<string, number> = {};
-    (data || []).forEach((b: { time_slot: string; people: number; payment_status: string }) => {
-      used[b.time_slot] = (used[b.time_slot] || 0) + b.people;
-    });
+    const availRes = await fetch(`/api/availability?date=${forDate}`).then((r) => r.json()).catch(() => ({}));
+    const used: Record<string, number> = availRes.slotUsed || {};
     const currentSlots = getSlotsForDate(forDate).slots;
     const rem: Record<string, number> = {};
     currentSlots.forEach((slot) => {
@@ -361,33 +364,17 @@ function BookingPageInner() {
     setRemaining(rem);
     setLoadingSlots(false);
 
-    // Fetch events for this date directly from supabase
+    // Fetch events for this date — aggregate endpoint returns instances with
+    // their event details and paid booking counts (no attendee PII exposed).
     try {
-      const { data: instances } = await supabase
-        .from("special_event_instances")
-        .select("*, event:special_events(id, title, slug, category, image_url, price, pricing_model, duration_minutes, is_active)")
-        .eq("date", forDate)
-        .eq("status", "open");
-
-      // Fetch paid booking counts for these instances so capacity decrements correctly
-      const typedInstances = (instances || []) as EventInstance[];
-      const instanceIds = typedInstances.map((i) => i.id);
-      const bookingCounts: Record<string, number> = {};
-      if (instanceIds.length > 0) {
-        const { data: paidBookings } = await supabase
-          .from("special_event_bookings")
-          .select("instance_id, quantity")
-          .in("instance_id", instanceIds)
-          .eq("payment_status", "paid");
-        ((paidBookings || []) as { instance_id: string; quantity: number }[]).forEach((b) => {
-          bookingCounts[b.instance_id] = (bookingCounts[b.instance_id] || 0) + b.quantity;
-        });
-      }
+      const res = await fetch(`/api/event-instances?date=${forDate}`);
+      const { instances } = await res.json();
+      const typedInstances = (instances || []) as (EventInstance & { booked_count?: number })[];
 
       const dayEvts: DayEvent[] = [];
       typedInstances.forEach((inst) => {
         if (inst.event && inst.event.is_active) {
-          const bookedCount = bookingCounts[inst.id] || 0;
+          const bookedCount = inst.booked_count || 0;
           dayEvts.push({
             event_id: inst.event.id,
             event_slug: inst.event.slug,
@@ -619,17 +606,10 @@ function BookingPageInner() {
       setTermsPreAgreed(true);
     }
 
-    // Check total bookings for this date (daily cap, excluding parties and the
-    // auto-blocked second-hour rows of 2-hour bookings) — only paid bookings count
-    const { data: dailyBookings } = await supabase
-      .from("bookings")
-      .select("people, stripe_session_id, notes")
-      .eq("date", date)
-      .eq("payment_status", "paid")
-      .eq("is_party", false);
-    const dailyUsed = (dailyBookings || [])
-      .filter((b: { people: number; stripe_session_id?: string; notes?: string }) => !isSlotPlaceholder(b))
-      .reduce((sum: number, b: { people: number }) => sum + b.people, 0);
+    // Daily + slot capacity re-check via the public availability endpoint —
+    // the server re-validates again at payment creation.
+    const avail = await fetch(`/api/availability?date=${date}`).then((r) => r.json()).catch(() => ({}));
+    const dailyUsed = avail.dailyUsed || 0;
     if (dailyUsed + people > maxDaily) {
       setStatus("error");
       setErrorMsg(`Sorry, this date is fully booked. Please choose another date.`);
@@ -637,16 +617,7 @@ function BookingPageInner() {
       return;
     }
 
-    // Re-check slot capacity — only paid bookings count
-    const { data: existing } = await supabase
-      .from("bookings")
-      .select("people")
-      .eq("date", date)
-      .eq("time_slot", timeSlot)
-      .eq("payment_status", "paid");
-    const used = (existing || [])
-      .reduce((sum: number, b: { people: number }) => sum + b.people, 0);
-
+    const used = (avail.slotUsed && avail.slotUsed[timeSlot]) || 0;
     if (used + people > slotCapacity) {
       setStatus("error");
       setErrorMsg(`Sorry, only ${Math.max(0, slotCapacity - used)} spot(s) left in that slot. Please choose another.`);
@@ -658,7 +629,7 @@ function BookingPageInner() {
     try {
       if (paymentProvider === "sumup") {
         // SumUp: redirect to hosted checkout
-        const adSource = withThemeVariant(getAdSource());
+        const adSource = getAdSource();
         const res = await fetch("/api/sumup-booking-checkout", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -699,7 +670,7 @@ function BookingPageInner() {
       }
 
       // Stripe: inline payment intent
-      const adSource = withThemeVariant(getAdSource());
+      const adSource = getAdSource();
       const res = await fetch("/api/create-payment-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -775,6 +746,15 @@ function BookingPageInner() {
             <span>🚶</span>
             <span className="font-medium">{c.booking_walkins}</span>
           </div>
+          <div className="mt-2">
+            <Link
+              href="/gift-card"
+              className="inline-flex items-center gap-2 bg-bright-lavender/30 rounded-full px-4 py-2 text-[0.85rem] text-ink hover:bg-bright-lavender/50 transition-colors"
+            >
+              <span>🎁</span>
+              <span className="font-medium">Buying for someone else? Gift vouchers available →</span>
+            </Link>
+          </div>
           {isAdLanding && (
             <div className="mt-6">
               <a href="#book" className="btn-primary btn-book-now inline-block !px-10 !py-4 !text-[1.05rem]">Book Your Slot</a>
@@ -819,7 +799,7 @@ function BookingPageInner() {
                   </div>
                   <div className="flex items-center justify-between px-4 md:px-5 py-3.5 gap-2">
                     <span className="text-[0.85rem] text-ink-soft flex-shrink-0">Time</span>
-                    <span className="text-[0.9rem] font-medium text-ink text-right">{timeSlot} — {timeSlot.split(":").map(Number).length === 2 ? (() => { const [h, m] = timeSlot.split(":").map(Number); const end = new Date(); end.setHours(h + 1, m); return `${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}`; })() : ""}</span>
+                    <span className="text-[0.9rem] font-medium text-ink text-right">{timeSlot} — {timeSlot.split(":").map(Number).length === 2 ? (() => { const [h, m] = timeSlot.split(":").map(Number); const end = new Date(); end.setHours(h, m + 45); return `${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}`; })() : ""}</span>
                   </div>
                   <div className="flex items-center justify-between px-4 md:px-5 py-3.5 gap-2">
                     <span className="text-[0.85rem] text-ink-soft flex-shrink-0">Slime Makers</span>
@@ -947,7 +927,7 @@ function BookingPageInner() {
                             discountCode: appliedDiscount?.code,
                             giftCardCode: giftCardBalance !== null ? giftCardCode : null,
                             giftCardAmount: giftCardCover,
-                            adSource: withThemeVariant(getAdSource()),
+                            adSource: getAdSource(),
                             gclid: getGclid(),
                           }),
                         });
@@ -1037,7 +1017,7 @@ function BookingPageInner() {
                           <div className="w-12 h-12 rounded-lg bg-bright-lavender/20 grid place-items-center text-2xl flex-shrink-0">🫧</div>
                           <div className="min-w-0">
                             <div className="text-sm font-medium text-ink truncate">Slime Making Session</div>
-                            <div className="text-[0.75rem] text-ink-soft">1 hour · £{pricePerPerson.toFixed(2)}/person</div>
+                            <div className="text-[0.75rem] text-ink-soft">45 mins · £{pricePerPerson.toFixed(2)}/person</div>
                           </div>
                         </div>
                         <div className="flex-shrink-0 ml-2 text-[0.8rem] font-medium text-sky-blue-light">
@@ -1241,7 +1221,7 @@ function BookingPageInner() {
                             event_id: selectedEvent.event_id,
                             name: evtName.trim(), email: evtEmail.trim(), phone: evtPhone.trim() || undefined,
                             quantity: evtQty,
-                            adSource: withThemeVariant(getAdSource()),
+                            adSource: getAdSource(),
                             gclid: getGclid(),
                           }),
                         });
@@ -1593,7 +1573,7 @@ function BookingPageInner() {
               <div className={`mt-4 space-y-3 ${isAdLanding ? "text-[0.92rem] md:text-[1rem]" : "text-[0.85rem] md:text-[0.9rem]"} text-ink-soft leading-relaxed`}>
                 <div className="flex gap-3">
                   <span className="text-[1.1rem] flex-shrink-0">🕐</span>
-                  <p>Each session lasts <strong className="text-ink">1 hour</strong>. Please arrive 5 minutes before your slot so we can get you set up and ready to squish!</p>
+                  <p>Sessions are booked on the hour and last <strong className="text-ink">45 minutes</strong> — but the experience can take anywhere from 30 minutes to the full session, depending on age and ability. Some slime makers are finished in half an hour and ready to go; others take the whole time to sit and play with their slime. Both are completely normal! Please arrive 5 minutes before your slot so we can get you set up and ready to squish!</p>
                 </div>
                 <div className="flex gap-3">
                   <span className="text-[1.1rem] flex-shrink-0">🎨</span>

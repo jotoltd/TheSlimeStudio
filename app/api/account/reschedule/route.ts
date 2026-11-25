@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCustomerSession } from "@/lib/customer-auth";
 import { supabaseAdmin } from "@/lib/supabase";
+import { isValidDateString, isValidTimeSlot, nextHourSlotWithDate } from "@/lib/time-slots";
+import { rateLimited, clientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
+  if (rateLimited(`reschedule:${clientIp(req)}`, 20, 15 * 60 * 1000)) {
+    return NextResponse.json({ error: "Too many attempts. Please try again later." }, { status: 429 });
+  }
+
   const session = getCustomerSession(req);
   if (!session) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
@@ -21,6 +27,12 @@ export async function POST(req: NextRequest) {
       { error: "Booking ID, new date, and new time slot are required." },
       { status: 400 }
     );
+  }
+
+  // Strict formats — a malformed slot makes the Date math NaN, which slips
+  // past the past-date check below.
+  if (!isValidDateString(newDate) || !isValidTimeSlot(newTimeSlot)) {
+    return NextResponse.json({ error: "Invalid date or time slot." }, { status: 400 });
   }
 
   // Fetch the booking and verify it belongs to this customer
@@ -43,18 +55,49 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Only paid bookings can be rescheduled." }, { status: 400 });
   }
 
-  const todayStr = new Date().toISOString().split("T")[0];
+  // Local "today", not UTC — toISOString() is a day ahead for UK evenings.
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   if (booking.date < todayStr) {
     return NextResponse.json({ error: "Past bookings cannot be rescheduled." }, { status: 400 });
   }
 
-  // Don't allow rescheduling to a past date/slot
-  const now = new Date();
+  // Don't allow rescheduling to a past date/slot, and only to slots the
+  // studio actually offers that day (same rule as public checkout).
   const slotDateTime = new Date(newDate + "T00:00:00");
   const [h, m] = newTimeSlot.split(":").map(Number);
   slotDateTime.setHours(h, m, 0, 0);
   if (slotDateTime.getTime() < now.getTime()) {
     return NextResponse.json({ error: "Cannot reschedule to a past date or time." }, { status: 400 });
+  }
+
+  const { data: dateOverride } = await supabaseAdmin
+    .from("date_overrides")
+    .select("is_open, time_slots")
+    .eq("date", newDate)
+    .maybeSingle();
+  let allowedSlots: string[] | null = null;
+  let isOpen = true;
+  if (dateOverride) {
+    isOpen = dateOverride.is_open;
+    allowedSlots = dateOverride.time_slots;
+  } else {
+    const dow = new Date(newDate + "T00:00:00").getDay();
+    const { data: weekly } = await supabaseAdmin
+      .from("opening_hours")
+      .select("is_open, time_slots")
+      .eq("day_of_week", dow)
+      .maybeSingle();
+    if (weekly) {
+      isOpen = weekly.is_open;
+      allowedSlots = weekly.time_slots;
+    }
+  }
+  if (!isOpen) {
+    return NextResponse.json({ error: "The studio is closed on that date." }, { status: 400 });
+  }
+  if (allowedSlots && allowedSlots.length > 0 && !allowedSlots.includes(newTimeSlot)) {
+    return NextResponse.json({ error: "That time slot isn't available on the selected date." }, { status: 400 });
   }
 
   // If nothing changed, no-op
@@ -120,13 +163,16 @@ export async function POST(req: NextRequest) {
   }
 
   // A 2-hour booking's `_slot2` placeholder must move with it, otherwise it
-  // keeps blocking the old slot and leaves the new second hour open.
+  // keeps blocking the old slot and leaves the new second hour open. Handles
+  // custom minutes and midnight wrap (23:30 → next day 00:30).
   if (booking.stripe_session_id) {
-    const nextSlot = `${String(h + 1).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-    await supabaseAdmin
-      .from("bookings")
-      .update({ date: newDate, time_slot: nextSlot, notes: `[Blocked for 2-hour party — primary slot ${newTimeSlot}]` })
-      .eq("stripe_session_id", `${booking.stripe_session_id}_slot2`);
+    const next = nextHourSlotWithDate(newDate, newTimeSlot);
+    if (next) {
+      await supabaseAdmin
+        .from("bookings")
+        .update({ date: next.date, time_slot: next.slot, notes: `[Blocked for 2-hour party — primary slot ${newTimeSlot}]` })
+        .eq("stripe_session_id", `${booking.stripe_session_id}_slot2`);
+    }
   }
 
   return NextResponse.json({ ok: true });

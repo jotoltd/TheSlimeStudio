@@ -15,6 +15,9 @@ function AccountLoginInner() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [unverified, setUnverified] = useState(false);
+  const [resending, setResending] = useState(false);
 
   useEffect(() => {
     const redirect = searchParams.get("redirect");
@@ -49,7 +52,19 @@ function AccountLoginInner() {
 
       const data = await res.json();
 
+      // Registration now requires email verification — show the confirmation
+      // instead of signing in.
+      if (res.ok && data.verifyRequired) {
+        setNotice(data.message || "Account created! Check your email for a verification link.");
+        setLoading(false);
+        return;
+      }
+
       if (!res.ok) {
+        // Unverified account on sign-in — offer to resend the link.
+        if (data.unverified) {
+          setUnverified(true);
+        }
         setError(data.error || "Something went wrong. Please try again.");
         setLoading(false);
         return;
@@ -61,6 +76,23 @@ function AccountLoginInner() {
       setError("Network error. Please try again.");
       setLoading(false);
     }
+  }
+
+  async function resendVerification() {
+    setResending(true);
+    try {
+      await fetch("/api/account/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      setNotice("If your account needs verifying, we've sent a new link to your email.");
+      setUnverified(false);
+      setError("");
+    } catch {
+      setError("Could not resend — please try again.");
+    }
+    setResending(false);
   }
 
   return (
@@ -169,9 +201,25 @@ function AccountLoginInner() {
                 />
               </div>
 
+              {notice && (
+                <div className="bg-green-50 border-2 border-green-200 rounded-xl p-3 text-center">
+                  <p className="text-[0.85rem] text-green-700">{notice}</p>
+                </div>
+              )}
+
               {error && (
                 <div className="bg-hot-pink/10 border-2 border-hot-pink/20 rounded-xl p-3 text-center">
                   <p className="text-[0.85rem] text-hot-pink">{error}</p>
+                  {unverified && mode === "login" && (
+                    <button
+                      type="button"
+                      onClick={resendVerification}
+                      disabled={resending}
+                      className="mt-2 text-[0.8rem] font-medium text-bright-lavender hover:underline disabled:opacity-50"
+                    >
+                      {resending ? "Sending..." : "Resend verification email"}
+                    </button>
+                  )}
                 </div>
               )}
 
